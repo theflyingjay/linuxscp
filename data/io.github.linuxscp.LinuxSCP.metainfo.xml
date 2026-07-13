@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.linuxscp.LinuxSCP</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>LinuxSCP</name>
+  <summary>Commander-style SFTP file transfer for GNOME</summary>
+  <description>
+    <p>
+      LinuxSCP is a free and open source SFTP client for GNOME, built for people
+      moving from Windows and WinSCP to Linux. It has a dual-pane, keyboard-driven
+      commander layout and works directly with your existing ~/.ssh/config, so the
+      hosts, jump proxies, keys and agents you already use just work.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Dual-pane local/remote file management with familiar function keys</li>
+      <li>Tabbed sessions: several connections open side by side</li>
+      <li>Reads ~/.ssh/config: aliases, ProxyJump, ControlMaster, agents and hardware keys via the system OpenSSH</li>
+      <li>Site manager with nested folders, search, drag and drop, and an in-app ~/.ssh/config editor</li>
+      <li>Root file management through sudo or su elevation</li>
+      <li>Transfer queue with live progress, speed and ETA; copying starts while large trees are still being scanned</li>
+      <li>Resumable transfers that survive disconnects</li>
+      <li>Right-click context menu with copy, cut and paste, and a properties dialog for permissions, owner and group</li>
+      <li>Drag and drop between panes</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.linuxscp.LinuxSCP.desktop</launchable>
+  <url type="homepage">https://github.com/linuxscp/linuxscp</url>
+  <url type="bugtracker">https://github.com/linuxscp/linuxscp/issues</url>
+  <developer id="io.github.linuxscp">
+    <name>Jacob Petrosky</name>
+  </developer>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" date="2026-07-11">
+      <description>
+        <p>Initial release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

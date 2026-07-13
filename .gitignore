@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+*.swp
+.DS_Store
+
+# flatpak-builder work dirs (README build command uses ./build)
+/build
+/.flatpak-builder

@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinuxSCP — a WinSCP for Linux</title>
+<meta name="description" content="LinuxSCP is a free, open source dual-pane SFTP client for GNOME — a WinSCP for Linux. It reads your ~/.ssh/config, elevates with sudo or su, and resumes interrupted transfers.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LinuxSCP — a WinSCP for Linux">
+<meta property="og:description" content="A dual-pane, commander-style SFTP client for GNOME. Your ~/.ssh/config just works. Free forever under the GPL.">
+<meta property="og:url" content="https://linuxscp.github.io/linuxscp/">
+<meta property="og:image" content="https://linuxscp.github.io/linuxscp/icon.png">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" type="image/png" href="icon.png">
+<style>
+  :root {
+    --bg: #0e1116;
+    --bg-soft: #141922;
+    --panel: #171d26;
+    --border: #242e3b;
+    --text: #e7edf3;
+    --muted: #96a4b4;
+    --blue: #4aa3ff;
+    --green: #47d178;
+    --accent: #3584e4;
+    --code-bg: #0b0e13;
+    --radius: 12px;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Cantarell, "Noto Sans", sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f8fb;
+      --bg-soft: #eef2f7;
+      --panel: #ffffff;
+      --border: #dbe3ec;
+      --text: #17212e;
+      --muted: #5a6b7d;
+      --code-bg: #101418;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    font-size: 16.5px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  section { padding: 40px 0; scroll-margin-top: 24px; }
+  h1, h2 { line-height: 1.15; letter-spacing: -0.02em; }
+  h2 { font-size: 1.9rem; margin: 0 0 16px; }
+  p { margin: 0 0 16px; }
+  .muted { color: var(--muted); }
+
+  /* top bar */
+  .top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--text); }
+  .brand img { width: 30px; height: 30px; }
+  .top nav { margin-left: auto; display: flex; align-items: center; gap: 22px; font-size: 0.95rem; }
+  .top nav a { color: var(--muted); }
+  .top nav a:hover { color: var(--text); text-decoration: none; }
+  .top nav a.gh { color: var(--text); border: 1px solid var(--border); padding: 7px 14px; border-radius: 8px; }
+  .top nav a.gh:hover { border-color: var(--blue); }
+  @media (max-width: 680px) { .top nav a:not(.gh) { display: none; } }
+
+  /* hero */
+  .hero { padding: 56px 0 64px; text-align: center; }
+  .hero img.mark { width: 108px; height: 108px; margin-bottom: 18px; }
+  .hero h1 {
+    font-size: clamp(2rem, 5.4vw, 3.1rem);
+    margin: 0 auto 18px; max-width: 17em;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(100deg, var(--blue), var(--green));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .lede { max-width: 44em; margin: 0 auto 26px; color: var(--muted); font-size: 1.13rem; }
+  .hero .lede code { font-family: var(--mono); font-size: 0.92em; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .btn {
+    display: inline-block; padding: 12px 22px; border-radius: 10px;
+    font-weight: 600; font-size: 1rem;
+  }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.primary:hover { background: #4695ef; text-decoration: none; }
+  .btn.ghost { border: 1px solid var(--border); color: var(--text); }
+  .btn.ghost:hover { border-color: var(--blue); text-decoration: none; }
+  .chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 48px; }
+  .chip {
+    font-size: 0.8rem; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 99px; padding: 3px 12px; background: var(--bg-soft);
+  }
+
+  /* mock window */
+  .window {
+    max-width: 860px; margin: 0 auto; text-align: left;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 24px 60px -24px rgba(0,0,0,.55);
+    font-size: 13px;
+  }
+  .headerbar {
+    display: flex; align-items: center; padding: 10px 14px;
+    background: var(--bg-soft); border-bottom: 1px solid var(--border);
+  }
+  .hb-title { flex: 1; text-align: center; font-weight: 600; color: var(--muted); }
+  .hb-btns { display: flex; gap: 8px; }
+  .hb-btns span { width: 12px; height: 12px; border-radius: 50%; background: var(--border); display: block; }
+  .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+  .path {
+    background: var(--panel); padding: 8px 14px; font-family: var(--mono);
+    color: var(--muted); display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap;
+  }
+  .path .schip {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    color: var(--green); border: 1px solid var(--green);
+    border-radius: 99px; padding: 0 8px; opacity: .85;
+  }
+  .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+  .pane { background: var(--panel); padding: 4px 0 8px; }
+  .row {
+    display: grid; grid-template-columns: 1fr 66px 92px; gap: 8px;
+    padding: 4px 14px; align-items: baseline;
+  }
+  .row span:nth-child(2), .row span:nth-child(3) { text-align: right; color: var(--muted); font-size: 12px; }
+  .row.head { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); margin-bottom: 4px; padding-bottom: 6px; }
+  .row.head span { color: var(--muted); font-size: inherit; }
+  .row .dir { font-weight: 600; }
+  .row.sel { background: color-mix(in srgb, var(--accent) 22%, transparent); border-left: 3px solid var(--accent); padding-left: 11px; }
+  .statusbar { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--bg-soft); }
+  .prog { height: 6px; border-radius: 99px; background: var(--border); overflow: hidden; margin-bottom: 7px; }
+  .prog .fill { height: 100%; width: 68%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--green)); }
+  .prog-label { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  .window-caption { text-align: center; margin-top: 14px; font-size: 0.85rem; }
+  @media (max-width: 720px) {
+    .paths, .panes { grid-template-columns: 1fr; }
+    .path:last-child { border-top: 1px solid var(--border); }
+    .row { grid-template-columns: 1fr 60px 80px; }
+  }
+
+  /* story sections */
+  .prose { max-width: 46em; }
+  .pull {
+    border-left: 3px solid var(--green); padding: 4px 0 4px 18px;
+    margin: 22px 0; font-size: 1.15rem; font-weight: 500;
+  }
+
+  /* features */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 28px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 1.05rem; }
+  .card h3::before {
+    content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 3px;
+    background: linear-gradient(135deg, var(--blue), var(--green));
+    margin-right: 10px;
+  }
+  .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .card code { font-family: var(--mono); font-size: 0.88em; }
+
+  /* shortcuts */
+  .keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 32px; margin-top: 24px; }
+  .keyrow { display: flex; align-items: center; gap: 14px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  kbd {
+    font-family: var(--mono); font-size: 0.82rem; min-width: 84px; text-align: center;
+    background: var(--bg-soft); border: 1px solid var(--border); border-bottom-width: 2px;
+    border-radius: 7px; padding: 4px 10px; white-space: nowrap;
+  }
+
+  /* install */
+  .install h3 { margin: 32px 0 10px; font-size: 1.1rem; }
+  .btns.dl { justify-content: flex-start; margin: 14px 0 14px; }
+  .compat {
+    color: var(--muted); font-size: 0.95rem; max-width: 46em;
+    border-left: 3px solid var(--blue); padding-left: 16px; margin-top: 16px;
+  }
+  pre {
+    background: var(--code-bg); color: #dbe7f3; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px; overflow-x: auto;
+    font-family: var(--mono); font-size: 0.88rem; line-height: 1.6; margin: 0;
+  }
+  pre .c { color: #7d8fa3; }
+
+  footer {
+    border-top: 1px solid var(--border); margin-top: 48px;
+    padding: 34px 0 44px; text-align: center; color: var(--muted); font-size: 0.92rem;
+  }
+  footer p { margin: 0 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <span class="brand"><img src="icon.png" alt="" width="30" height="30">LinuxSCP</span>
+    <nav>
+      <a href="#why">Why</a>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a class="gh" href="https://github.com/linuxscp/linuxscp">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <img class="mark" src="icon.png" alt="LinuxSCP icon: a penguin with transfer arrows">
+    <h1>The only app I was <span class="grad">sad to lose</span> when I switched to Linux.</h1>
+    <p class="lede">
+      LinuxSCP is a dual-pane, commander-style SFTP client for GNOME — a WinSCP for Linux.
+      It reads your <code>~/.ssh/config</code>, elevates to root with <code>sudo</code> or
+      <code>su&nbsp;-</code>, and resumes transfers that drop mid-copy. Free and open source, forever.
+    </p>
+    <div class="btns">
+      <a class="btn primary" href="#install">Download .deb</a>
+      <a class="btn ghost" href="https://github.com/linuxscp/linuxscp">View on GitHub</a>
+    </div>
+    <div class="chips">
+      <span class="chip">GTK4 + libadwaita</span>
+      <span class="chip">Rust</span>
+      <span class="chip">GPL-3.0-or-later</span>
+      <span class="chip">Uses your real ssh</span>
+    </div>
+
+    <div class="window" aria-hidden="true">
+      <div class="headerbar">
+        <div class="hb-title">jacob@homelab — LinuxSCP</div>
+        <div class="hb-btns"><span></span><span></span><span></span></div>
+      </div>
+      <div class="paths">
+        <div class="path">~/backups</div>
+        <div class="path">/var/www/site <span class="schip">root via sudo</span></div>
+      </div>
+      <div class="panes">
+        <div class="pane">
+          <div class="row head"><span>Name</span><span>Size</span><span>Modified</span></div>
+          <div class="row"><span class="dir">..</span><span>—</span><span></span></div>
+          <div class="row"><span class="dir">photos/</span><span>—</span><span>Jul 6</span></div>
+          <div class="row"><span>site-backup.tar.gz</span><span>1.2 GB</span><span>Today 14:02</span></div>
+          <div class="row"><span>docker-compose.yml</span><span>2.1 kB</span><span>Jul 9</span></div>
+          <div class="row"><span>deploy.sh</span><span>1.8 kB</span><span>Jul 9</span></div>
+          <div class="row"><span>notes.md</span><span>4.3 kB</span><span>Jun 30</span></div>
+        </div>
+        <div class="pane">
+          <div class="row head"><span>Name</span><span>Size</span><span>Modified</span></div>
+          <div class="row"><span class="dir">..</span><span>—</span><span></span></div>
+          <div class="row"><span class="dir">assets/</span><span>—</span><span>Jul 2</span></div>
+          <div class="row"><span class="dir">uploads/</span><span>—</span><span>Today 13:56</span></div>
+          <div class="row"><span>index.html</span><span>12 kB</span><span>Jul 2</span></div>
+          <div class="row sel"><span>error.log</span><span>84 kB</span><span>Today 14:05</span></div>
+          <div class="row"><span>.htaccess</span><span>512 B</span><span>May 18</span></div>
+        </div>
+      </div>
+      <div class="statusbar">
+        <div class="prog"><div class="fill"></div></div>
+        <div class="prog-label">site-backup.tar.gz → homelab:/var/www/site &nbsp;·&nbsp; 68% &nbsp;·&nbsp; 42 MB/s &nbsp;·&nbsp; ETA 0:12</div>
+      </div>
+    </div>
+    <p class="window-caption muted"><em>A stylized impression, not a screenshot — install it below to see the real thing.</em></p>
+  </section>
+
+  <section id="why">
+    <h2>Why I made this</h2>
+    <div class="prose">
+      <p>
+        When I finally moved from Windows to Linux, almost nothing hurt. Everything I used
+        either ran natively or had a Linux equivalent that was close enough. One app was the
+        exception: <strong>WinSCP</strong>. It was the only piece of software I was genuinely
+        sad to leave behind.
+      </p>
+      <p class="pull">
+        FileZilla is awesome — it just isn't WinSCP.
+      </p>
+      <p>
+        What I missed wasn't a feature list. It was the shape of the thing: two panes, local on
+        the left, server on the right, <em>F5</em> to copy, editing root-owned files through
+        <code>sudo</code> without touching the server's config. Ten years of muscle memory with
+        nowhere to go.
+      </p>
+      <p>
+        So now there's LinuxSCP: that same commander layout, built native for GNOME, on top of
+        the OpenSSH you already have configured.
+      </p>
+    </div>
+  </section>
+
+  <section id="built">
+    <h2>Full disclosure: I didn't write a line of it</h2>
+    <div class="prose">
+      <p>
+        I described the WinSCP I remembered to <strong>Fable&nbsp;5</strong>, an AI coding model,
+        and it built LinuxSCP in about five prompts — the dual panes, the
+        <code>~/.ssh/config</code> integration, the sudo/su elevation, the resumable transfer
+        queue, the tests.
+      </p>
+      <p>
+        I use it every day on Debian 13 (Trixie) with GNOME to move files to and from my
+        servers. Every line is GPL, in the open, so you can audit exactly what the robot wrote —
+        and it never reimplements SSH: it drives your system's real <code>ssh</code> binary,
+        so your keys, agents, aliases and jump hosts work untouched.
+      </p>
+    </div>
+  </section>
+
+  <section id="features">
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Dual-pane commander</h3>
+        <p>Local on one side, remote on the other. <code>Tab</code> to switch, <code>F5</code> to copy,
+        drag and drop if you insist on using the mouse — and tabs along the top for as many
+        sessions as you need.</p>
+      </div>
+      <div class="card">
+        <h3>Your <code>~/.ssh/config</code> just works</h3>
+        <p>Aliases, <code>ProxyJump</code>, <code>ControlMaster</code>, identity files, agents and
+        hardware keys — LinuxSCP spawns your real <code>ssh</code>, so zero re-configuration.</p>
+      </div>
+      <div class="card">
+        <h3>Root file management</h3>
+        <p>Connect as yourself, elevate with <code>sudo</code> or <code>su -</code>, WinSCP-style.
+        No <code>sshd_config</code> changes, no root logins enabled.</p>
+      </div>
+      <div class="card">
+        <h3>Transfers that survive</h3>
+        <p>Interrupted files stage as <code>.filepart</code> and resume from the exact byte where
+        they stopped — across reconnects.</p>
+      </div>
+      <div class="card">
+        <h3>A real queue</h3>
+        <p>Progress, speed and ETA; pause, resume and cancel; recursive directory copies; and
+        overwrite / resume / skip prompts on conflicts. Scanning and copying run in parallel,
+        so big trees start moving instantly.</p>
+      </div>
+      <div class="card">
+        <h3>Little comforts</h3>
+        <p>A site manager with folders and search, "open terminal here" (locally or ssh'd into
+        the host), a right-click menu with copy/paste, a properties dialog for permissions,
+        owner and group, hidden-file toggle, reconnect on drop.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="shortcuts">
+    <h2>Muscle memory included</h2>
+    <p class="muted">If your fingers know WinSCP or Norton Commander, they already know LinuxSCP.</p>
+    <div class="keys">
+      <div class="keyrow"><kbd>Tab</kbd><span>Switch active pane</span></div>
+      <div class="keyrow"><kbd>F5</kbd><span>Copy to other pane</span></div>
+      <div class="keyrow"><kbd>Enter</kbd><span>Open directory</span></div>
+      <div class="keyrow"><kbd>F6</kbd><span>Move to other pane</span></div>
+      <div class="keyrow"><kbd>Backspace</kbd><span>Parent directory</span></div>
+      <div class="keyrow"><kbd>F7</kbd><span>New directory</span></div>
+      <div class="keyrow"><kbd>F2</kbd><span>Rename</span></div>
+      <div class="keyrow"><kbd>F8 / Del</kbd><span>Delete</span></div>
+      <div class="keyrow"><kbd>F9</kbd><span>Properties — permissions, owner, group</span></div>
+      <div class="keyrow"><kbd>Ctrl+H</kbd><span>Toggle hidden files</span></div>
+      <div class="keyrow"><kbd>Ctrl+C / Ctrl+V</kbd><span>Copy and paste files</span></div>
+      <div class="keyrow"><kbd>Ctrl+T</kbd><span>Open terminal here</span></div>
+      <div class="keyrow"><kbd>Ctrl+L</kbd><span>Edit path</span></div>
+    </div>
+  </section>
+
+  <section id="install" class="install">
+    <h2>Get it</h2>
+
+    <h3 style="margin-top:8px">Debian / Ubuntu — download the .deb</h3>
+    <p class="muted">Grab the latest build, then let apt handle dependencies:</p>
+    <div class="btns dl">
+      <a class="btn primary" href="https://github.com/linuxscp/linuxscp/releases/latest/download/linuxscp_amd64.deb">Download for x86-64</a>
+      <a class="btn ghost" href="https://github.com/linuxscp/linuxscp/releases/latest/download/linuxscp_arm64.deb">Download for ARM64</a>
+    </div>
+<pre>sudo apt install ./linuxscp_amd64.deb</pre>
+    <p class="compat">
+      <strong>Compatibility:</strong> needs Debian 13 "Trixie", Ubuntu 24.04 LTS, or anything
+      newer (including derivatives like Mint 22), with GTK4 &ge; 4.12 and libadwaita &ge; 1.5 —
+      in practice, a distro from 2024 onward. Don't worry about getting it wrong:
+      <code>apt</code> checks all of this and politely refuses rather than half-installing.
+      On an older or non-Debian distro, build from source or use the Flatpak below.
+      Versioned builds and checksums live on the
+      <a href="https://github.com/linuxscp/linuxscp/releases">releases page</a>.
+      I daily-drive the x86-64 build on Debian 13 + GNOME.
+    </p>
+
+    <h3>Or build the .deb yourself</h3>
+<pre><span class="c"># dependencies (plus a Rust toolchain)</span>
+sudo apt install libgtk-4-dev libadwaita-1-dev build-essential
+
+git clone https://github.com/linuxscp/linuxscp.git
+cd linuxscp
+make deb
+sudo apt install ./target/deb/linuxscp_*_amd64.deb</pre>
+
+    <h3>Run from source (any distro)</h3>
+<pre><span class="c"># Fedora: sudo dnf install gtk4-devel libadwaita-devel</span>
+<span class="c"># Arch:   sudo pacman -S gtk4 libadwaita</span>
+cargo run -p linuxscp</pre>
+
+    <h3>Flatpak</h3>
+<pre>flatpak-builder --user --install build build-aux/io.github.linuxscp.LinuxSCP.json</pre>
+  </section>
+
+  <section id="support">
+    <h2>The maintenance plan, honestly</h2>
+    <div class="prose">
+      <p>
+        I will support LinuxSCP for as long as I'm employed and need to move files between
+        machines without remembering CLI flags. I'm lazy, which makes this load-bearing
+        software in my life — that's a stronger guarantee than most roadmaps.
+      </p>
+      <p>
+        And if I ever do disappear: it's GPL-3.0. The code is yours. Fork it, fix it, keep it alive.
+      </p>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <p><strong>LinuxSCP</strong> · GPL-3.0-or-later · Free for everyone, forever.</p>
+  <p><a href="https://github.com/linuxscp/linuxscp">Source code</a> · <a href="https://github.com/linuxscp/linuxscp/issues">Report a bug</a></p>
+  <p>Made on Debian, for people who miss F5.</p>
+</footer>
+
+</body>
+</html>

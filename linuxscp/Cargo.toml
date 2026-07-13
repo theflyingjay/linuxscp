@@ -1,0 +1,28 @@
+[package]
+name = "linuxscp"
+description = "A commander-style SFTP client for GNOME"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+adw = { version = "0.8", package = "libadwaita", features = ["v1_5"] }
+anyhow = "1.0.103"
+async-channel = "2.5.0"
+dirs = "6.0.0"
+futures = "0.3.32"
+gtk = { version = "0.10.3", package = "gtk4", features = ["v4_12"] }
+keyring = { version = "3", default-features = false, features = ["async-secret-service", "crypto-rust", "tokio"] }
+russh-sftp = "2.3.0"
+serde = "1.0.228"
+serde_json = "1.0.150"
+shell-words = "1.1.1"
+thiserror = "2.0.18"
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "process", "io-util", "sync", "time", "fs", "net"] }
+tokio-util = "0.7.18"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+uuid = { version = "1.23.4", features = ["v4"] }

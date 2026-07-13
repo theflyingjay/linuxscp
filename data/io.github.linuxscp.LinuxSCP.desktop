@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=LinuxSCP
+GenericName=SFTP Client
+Comment=Commander-style SFTP file transfer for GNOME
+Icon=io.github.linuxscp.LinuxSCP
+Exec=linuxscp %U
+Terminal=false
+Categories=Network;FileTransfer;GTK;
+Keywords=SFTP;SSH;SCP;FTP;Transfer;Remote;Files;Server;
+StartupNotify=true
+StartupWMClass=linuxscp

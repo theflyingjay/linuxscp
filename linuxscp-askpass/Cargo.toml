@@ -1,0 +1,11 @@
+[package]
+name = "linuxscp-askpass"
+description = "SSH_ASKPASS helper that forwards prompts to the LinuxSCP GUI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

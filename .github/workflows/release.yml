@@ -1,0 +1,73 @@
+name: Release
+
+# Builds .deb packages and attaches them to a GitHub Release.
+# Cut a release with:
+#   git tag v0.2.0 && git push origin v0.2.0
+#
+# Runners are pinned to ubuntu-24.04 (not -latest) on purpose: the .deb
+# inherits the build machine's glibc floor, and 24.04 keeps the package
+# installable on Debian 13 "Trixie" and Ubuntu 24.04 LTS or newer — which
+# matches the app's real minimum (GTK4 >= 4.12, libadwaita >= 1.5).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create release if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --verify-tag --generate-notes --title "LinuxSCP $GITHUB_REF_NAME"
+
+  build-deb:
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GTK4 and libadwaita
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev build-essential
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build .deb
+        run: make deb
+
+      - name: Smoke-test the package installs
+        run: |
+          sudo apt-get install -y ./target/deb/linuxscp_*_${{ matrix.arch }}.deb
+          command -v linuxscp
+          command -v linuxscp-askpass
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: target/deb
+        run: |
+          DEB="$(ls linuxscp_*_${{ matrix.arch }}.deb)"
+          sha256sum "$DEB" > "$DEB.sha256"
+          # Stable-name copy so the website can always link to the newest build:
+          #   .../releases/latest/download/linuxscp_${{ matrix.arch }}.deb
+          cp "$DEB" "linuxscp_${{ matrix.arch }}.deb"
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber \
+            "$DEB" "$DEB.sha256" "linuxscp_${{ matrix.arch }}.deb"

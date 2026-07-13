@@ -1,0 +1,46 @@
+{
+    "app-id": "io.github.linuxscp.LinuxSCP",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "47",
+    "sdk": "org.gnome.Sdk",
+    "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+    "command": "linuxscp",
+    "finish-args": [
+        "--share=network",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--filesystem=home",
+        "--filesystem=xdg-run/ssh-agent",
+        "--talk-name=org.freedesktop.Flatpak"
+    ],
+    "build-options": {
+        "append-path": "/usr/lib/sdk/rust-stable/bin",
+        "env": {
+            "CARGO_HOME": "/run/build/linuxscp/cargo"
+        }
+    },
+    "comment": "SSH connectivity uses the host's ssh via flatpak-spawn --host; the app talks to org.freedesktop.Flatpak to reach the host OpenSSH, keys and agent.",
+    "modules": [
+        {
+            "name": "linuxscp",
+            "buildsystem": "simple",
+            "build-commands": [
+                "cargo --offline build --release",
+                "install -Dm755 target/release/linuxscp /app/bin/linuxscp",
+                "install -Dm755 target/release/linuxscp-askpass /app/bin/linuxscp-askpass",
+                "install -Dm644 data/io.github.linuxscp.LinuxSCP.desktop /app/share/applications/io.github.linuxscp.LinuxSCP.desktop",
+                "install -Dm644 data/io.github.linuxscp.LinuxSCP.metainfo.xml /app/share/metainfo/io.github.linuxscp.LinuxSCP.metainfo.xml",
+                "install -Dm644 data/icons/hicolor/256x256/apps/io.github.linuxscp.LinuxSCP.png /app/share/icons/hicolor/256x256/apps/io.github.linuxscp.LinuxSCP.png",
+                "install -Dm644 data/sounds/success.mp3 /app/share/linuxscp/sounds/success.mp3"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": ".."
+                }
+            ]
+        }
+    ]
+}
