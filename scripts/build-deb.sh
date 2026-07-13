@@ -9,7 +9,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-APP_ID="io.github.linuxscp.LinuxSCP"
+APP_ID="io.github.theflyingjay.LinuxSCP"
 PKG="linuxscp"
 VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
 ARCH="$(dpkg --print-architecture)"
@@ -105,7 +105,7 @@ Installed-Size: $INSTALLED_KB
 Depends: $DEPS
 Section: net
 Priority: optional
-Homepage: https://github.com/linuxscp/linuxscp
+Homepage: https://github.com/theflyingjay/linuxscp
 Description: Commander-style SFTP client for GNOME
  LinuxSCP is a native GTK4/libadwaita SFTP client with a dual-pane,
  keyboard-driven layout for people moving from Windows and WinSCP to Linux.

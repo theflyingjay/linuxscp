@@ -6,7 +6,7 @@
 //! operation therefore runs on a short-lived dedicated OS thread that has no
 //! ambient runtime, which is safe to call from GTK handlers or tokio tasks.
 
-const SERVICE: &str = "io.github.linuxscp.LinuxSCP";
+const SERVICE: &str = "io.github.theflyingjay.LinuxSCP";
 
 fn run<T, F>(f: F) -> keyring::Result<T>
 where

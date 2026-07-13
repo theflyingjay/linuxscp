@@ -8,8 +8,8 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="LinuxSCP — a WinSCP for Linux">
 <meta property="og:description" content="A dual-pane, commander-style SFTP client for GNOME. Your ~/.ssh/config just works. Free forever under the GPL.">
-<meta property="og:url" content="https://linuxscp.github.io/linuxscp/">
-<meta property="og:image" content="https://linuxscp.github.io/linuxscp/icon.png">
+<meta property="og:url" content="https://theflyingjay.github.io/linuxscp/">
+<meta property="og:image" content="https://theflyingjay.github.io/linuxscp/icon.png">
 <meta name="theme-color" content="#0e1116">
 <link rel="icon" type="image/png" href="icon.png">
 <style>
@@ -208,7 +208,7 @@
       <a href="#why">Why</a>
       <a href="#features">Features</a>
       <a href="#install">Install</a>
-      <a class="gh" href="https://github.com/linuxscp/linuxscp">GitHub</a>
+      <a class="gh" href="https://github.com/theflyingjay/linuxscp">GitHub</a>
     </nav>
   </header>
 
@@ -222,7 +222,7 @@
     </p>
     <div class="btns">
       <a class="btn primary" href="#install">Download .deb</a>
-      <a class="btn ghost" href="https://github.com/linuxscp/linuxscp">View on GitHub</a>
+      <a class="btn ghost" href="https://github.com/theflyingjay/linuxscp">View on GitHub</a>
     </div>
     <div class="chips">
       <span class="chip">GTK4 + libadwaita</span>
@@ -376,8 +376,8 @@
     <h3 style="margin-top:8px">Debian / Ubuntu — download the .deb</h3>
     <p class="muted">Grab the latest build, then let apt handle dependencies:</p>
     <div class="btns dl">
-      <a class="btn primary" href="https://github.com/linuxscp/linuxscp/releases/latest/download/linuxscp_amd64.deb">Download for x86-64</a>
-      <a class="btn ghost" href="https://github.com/linuxscp/linuxscp/releases/latest/download/linuxscp_arm64.deb">Download for ARM64</a>
+      <a class="btn primary" href="https://github.com/theflyingjay/linuxscp/releases/latest/download/linuxscp_amd64.deb">Download for x86-64</a>
+      <a class="btn ghost" href="https://github.com/theflyingjay/linuxscp/releases/latest/download/linuxscp_arm64.deb">Download for ARM64</a>
     </div>
 <pre>sudo apt install ./linuxscp_amd64.deb</pre>
     <p class="compat">
@@ -387,7 +387,7 @@
       <code>apt</code> checks all of this and politely refuses rather than half-installing.
       On an older or non-Debian distro, build from source or use the Flatpak below.
       Versioned builds and checksums live on the
-      <a href="https://github.com/linuxscp/linuxscp/releases">releases page</a>.
+      <a href="https://github.com/theflyingjay/linuxscp/releases">releases page</a>.
       I daily-drive the x86-64 build on Debian 13 + GNOME.
     </p>
 
@@ -395,7 +395,7 @@
 <pre><span class="c"># dependencies (plus a Rust toolchain)</span>
 sudo apt install libgtk-4-dev libadwaita-1-dev build-essential
 
-git clone https://github.com/linuxscp/linuxscp.git
+git clone https://github.com/theflyingjay/linuxscp.git
 cd linuxscp
 make deb
 sudo apt install ./target/deb/linuxscp_*_amd64.deb</pre>
@@ -406,7 +406,7 @@ sudo apt install ./target/deb/linuxscp_*_amd64.deb</pre>
 cargo run -p linuxscp</pre>
 
     <h3>Flatpak</h3>
-<pre>flatpak-builder --user --install build build-aux/io.github.linuxscp.LinuxSCP.json</pre>
+<pre>flatpak-builder --user --install build build-aux/io.github.theflyingjay.LinuxSCP.json</pre>
   </section>
 
   <section id="support">
@@ -426,7 +426,7 @@ cargo run -p linuxscp</pre>
 
 <footer>
   <p><strong>LinuxSCP</strong> · GPL-3.0-or-later · Free for everyone, forever.</p>
-  <p><a href="https://github.com/linuxscp/linuxscp">Source code</a> · <a href="https://github.com/linuxscp/linuxscp/issues">Report a bug</a></p>
+  <p><a href="https://github.com/theflyingjay/linuxscp">Source code</a> · <a href="https://github.com/theflyingjay/linuxscp/issues">Report a bug</a></p>
   <p>Made on Debian, for people who miss F5.</p>
 </footer>
 

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="data/io.github.linuxscp.LinuxSCP.png" width="128" alt="LinuxSCP icon">
+<img src="data/io.github.theflyingjay.LinuxSCP.png" width="128" alt="LinuxSCP icon">
 
 # LinuxSCP
 
@@ -138,7 +138,7 @@ sudo make install
 ## Debian / Ubuntu package (.deb)
 
 Prebuilt `.deb`s for **x86-64 and ARM64** are attached to every
-[release](https://github.com/linuxscp/linuxscp/releases) (built on Ubuntu 24.04,
+[release](https://github.com/theflyingjay/linuxscp/releases) (built on Ubuntu 24.04,
 with SHA-256 checksums). They install on Debian 13 "Trixie", Ubuntu 24.04 LTS,
 and newer — anything shipping GTK4 ≥ 4.12 and libadwaita ≥ 1.5. On older systems
 `apt` will refuse cleanly; build from source instead.
@@ -171,7 +171,7 @@ penguin icon and "LinuxSCP" launcher show up in the app grid immediately.
 ## Flatpak
 
 ```bash
-flatpak-builder --user --install build build-aux/io.github.linuxscp.LinuxSCP.json
+flatpak-builder --user --install build build-aux/io.github.theflyingjay.LinuxSCP.json
 ```
 
 The Flatpak reaches the host's `ssh`, keys and agent via the host portal, so your

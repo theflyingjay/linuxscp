@@ -4,7 +4,7 @@ mod ui;
 use adw::prelude::*;
 use gtk::glib;
 
-const APP_ID: &str = "io.github.linuxscp.LinuxSCP";
+const APP_ID: &str = "io.github.theflyingjay.LinuxSCP";
 
 fn main() -> glib::ExitCode {
     tracing_subscriber::fmt()

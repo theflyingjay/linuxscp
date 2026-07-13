@@ -63,9 +63,9 @@ fn logo_widget() -> gtk::Widget {
     const CANDIDATES: [&str; 2] = [
         concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../data/io.github.linuxscp.LinuxSCP.png"
+            "/../data/io.github.theflyingjay.LinuxSCP.png"
         ),
-        "/usr/share/icons/hicolor/512x512/apps/io.github.linuxscp.LinuxSCP.png",
+        "/usr/share/icons/hicolor/512x512/apps/io.github.theflyingjay.LinuxSCP.png",
     ];
     for path in CANDIDATES {
         if std::path::Path::new(path).is_file() {
@@ -75,7 +75,7 @@ fn logo_widget() -> gtk::Widget {
             return picture.upcast();
         }
     }
-    let image = gtk::Image::from_icon_name("io.github.linuxscp.LinuxSCP");
+    let image = gtk::Image::from_icon_name("io.github.theflyingjay.LinuxSCP");
     image.set_pixel_size(160);
     image.upcast()
 }

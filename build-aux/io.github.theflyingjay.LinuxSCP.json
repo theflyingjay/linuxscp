@@ -1,5 +1,5 @@
 {
-    "app-id": "io.github.linuxscp.LinuxSCP",
+    "app-id": "io.github.theflyingjay.LinuxSCP",
     "runtime": "org.gnome.Platform",
     "runtime-version": "47",
     "sdk": "org.gnome.Sdk",
@@ -30,9 +30,9 @@
                 "cargo --offline build --release",
                 "install -Dm755 target/release/linuxscp /app/bin/linuxscp",
                 "install -Dm755 target/release/linuxscp-askpass /app/bin/linuxscp-askpass",
-                "install -Dm644 data/io.github.linuxscp.LinuxSCP.desktop /app/share/applications/io.github.linuxscp.LinuxSCP.desktop",
-                "install -Dm644 data/io.github.linuxscp.LinuxSCP.metainfo.xml /app/share/metainfo/io.github.linuxscp.LinuxSCP.metainfo.xml",
-                "install -Dm644 data/icons/hicolor/256x256/apps/io.github.linuxscp.LinuxSCP.png /app/share/icons/hicolor/256x256/apps/io.github.linuxscp.LinuxSCP.png",
+                "install -Dm644 data/io.github.theflyingjay.LinuxSCP.desktop /app/share/applications/io.github.theflyingjay.LinuxSCP.desktop",
+                "install -Dm644 data/io.github.theflyingjay.LinuxSCP.metainfo.xml /app/share/metainfo/io.github.theflyingjay.LinuxSCP.metainfo.xml",
+                "install -Dm644 data/icons/hicolor/256x256/apps/io.github.theflyingjay.LinuxSCP.png /app/share/icons/hicolor/256x256/apps/io.github.theflyingjay.LinuxSCP.png",
                 "install -Dm644 data/sounds/success.mp3 /app/share/linuxscp/sounds/success.mp3"
             ],
             "sources": [

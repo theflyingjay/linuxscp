@@ -655,7 +655,7 @@ impl App {
     fn show_about(&self) {
         let about = adw::AboutDialog::builder()
             .application_name("LinuxSCP")
-            .application_icon("io.github.linuxscp.LinuxSCP")
+            .application_icon("io.github.theflyingjay.LinuxSCP")
             .developer_name("Jacob Petrosky")
             .copyright("© 2026 Jacob Petrosky")
             .version(env!("CARGO_PKG_VERSION"))
@@ -665,7 +665,7 @@ impl App {
                  your ~/.ssh/config and supports sudo/su elevation and resumable \
                  transfers.",
             )
-            .website("https://github.com/linuxscp/linuxscp")
+            .website("https://github.com/theflyingjay/linuxscp")
             .build();
         about.present(Some(&self.window));
     }

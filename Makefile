@@ -4,7 +4,7 @@ PREFIX ?= /usr/local
 DESTDIR ?=
 BINDIR = $(DESTDIR)$(PREFIX)/bin
 DATADIR = $(DESTDIR)$(PREFIX)/share
-APP_ID = io.github.linuxscp.LinuxSCP
+APP_ID = io.github.theflyingjay.LinuxSCP
 
 .PHONY: all build release install uninstall test deb clean
 

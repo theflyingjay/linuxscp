@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.linuxscp.LinuxSCP</id>
+  <id>io.github.theflyingjay.LinuxSCP</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>LinuxSCP</name>
@@ -25,10 +25,10 @@
       <li>Drag and drop between panes</li>
     </ul>
   </description>
-  <launchable type="desktop-id">io.github.linuxscp.LinuxSCP.desktop</launchable>
-  <url type="homepage">https://github.com/linuxscp/linuxscp</url>
-  <url type="bugtracker">https://github.com/linuxscp/linuxscp/issues</url>
-  <developer id="io.github.linuxscp">
+  <launchable type="desktop-id">io.github.theflyingjay.LinuxSCP.desktop</launchable>
+  <url type="homepage">https://theflyingjay.github.io/linuxscp/</url>
+  <url type="bugtracker">https://github.com/theflyingjay/linuxscp/issues</url>
+  <developer id="io.github.theflyingjay">
     <name>Jacob Petrosky</name>
   </developer>
   <content_rating type="oars-1.1" />

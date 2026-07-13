@@ -11,7 +11,7 @@ edition = "2024"
 rust-version = "1.85"
 authors = ["Jacob Petrosky <theflyingjay@gmail.com>"]
 license = "GPL-3.0-or-later"
-repository = "https://github.com/linuxscp/linuxscp"
+repository = "https://github.com/theflyingjay/linuxscp"
 
 [profile.release]
 lto = "thin"
