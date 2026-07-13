@@ -229,7 +229,7 @@ fn sftp_roundtrip_with_resume() {
             gid,
             add_x_dirs: true,
         };
-        let changed = fsops::apply_attrs(remote, &[root_entry], &changes, true)
+        let changed = fsops::apply_attrs(remote, &[root_entry], &changes, true, None)
             .await
             .expect("apply_attrs failed");
         assert_eq!(changed, 3, "attrs + inner + leaf.txt");

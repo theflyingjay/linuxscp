@@ -9,16 +9,18 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 
 use super::entry_object::{format_mtime, format_size};
-use linuxscp::fsops::AttrChanges;
 use linuxscp::runtime::runtime;
+use linuxscp::transfers::AttrRequest;
 use linuxscp::types::{Backend, FsEntry};
 use linuxscp::{fsops, sessions};
 
+/// Show the dialog. When the user confirms with actual changes, `on_apply`
+/// receives the request — the app runs it as a queued, watchable job.
 pub fn show(
     parent: &impl IsA<gtk::Widget>,
     backend: Backend,
     entries: Vec<FsEntry>,
-    on_applied: impl Fn(u64) + 'static,
+    on_apply: impl Fn(AttrRequest) + 'static,
 ) {
     if entries.is_empty() {
         return;
@@ -215,10 +217,6 @@ pub fn show(
     let owner_focus = owner_row.clone();
     {
         let perms = perms.clone();
-        let backend_for_apply = backend;
-        let entries_for_apply = entries.clone();
-        let parent = parent.clone();
-        let on_applied = Rc::new(on_applied);
         dialog.connect_response(Some("ok"), move |_, _| {
             let owner_text = owner_row.text().trim().to_string();
             let group_text = group_row.text().trim().to_string();
@@ -230,30 +228,12 @@ pub fn show(
             if owner.is_none() && group.is_none() && mode.is_none() {
                 return; // nothing changed
             }
-            let add_x_dirs = add_x_check.is_active();
-            let recursive = recursive_check.is_active();
-            let entries = entries_for_apply.clone();
-            let parent = parent.clone();
-            let on_applied = on_applied.clone();
-            glib::spawn_future_local(async move {
-                let result = runtime()
-                    .spawn(async move {
-                        let (uid, gid) =
-                            fsops::resolve_ids(backend_for_apply, owner, group).await?;
-                        let changes = AttrChanges {
-                            mode,
-                            uid,
-                            gid,
-                            add_x_dirs,
-                        };
-                        fsops::apply_attrs(backend_for_apply, &entries, &changes, recursive).await
-                    })
-                    .await;
-                match result {
-                    Ok(Ok(changed)) => on_applied(changed),
-                    Ok(Err(err)) => show_error(&parent, &format!("{err:#}")),
-                    Err(err) => show_error(&parent, &err.to_string()),
-                }
+            on_apply(AttrRequest {
+                owner,
+                group,
+                mode,
+                add_x_dirs: add_x_check.is_active(),
+                recursive: recursive_check.is_active(),
             });
         });
     }
@@ -262,16 +242,6 @@ pub fn show(
     // Keep focus off the selectable info labels (which would show an
     // all-selected highlight); start in the first editable field instead.
     owner_focus.grab_focus();
-}
-
-fn show_error(parent: &gtk::Widget, message: &str) {
-    let alert = adw::AlertDialog::builder()
-        .heading("Could Not Apply Changes")
-        .body(message)
-        .close_response("close")
-        .build();
-    alert.add_response("close", "Close");
-    alert.present(Some(parent));
 }
 
 /// The WinSCP-style permission editor: R/W/X per class, the special bits,

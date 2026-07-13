@@ -216,10 +216,22 @@ impl TransferState {
     }
 }
 
+/// What a queue job is doing — copies/moves transfer bytes, while deletes
+/// and attribute changes are remote mutations that also want progress,
+/// cancel and a pane refresh when they complete.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransferKind {
+    Copy,
+    Move,
+    Delete,
+    Attributes,
+}
+
 #[derive(Debug, Clone)]
 pub struct TransferSnapshot {
     pub id: TransferId,
     pub title: String,
+    pub kind: TransferKind,
     pub state: TransferState,
     pub current_file: String,
     pub done_bytes: u64,

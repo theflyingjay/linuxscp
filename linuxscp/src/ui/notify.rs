@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::gio;
-use linuxscp::types::TransferState;
+use linuxscp::types::{TransferKind, TransferState};
 
 /// What feedback to give when a transfer reaches a given state, factoring in
 /// the user's notification settings. `None` means stay silent (transfer is
@@ -21,10 +21,16 @@ pub struct CompletionPlan {
 }
 
 pub fn completion_plan(
+    kind: TransferKind,
     state: TransferState,
     sound_on: bool,
     desktop_on: bool,
 ) -> Option<CompletionPlan> {
+    // Quick in-place mutations (delete, chmod/chown) finish with their queue
+    // row and a pane refresh; a chime and desktop banner would be noise.
+    if !matches!(kind, TransferKind::Copy | TransferKind::Move) {
+        return None;
+    }
     let success = match state {
         TransferState::Done => true,
         TransferState::Failed => false,
@@ -141,20 +147,25 @@ mod tests {
 
     #[test]
     fn plan_matrix() {
+        use TransferKind::*;
         // Success with both toggles on: sound + desktop.
-        let p = completion_plan(TransferState::Done, true, true).unwrap();
+        let p = completion_plan(Copy, TransferState::Done, true, true).unwrap();
         assert!(p.play_sound && p.show_desktop && p.success);
 
         // Failure never plays the success sound, but can still notify.
-        let p = completion_plan(TransferState::Failed, true, true).unwrap();
+        let p = completion_plan(Move, TransferState::Failed, true, true).unwrap();
         assert!(!p.play_sound && p.show_desktop && !p.success);
 
         // Toggles off: silence.
-        let p = completion_plan(TransferState::Done, false, false).unwrap();
+        let p = completion_plan(Copy, TransferState::Done, false, false).unwrap();
         assert!(!p.play_sound && !p.show_desktop);
 
         // Non-terminal / cancelled: no plan at all.
-        assert!(completion_plan(TransferState::Running, true, true).is_none());
-        assert!(completion_plan(TransferState::Cancelled, true, true).is_none());
+        assert!(completion_plan(Copy, TransferState::Running, true, true).is_none());
+        assert!(completion_plan(Copy, TransferState::Cancelled, true, true).is_none());
+
+        // Mutation jobs complete quietly (queue row + pane refresh only).
+        assert!(completion_plan(Delete, TransferState::Done, true, true).is_none());
+        assert!(completion_plan(Attributes, TransferState::Failed, true, true).is_none());
     }
 }

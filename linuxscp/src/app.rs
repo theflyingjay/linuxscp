@@ -897,31 +897,12 @@ impl App {
         };
         let this = self.clone();
         let backend = pane.backend();
-        let dir = pane.current_dir();
         prompts::confirm(&self.window, "Delete", &body, "Delete", move || {
-            let entries = entries.clone();
-            let dir = dir.clone();
-            let this = this.clone();
-            glib::spawn_future_local(async move {
-                let result = runtime()
-                    .spawn(async move {
-                        for entry in &entries {
-                            fsops::delete(backend, entry).await?;
-                        }
-                        Ok::<_, anyhow::Error>(())
-                    })
-                    .await;
-                match result {
-                    // Reload on success and on partial failure alike, so the
-                    // list reflects whatever was actually removed.
-                    Ok(Ok(())) => this.reload_views(backend, &dir),
-                    Ok(Err(err)) => {
-                        this.toast(&format!("Delete failed: {err:#}"));
-                        this.reload_views(backend, &dir);
-                    }
-                    Err(err) => this.toast(&err.to_string()),
-                }
-            });
+            // Runs as a queue job: the row shows the removal count climbing
+            // and can be cancelled; every pane refreshes when it finishes
+            // (success, failure or cancel alike — reload_all_panes fires on
+            // any terminal state, so partial deletions show up too).
+            transfers::start_delete(backend, entries.clone(), this.events_tx.clone());
         });
     }
 
@@ -1140,13 +1121,18 @@ impl App {
             return;
         }
         let this = self.clone();
-        properties::show(&self.window, pane.backend(), entries, move |changed| {
-            // Both panes might be showing the affected directory.
-            this.reload_all_panes();
-            this.toast(&format!(
-                "Changed {changed} {}",
-                if changed == 1 { "item" } else { "items" }
-            ));
+        let backend = pane.backend();
+        let entries_for_apply = entries.clone();
+        properties::show(&self.window, backend, entries, move |request| {
+            // Runs as a queue job (recursive changes can take a while on a
+            // real link): progress is visible, it can be cancelled, and all
+            // panes refresh when it completes.
+            transfers::start_attrs(
+                backend,
+                entries_for_apply.clone(),
+                request,
+                this.events_tx.clone(),
+            );
         });
     }
 
@@ -1385,7 +1371,9 @@ impl App {
             let s = self.settings.borrow();
             (s.notify_sound, s.notify_desktop)
         };
-        let Some(plan) = crate::ui::notify::completion_plan(snapshot.state, sound, desktop) else {
+        let Some(plan) =
+            crate::ui::notify::completion_plan(snapshot.kind, snapshot.state, sound, desktop)
+        else {
             return;
         };
         let detail = if plan.success {

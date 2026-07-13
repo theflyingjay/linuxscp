@@ -6,10 +6,11 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use gtk::glib;
 
 use super::entry_object::format_size;
 use linuxscp::transfers;
-use linuxscp::types::{TransferAction, TransferId, TransferSnapshot, TransferState};
+use linuxscp::types::{TransferAction, TransferId, TransferKind, TransferSnapshot, TransferState};
 
 struct Row {
     root: gtk::Box,
@@ -78,16 +79,23 @@ impl QueueView {
         });
 
         row.title.set_text(&snapshot.title);
-        // While the tree is still being counted the byte total is only a
-        // lower bound, so a percentage would lurch around and read far too
-        // high early on. Pulse an indeterminate bar until the total is known,
-        // then switch to an exact fraction.
+        let is_op = matches!(
+            snapshot.kind,
+            TransferKind::Delete | TransferKind::Attributes
+        );
+        // While the totals are still being counted they're only lower
+        // bounds, so a percentage would lurch around and read far too high
+        // early on. Pulse an indeterminate bar until the total is known,
+        // then switch to an exact fraction (bytes for copies, item counts
+        // for mutations, which move no bytes).
         let counting = snapshot.scanning && !snapshot.state.is_terminal();
         if counting {
             row.progress.pulse();
         } else {
             let fraction = if snapshot.total_bytes > 0 {
                 snapshot.done_bytes as f64 / snapshot.total_bytes as f64
+            } else if snapshot.files_total > 0 {
+                snapshot.files_done as f64 / snapshot.files_total as f64
             } else {
                 0.0
             };
@@ -100,11 +108,7 @@ impl QueueView {
             TransferState::Running => running_detail(&snapshot),
             TransferState::Paused => "Paused".to_string(),
             TransferState::WaitingConflict => "Waiting for answer…".to_string(),
-            TransferState::Done => format!(
-                "Done — {} in {} files",
-                format_size(snapshot.total_bytes),
-                snapshot.files_total
-            ),
+            TransferState::Done => done_detail(&snapshot),
             TransferState::Failed => snapshot
                 .error
                 .clone()
@@ -123,6 +127,9 @@ impl QueueView {
                 row.pause_btn.set_tooltip_text(Some("Pause"));
             }
         }
+        // Mutations support cancel but not pause.
+        row.pause_btn
+            .set_visible(!is_op && !snapshot.state.is_terminal());
 
         if snapshot.state.is_terminal() {
             row.pause_btn.set_visible(false);
@@ -133,6 +140,16 @@ impl QueueView {
             }
             if snapshot.state == TransferState::Done {
                 row.progress.set_fraction(1.0);
+                // Completed mutations clear themselves after a moment (the
+                // pane refresh is the real receipt); copies stay dismissable
+                // by hand, and failures always stick around.
+                if is_op {
+                    let queue = self.clone();
+                    let id = snapshot.id;
+                    glib::timeout_add_local_once(std::time::Duration::from_secs(4), move || {
+                        queue.dismiss(id);
+                    });
+                }
             }
             // Terminal states are emitted exactly once, so this fires once
             // per job however it ended: partial results from a cancelled or
@@ -229,7 +246,21 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
 /// the total is partial, so we show what's been done plus a "still counting"
 /// hint and withhold the ETA (which would be meaningless). Once the total is
 /// known we show an exact "done / total", speed and time remaining.
+/// Mutations (delete / attribute changes) report item counts instead.
 fn running_detail(snap: &TransferSnapshot) -> String {
+    match snap.kind {
+        TransferKind::Delete => {
+            return format!("{} removed…", snap.files_done);
+        }
+        TransferKind::Attributes => {
+            return if snap.scanning {
+                format!("Collecting items… {} changed", snap.files_done)
+            } else {
+                format!("{} / {} changed", snap.files_done, snap.files_total)
+            };
+        }
+        TransferKind::Copy | TransferKind::Move => {}
+    }
     let mut text = if snap.scanning {
         // "+" signals the totals are still climbing.
         format!(
@@ -263,6 +294,35 @@ fn running_detail(snap: &TransferSnapshot) -> String {
         text.push_str(&format!("  •  {}", snap.current_file));
     }
     text
+}
+
+/// Detail line for a finished job, per kind.
+fn done_detail(snap: &TransferSnapshot) -> String {
+    match snap.kind {
+        TransferKind::Delete => format!(
+            "Removed {} {}",
+            snap.files_done,
+            if snap.files_done == 1 {
+                "item"
+            } else {
+                "items"
+            }
+        ),
+        TransferKind::Attributes => format!(
+            "Changed {} {}",
+            snap.files_done,
+            if snap.files_done == 1 {
+                "item"
+            } else {
+                "items"
+            }
+        ),
+        TransferKind::Copy | TransferKind::Move => format!(
+            "Done — {} in {} files",
+            format_size(snap.total_bytes),
+            snap.files_total
+        ),
+    }
 }
 
 fn format_eta(seconds: f64) -> String {

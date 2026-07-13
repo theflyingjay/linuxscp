@@ -294,18 +294,51 @@ impl AttrChanges {
     }
 }
 
+/// Live progress + cancellation for long-running mutations (recursive
+/// deletes and attribute changes) so the UI can watch them complete.
+/// `total` is 0 until the work list is known; `done` climbs as items finish.
+#[derive(Debug, Default)]
+pub struct OpProgress {
+    pub total: std::sync::atomic::AtomicU64,
+    pub done: std::sync::atomic::AtomicU64,
+    pub cancelled: std::sync::atomic::AtomicBool,
+}
+
+impl OpProgress {
+    fn checkpoint(&self) -> anyhow::Result<()> {
+        if self.cancelled.load(std::sync::atomic::Ordering::Relaxed) {
+            anyhow::bail!("cancelled");
+        }
+        Ok(())
+    }
+
+    fn add_total(&self, n: u64) {
+        self.total
+            .fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn bump(&self) {
+        self.done.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
 /// Apply owner/group/permission changes to `roots`, and — when `recursive`
 /// — to everything below the selected directories. Symlinks are left
 /// untouched (and never followed). Returns how many items were changed.
+/// `progress` (optional) reports the discovered total and per-item
+/// completion, and can cancel between items.
 pub async fn apply_attrs(
     backend: Backend,
     roots: &[FsEntry],
     changes: &AttrChanges,
     recursive: bool,
+    progress: Option<&OpProgress>,
 ) -> anyhow::Result<u64> {
     if changes.is_empty() {
         return Ok(0);
     }
+    let noop = OpProgress::default();
+    let progress = progress.unwrap_or(&noop);
 
     // Collect the full work list up front: applying a restrictive mode to a
     // directory first could make its children unlistable.
@@ -321,6 +354,7 @@ pub async fn apply_attrs(
         }
     }
     while let Some(dir) = dirs.pop() {
+        progress.checkpoint()?;
         let children = list_dir(backend, &dir)
             .await
             .with_context(|| format!("listing {dir}"))?;
@@ -334,9 +368,11 @@ pub async fn apply_attrs(
             work.push((child.path, child.is_dir));
         }
     }
+    progress.add_total(work.len() as u64);
 
     let mut changed = 0u64;
     for (path, is_dir) in work {
+        progress.checkpoint()?;
         if let Some(mode) = changes.mode_for(is_dir) {
             chmod(backend, &path, mode)
                 .await
@@ -346,6 +382,7 @@ pub async fn apply_attrs(
             .await
             .with_context(|| format!("changing owner of {path}"))?;
         changed += 1;
+        progress.bump();
     }
     Ok(changed)
 }
@@ -418,45 +455,93 @@ pub async fn disk_usage(backend: Backend, roots: &[FsEntry]) -> anyhow::Result<D
 
 /// Recursively delete a file or directory.
 pub async fn delete(backend: Backend, entry: &FsEntry) -> anyhow::Result<()> {
+    delete_tracked(backend, entry, None).await
+}
+
+/// Recursively delete, reporting each removed node through `progress` (which
+/// can also cancel between nodes). Every file and directory counts as one.
+pub async fn delete_tracked(
+    backend: Backend,
+    entry: &FsEntry,
+    progress: Option<&OpProgress>,
+) -> anyhow::Result<()> {
+    let noop = OpProgress::default();
+    let progress = progress.unwrap_or(&noop);
+    let is_dir = entry.is_dir && !entry.is_symlink;
     match backend {
-        Backend::Local => {
-            let path = entry.path.clone();
-            let is_dir = entry.is_dir && !entry.is_symlink;
-            tokio::task::spawn_blocking(move || {
-                if is_dir {
-                    std::fs::remove_dir_all(&path)
-                } else {
-                    std::fs::remove_file(&path)
-                }
-            })
-            .await??;
-            Ok(())
-        }
+        Backend::Local => delete_local(&entry.path, is_dir, progress).await,
         Backend::Remote(id) => {
             let sftp = sftp(id)?;
-            delete_remote(&sftp, &entry.path, entry.is_dir && !entry.is_symlink).await
+            delete_remote(&sftp, &entry.path, is_dir, progress).await
         }
     }
+}
+
+async fn delete_local(path: &str, is_dir: bool, progress: &OpProgress) -> anyhow::Result<()> {
+    if !is_dir {
+        progress.checkpoint()?;
+        tokio::fs::remove_file(path)
+            .await
+            .with_context(|| format!("deleting {path}"))?;
+        progress.bump();
+        return Ok(());
+    }
+    // Manual DFS (instead of remove_dir_all) so progress counts and
+    // cancellation work on huge trees.
+    let mut stack: Vec<(String, bool)> = vec![(path.to_owned(), false)];
+    while let Some((dir, children_done)) = stack.pop() {
+        progress.checkpoint()?;
+        if children_done {
+            tokio::fs::remove_dir(&dir)
+                .await
+                .with_context(|| format!("removing directory {dir}"))?;
+            progress.bump();
+            continue;
+        }
+        stack.push((dir.clone(), true));
+        let mut read = tokio::fs::read_dir(&dir)
+            .await
+            .with_context(|| format!("reading {dir}"))?;
+        while let Some(child) = read.next_entry().await? {
+            let child_path = child.path().to_string_lossy().into_owned();
+            let meta = child.metadata().await?;
+            if meta.is_dir() && !meta.is_symlink() {
+                stack.push((child_path, false));
+            } else {
+                progress.checkpoint()?;
+                tokio::fs::remove_file(&child_path)
+                    .await
+                    .with_context(|| format!("deleting {child_path}"))?;
+                progress.bump();
+            }
+        }
+    }
+    Ok(())
 }
 
 async fn delete_remote(
     sftp: &russh_sftp::client::SftpSession,
     path: &str,
     is_dir: bool,
+    progress: &OpProgress,
 ) -> anyhow::Result<()> {
     if !is_dir {
+        progress.checkpoint()?;
         sftp.remove_file(path.to_owned())
             .await
             .with_context(|| format!("deleting {path}"))?;
+        progress.bump();
         return Ok(());
     }
     // Iterative DFS to avoid async recursion boxing.
     let mut stack: Vec<(String, bool)> = vec![(path.to_owned(), false)];
     while let Some((dir, children_done)) = stack.pop() {
+        progress.checkpoint()?;
         if children_done {
             sftp.remove_dir(dir.clone())
                 .await
                 .with_context(|| format!("removing directory {dir}"))?;
+            progress.bump();
             continue;
         }
         stack.push((dir.clone(), true));
@@ -467,9 +552,11 @@ async fn delete_remote(
             if file_type.is_dir() {
                 stack.push((child, false));
             } else {
+                progress.checkpoint()?;
                 sftp.remove_file(child.clone())
                     .await
                     .with_context(|| format!("deleting {child}"))?;
+                progress.bump();
             }
         }
     }

@@ -21,7 +21,7 @@ use tokio::sync::watch;
 
 use crate::types::{
     Backend, ConflictDecision, ConflictRequest, Event, FsEntry, TransferAction, TransferId,
-    TransferRequest, TransferSnapshot, TransferState,
+    TransferKind, TransferRequest, TransferSnapshot, TransferState,
 };
 use crate::{fsops, sessions};
 
@@ -58,16 +58,24 @@ pub fn control(id: TransferId, action: TransferAction) {
     }
 }
 
-/// Queue a transfer; progress arrives as [`Event::TransferUpdate`]s.
-pub fn start(request: TransferRequest, events: async_channel::Sender<Event>) -> TransferId {
+fn next_id() -> TransferId {
     static NEXT: AtomicU64 = AtomicU64::new(1);
-    let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
 
+fn register(id: TransferId) -> watch::Receiver<Ctrl> {
     let (ctrl_tx, ctrl_rx) = watch::channel(Ctrl {
         paused: false,
         cancelled: false,
     });
     controls().lock().unwrap().insert(id, ctrl_tx);
+    ctrl_rx
+}
+
+/// Queue a transfer; progress arrives as [`Event::TransferUpdate`]s.
+pub fn start(request: TransferRequest, events: async_channel::Sender<Event>) -> TransferId {
+    let id = next_id();
+    let ctrl_rx = register(id);
 
     crate::runtime::runtime().spawn(async move {
         let mut job = Job::new(id, request, events, ctrl_rx);
@@ -84,6 +92,159 @@ pub fn start(request: TransferRequest, events: async_channel::Sender<Event>) -> 
                     .await;
             }
         }
+        controls().lock().unwrap().remove(&id);
+    });
+    id
+}
+
+/// Attribute changes requested from the Properties dialog, with owner and
+/// group still as names (resolved on the job so the dialog never blocks).
+#[derive(Debug, Clone)]
+pub struct AttrRequest {
+    pub owner: Option<String>,
+    pub group: Option<String>,
+    pub mode: Option<u32>,
+    pub add_x_dirs: bool,
+    pub recursive: bool,
+}
+
+/// Queue a recursive delete as a watchable job: the row shows the removal
+/// count climbing, supports cancel, and the panes refresh when it finishes.
+pub fn start_delete(
+    backend: Backend,
+    entries: Vec<FsEntry>,
+    events: async_channel::Sender<Event>,
+) -> TransferId {
+    let title = if entries.len() == 1 {
+        format!("Delete {}", entries[0].name)
+    } else {
+        format!("Delete {} items", entries.len())
+    };
+    start_op(
+        TransferKind::Delete,
+        title,
+        events,
+        move |progress| async move {
+            for entry in &entries {
+                fsops::delete_tracked(backend, entry, Some(&progress)).await?;
+            }
+            Ok(())
+        },
+    )
+}
+
+/// Queue an owner/group/permissions change (optionally recursive) as a
+/// watchable job, mirroring how WinSCP reports long chmod runs.
+pub fn start_attrs(
+    backend: Backend,
+    entries: Vec<FsEntry>,
+    request: AttrRequest,
+    events: async_channel::Sender<Event>,
+) -> TransferId {
+    let title = if entries.len() == 1 {
+        format!("Change {}", entries[0].name)
+    } else {
+        format!("Change {} items", entries.len())
+    };
+    start_op(
+        TransferKind::Attributes,
+        title,
+        events,
+        move |progress| async move {
+            let (uid, gid) = fsops::resolve_ids(backend, request.owner, request.group).await?;
+            let changes = fsops::AttrChanges {
+                mode: request.mode,
+                uid,
+                gid,
+                add_x_dirs: request.add_x_dirs,
+            };
+            fsops::apply_attrs(
+                backend,
+                &entries,
+                &changes,
+                request.recursive,
+                Some(&progress),
+            )
+            .await?;
+            Ok(())
+        },
+    )
+}
+
+/// Shared runner for mutation jobs (delete / attributes): spawns the work
+/// with an [`fsops::OpProgress`], relays cancel from the queue controls, and
+/// emits snapshots while the counters climb so the UI can watch completion.
+fn start_op<F, Fut>(
+    kind: TransferKind,
+    title: String,
+    events: async_channel::Sender<Event>,
+    work: F,
+) -> TransferId
+where
+    F: FnOnce(Arc<fsops::OpProgress>) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = anyhow::Result<()>> + Send + 'static,
+{
+    let id = next_id();
+    let mut ctrl_rx = register(id);
+
+    crate::runtime::runtime().spawn(async move {
+        let progress = Arc::new(fsops::OpProgress::default());
+        let snapshot = |state: TransferState, error: Option<String>| {
+            let total = progress.total.load(Ordering::Relaxed);
+            TransferSnapshot {
+                id,
+                title: title.clone(),
+                kind,
+                state,
+                current_file: String::new(),
+                done_bytes: 0,
+                total_bytes: 0,
+                files_done: progress.done.load(Ordering::Relaxed) as u32,
+                files_total: total as u32,
+                speed_bps: 0.0,
+                // Totals unknown (deletes never pre-count; attribute jobs
+                // publish theirs once the work list is built).
+                scanning: total == 0,
+                error,
+            }
+        };
+        let emit = |snap: TransferSnapshot| {
+            let events = events.clone();
+            async move {
+                let _ = events.send(Event::TransferUpdate(snap)).await;
+            }
+        };
+        emit(snapshot(TransferState::Running, None)).await;
+
+        let mut task = crate::runtime::runtime().spawn(work(progress.clone()));
+        let result = loop {
+            tokio::select! {
+                res = &mut task => break res,
+                _ = tokio::time::sleep(Duration::from_millis(150)) => {
+                    if ctrl_rx.borrow_and_update().cancelled {
+                        progress
+                            .cancelled
+                            .store(true, Ordering::Relaxed);
+                    }
+                    emit(snapshot(TransferState::Running, None)).await;
+                }
+            }
+        };
+
+        let cancelled = ctrl_rx.borrow().cancelled;
+        let terminal = match result {
+            Ok(Ok(())) => snapshot(TransferState::Done, None),
+            Err(join_err) => snapshot(TransferState::Failed, Some(join_err.to_string())),
+            Ok(Err(err)) if cancelled => {
+                tracing::info!("op {id} cancelled: {err:#}");
+                snapshot(TransferState::Cancelled, None)
+            }
+            Ok(Err(err)) => {
+                tracing::warn!("op {id} failed: {err:#}");
+                snapshot(TransferState::Failed, Some(format!("{err:#}")))
+            }
+        };
+        emit(terminal).await;
         controls().lock().unwrap().remove(&id);
     });
     id
@@ -235,6 +396,11 @@ impl Job {
         let template = TransferSnapshot {
             id,
             title,
+            kind: if request.move_src {
+                TransferKind::Move
+            } else {
+                TransferKind::Copy
+            },
             state: TransferState::Queued,
             current_file: String::new(),
             done_bytes: 0,
