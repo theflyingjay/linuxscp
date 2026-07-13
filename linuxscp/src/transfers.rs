@@ -1,10 +1,16 @@
 //! The transfer engine: queued jobs, recursive copies between any two
 //! backends, pause/resume/cancel, `.filepart` resumable transfers and
 //! conflict resolution via the UI.
+//!
+//! Layout: a `Scanner` task walks the source tree and streams files into a
+//! channel while several copy workers drain it concurrently. Small-file
+//! throughput over SSH is bound by protocol round-trips (stat/open/close/
+//! rename per file), not bandwidth, so overlapping several files at once is
+//! what makes a "large folder with many files" fast on a real network.
 
 use std::collections::HashMap;
 use std::io::SeekFrom;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -21,6 +27,13 @@ use crate::{fsops, sessions};
 
 pub const PART_SUFFIX: &str = ".filepart";
 const CHUNK: usize = 256 * 1024;
+/// Files copied concurrently. Requests multiplex over the one SFTP channel,
+/// so this hides per-file latency without opening extra connections.
+const PARALLEL_FILES: usize = 4;
+/// Below this size a file is written straight to its final name: the
+/// `.filepart` stage-and-rename (probe stat + delete + rename = three round
+/// trips) costs more than re-sending the whole file after an interruption.
+const RESUME_THRESHOLD: u64 = 512 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Ctrl {
@@ -76,11 +89,13 @@ pub fn start(request: TransferRequest, events: async_channel::Sender<Event>) -> 
     id
 }
 
-/// One file to copy, produced by the scanner.
+/// One file to copy, produced by the scanner. `mode` rides along from the
+/// directory listing so the copier doesn't have to stat the source again.
 struct WorkItem {
     src_path: String,
     dst_final: String,
     size: u64,
+    mode: Option<u32>,
 }
 
 /// Totals the scanner discovers as it walks, read live by the copy loop so
@@ -91,20 +106,110 @@ struct WorkItem {
 struct Discovery {
     files: AtomicU32,
     bytes: AtomicU64,
-    done: std::sync::atomic::AtomicBool,
+    done: AtomicBool,
+}
+
+/// Everything the copy workers and the supervising job share: live counters,
+/// the snapshot template, conflict policy and the single emit path (globally
+/// rate-limited, so thousands of small files can't flood the UI loop).
+struct Shared {
+    id: TransferId,
+    events: async_channel::Sender<Event>,
+    discovery: Arc<Discovery>,
+    /// State/title/current-file live here; counters live in the atomics.
+    template: Mutex<TransferSnapshot>,
+    done_bytes: AtomicU64,
+    files_done: AtomicU32,
+    /// A worker picked up the first file (Scanning -> Running).
+    started: AtomicBool,
+    any_skipped: AtomicBool,
+    /// A worker failed; siblings drain out instead of starting new files.
+    failed: AtomicBool,
+    overwrite_all: AtomicBool,
+    skip_all: AtomicBool,
+    /// Serializes conflict prompts so the user sees one dialog at a time.
+    conflict_gate: tokio::sync::Mutex<()>,
+    /// Workers currently blocked on a conflict answer.
+    waiting_conflicts: AtomicU32,
+    /// (anchor_bytes, anchor_time, smoothed bps).
+    speed: Mutex<(u64, Instant, f64)>,
+    last_emit: Mutex<Instant>,
+    /// Terminal snapshot sent; silences any stragglers still winding down.
+    finished: AtomicBool,
+}
+
+impl Shared {
+    /// Snapshot of the live counters, with the speed estimate refreshed
+    /// roughly once per second.
+    fn snapshot(&self) -> TransferSnapshot {
+        let mut t = self.template.lock().unwrap();
+        t.files_total = self.discovery.files.load(Ordering::Relaxed);
+        t.total_bytes = self.discovery.bytes.load(Ordering::Relaxed);
+        t.scanning = !self.discovery.done.load(Ordering::Relaxed);
+        t.done_bytes = self.done_bytes.load(Ordering::Relaxed);
+        t.files_done = self.files_done.load(Ordering::Relaxed);
+        let mut speed = self.speed.lock().unwrap();
+        let elapsed = speed.1.elapsed().as_secs_f64();
+        if elapsed >= 1.0 {
+            let inst = t.done_bytes.saturating_sub(speed.0) as f64 / elapsed;
+            let smoothed = if speed.2 == 0.0 {
+                inst
+            } else {
+                0.6 * speed.2 + 0.4 * inst
+            };
+            *speed = (t.done_bytes, Instant::now(), smoothed);
+        }
+        t.speed_bps = speed.2;
+        t.clone()
+    }
+
+    /// Send a snapshot to the UI. Unforced emits are limited to one per
+    /// ~120ms across all workers; nothing is sent after the terminal one.
+    async fn emit(&self, force: bool) {
+        if self.finished.load(Ordering::Relaxed) {
+            return;
+        }
+        {
+            let mut last = self.last_emit.lock().unwrap();
+            if !force && last.elapsed() < Duration::from_millis(120) {
+                return;
+            }
+            *last = Instant::now();
+        }
+        let _ = self
+            .events
+            .send(Event::TransferUpdate(self.snapshot()))
+            .await;
+    }
+
+    fn set_state(&self, state: TransferState) {
+        self.template.lock().unwrap().state = state;
+    }
+
+    fn set_current(&self, name: &str) {
+        self.template.lock().unwrap().current_file = name.to_owned();
+    }
+}
+
+/// Block while paused; error out when cancelled. Shared by the job task,
+/// the scanner and every worker (each has its own receiver clone).
+async fn checkpoint(ctrl: &mut watch::Receiver<Ctrl>) -> anyhow::Result<()> {
+    loop {
+        let c = *ctrl.borrow();
+        if c.cancelled {
+            anyhow::bail!("cancelled");
+        }
+        if !c.paused {
+            return Ok(());
+        }
+        ctrl.changed().await.ok();
+    }
 }
 
 struct Job {
-    id: TransferId,
     request: TransferRequest,
-    events: async_channel::Sender<Event>,
     ctrl: watch::Receiver<Ctrl>,
-    snapshot: TransferSnapshot,
-    last_emit: Instant,
-    /// (bytes_done, at) samples for the speed estimate.
-    speed_anchor: (u64, Instant),
-    overwrite_all: bool,
-    skip_all: bool,
+    shared: Arc<Shared>,
 }
 
 impl Job {
@@ -127,28 +232,41 @@ impl Job {
                 request.items.len()
             )
         };
-        Self {
+        let template = TransferSnapshot {
+            id,
+            title,
+            state: TransferState::Queued,
+            current_file: String::new(),
+            done_bytes: 0,
+            total_bytes: 0,
+            files_done: 0,
+            files_total: 0,
+            speed_bps: 0.0,
+            scanning: true,
+            error: None,
+        };
+        let shared = Arc::new(Shared {
             id,
             events,
-            ctrl,
-            snapshot: TransferSnapshot {
-                id,
-                title,
-                state: TransferState::Queued,
-                current_file: String::new(),
-                done_bytes: 0,
-                total_bytes: 0,
-                files_done: 0,
-                files_total: 0,
-                speed_bps: 0.0,
-                scanning: true,
-                error: None,
-            },
-            last_emit: Instant::now() - Duration::from_secs(1),
-            speed_anchor: (0, Instant::now()),
+            discovery: Arc::new(Discovery::default()),
+            template: Mutex::new(template),
+            done_bytes: AtomicU64::new(0),
+            files_done: AtomicU32::new(0),
+            started: AtomicBool::new(false),
+            any_skipped: AtomicBool::new(false),
+            failed: AtomicBool::new(false),
+            overwrite_all: AtomicBool::new(false),
+            skip_all: AtomicBool::new(false),
+            conflict_gate: tokio::sync::Mutex::new(()),
+            waiting_conflicts: AtomicU32::new(0),
+            speed: Mutex::new((0, Instant::now(), 0.0)),
+            last_emit: Mutex::new(Instant::now() - Duration::from_secs(1)),
+            finished: AtomicBool::new(false),
+        });
+        Self {
             request,
-            overwrite_all: false,
-            skip_all: false,
+            ctrl,
+            shared,
         }
     }
 
@@ -156,52 +274,49 @@ impl Job {
         self.ctrl.borrow().cancelled
     }
 
-    async fn emit(&mut self, force: bool) {
-        if !force && self.last_emit.elapsed() < Duration::from_millis(120) {
-            return;
-        }
-        self.last_emit = Instant::now();
-        // Refresh the speed estimate roughly once per second.
-        let (anchor_bytes, anchor_at) = self.speed_anchor;
-        let elapsed = anchor_at.elapsed().as_secs_f64();
-        if elapsed >= 1.0 {
-            let delta = self.snapshot.done_bytes.saturating_sub(anchor_bytes) as f64;
-            let inst = delta / elapsed;
-            self.snapshot.speed_bps = if self.snapshot.speed_bps == 0.0 {
-                inst
-            } else {
-                0.6 * self.snapshot.speed_bps + 0.4 * inst
-            };
-            self.speed_anchor = (self.snapshot.done_bytes, Instant::now());
+    async fn finish(&mut self, state: TransferState, error: Option<String>) {
+        // Flag first so any worker still winding down can't emit a stale
+        // running snapshot after the terminal one.
+        self.shared.finished.store(true, Ordering::Relaxed);
+        {
+            let mut t = self.shared.template.lock().unwrap();
+            t.state = state;
+            t.error = error;
         }
         let _ = self
+            .shared
             .events
-            .send(Event::TransferUpdate(self.snapshot.clone()))
+            .send(Event::TransferUpdate(self.shared.snapshot()))
             .await;
     }
 
-    async fn finish(&mut self, state: TransferState, error: Option<String>) {
-        self.snapshot.state = state;
-        self.snapshot.error = error;
-        self.emit(true).await;
-    }
-
-    /// Block while paused; error out when cancelled.
+    /// Pause/cancel handling for the supervising task: reflects the paused
+    /// state in the UI (workers just block silently on their own receivers).
     async fn checkpoint(&mut self) -> anyhow::Result<()> {
         loop {
-            let ctrl = *self.ctrl.borrow();
-            if ctrl.cancelled {
+            let c = *self.ctrl.borrow();
+            if c.cancelled {
                 anyhow::bail!("cancelled");
             }
-            if !ctrl.paused {
+            if !c.paused {
                 return Ok(());
             }
-            if self.snapshot.state != TransferState::Paused {
-                self.snapshot.state = TransferState::Paused;
-                self.emit(true).await;
+            if self.shared.template.lock().unwrap().state != TransferState::Paused {
+                self.shared.set_state(TransferState::Paused);
+                self.shared.emit(true).await;
             }
-            let mut ctrl_rx = self.ctrl.clone();
-            ctrl_rx.changed().await.ok();
+            self.ctrl.changed().await.ok();
+            let c = *self.ctrl.borrow();
+            if !c.paused && !c.cancelled {
+                // Resumed: restore the visible state.
+                self.shared
+                    .set_state(if self.shared.started.load(Ordering::Relaxed) {
+                        TransferState::Running
+                    } else {
+                        TransferState::Scanning
+                    });
+                self.shared.emit(true).await;
+            }
         }
     }
 
@@ -209,15 +324,13 @@ impl Job {
         let src = self.request.src_backend;
         let dst = self.request.dst_backend;
 
-        self.snapshot.state = TransferState::Scanning;
-        self.emit(true).await;
+        self.shared.set_state(TransferState::Scanning);
+        self.shared.emit(true).await;
 
         // Scan and copy run concurrently: the scanner walks the tree,
         // creating destination directories and streaming files to copy,
-        // while this task copies them as they arrive. The first file starts
-        // moving almost immediately instead of after the whole tree is
-        // counted, and the file/byte totals climb in parallel.
-        let discovery = Arc::new(Discovery::default());
+        // while the workers copy them as they arrive. The first file starts
+        // moving almost immediately and the totals climb in parallel.
         let (tx, rx) = async_channel::unbounded::<anyhow::Result<WorkItem>>();
         let scanner = {
             let mut scanner = Scanner {
@@ -225,7 +338,7 @@ impl Job {
                 dst,
                 ctrl: self.ctrl.clone(),
                 tx,
-                discovery: discovery.clone(),
+                discovery: self.shared.discovery.clone(),
             };
             let items = self.request.items.clone();
             let dst_dir = self.request.dst_dir.clone();
@@ -237,60 +350,53 @@ impl Job {
                         return;
                     }
                 }
-                // The whole tree is now counted: the totals are final, so the
-                // UI can switch from an indeterminate bar to a real
-                // percentage and ETA even before copying finishes draining
-                // the (possibly large) backlog of discovered files.
+                // The whole tree is now counted: totals are final, so the UI
+                // can switch from the indeterminate bar to a real percentage
+                // and ETA even while the copy backlog drains.
                 scanner.discovery.done.store(true, Ordering::Relaxed);
                 // Dropping `scanner` (and its sender) closes the channel.
             })
         };
 
-        // Copy files as the scanner produces them.
-        let mut any_skipped = false;
-        let mut running = false;
+        let workers: Vec<_> = (0..PARALLEL_FILES)
+            .map(|_| {
+                let worker = Worker {
+                    src,
+                    dst,
+                    ctrl: self.ctrl.clone(),
+                    rx: rx.clone(),
+                    shared: self.shared.clone(),
+                };
+                crate::runtime::runtime().spawn(worker.run())
+            })
+            .collect();
+        drop(rx);
+
+        // Supervise: keep the UI ticking (totals climb even while workers
+        // grind through big files) and honor pause/cancel promptly.
+        let mut all = Box::pin(futures::future::join_all(workers));
         loop {
-            // Wake periodically while waiting so the discovered totals keep
-            // updating even when the scanner is ahead of the copier.
-            let msg = loop {
-                match tokio::time::timeout(Duration::from_millis(150), rx.recv()).await {
-                    Ok(Ok(msg)) => break Some(msg),
-                    Ok(Err(_closed)) => break None,
-                    Err(_timeout) => {
-                        self.checkpoint().await?;
-                        self.pull_totals(&discovery);
-                        self.emit(false).await;
+            tokio::select! {
+                results = &mut all => {
+                    for result in results {
+                        result.context("copy worker crashed")??;
                     }
+                    break;
                 }
-            };
-            let Some(msg) = msg else { break };
-            let item = msg?;
-            if !running {
-                running = true;
-                self.snapshot.state = TransferState::Running;
+                _ = tokio::time::sleep(Duration::from_millis(120)) => {
+                    self.checkpoint().await?;
+                    self.shared.emit(false).await;
+                }
             }
-            self.checkpoint().await?;
-            self.pull_totals(&discovery);
-            let skipped = self
-                .copy_file(src, dst, &item)
-                .await
-                .with_context(|| format!("copying {}", fsops::file_name(&item.src_path)))?;
-            any_skipped |= skipped;
-            self.snapshot.files_done += 1;
-            self.emit(true).await;
         }
 
-        // The channel closed: the scan finished (or a send failed because we
-        // bailed). Reap the scanner and surface a cancel if one landed while
-        // we were blocked waiting for the next item.
         let _ = scanner.await;
         self.checkpoint().await?;
-        self.pull_totals(&discovery);
 
         // For moves, delete sources — only when nothing was skipped, so we
         // never remove something that wasn't copied.
         if self.request.move_src {
-            if any_skipped {
+            if self.shared.any_skipped.load(Ordering::Relaxed) {
                 tracing::info!("move: keeping sources because some files were skipped");
             } else {
                 let items = self.request.items.clone();
@@ -305,159 +411,255 @@ impl Job {
         self.finish(TransferState::Done, None).await;
         Ok(())
     }
+}
 
-    /// Copy the scanner's discovered totals into the snapshot for the UI.
-    /// Once the scan is done these are final and the bar/ETA become exact.
-    fn pull_totals(&mut self, discovery: &Discovery) {
-        self.snapshot.files_total = discovery.files.load(Ordering::Relaxed);
-        self.snapshot.total_bytes = discovery.bytes.load(Ordering::Relaxed);
-        self.snapshot.scanning = !discovery.done.load(Ordering::Relaxed);
+/// One of the concurrent copy loops: pulls files from the scanner's channel
+/// until it closes, copying each with conflict/resume handling.
+struct Worker {
+    src: Backend,
+    dst: Backend,
+    ctrl: watch::Receiver<Ctrl>,
+    rx: async_channel::Receiver<anyhow::Result<WorkItem>>,
+    shared: Arc<Shared>,
+}
+
+impl Worker {
+    async fn run(mut self) -> anyhow::Result<()> {
+        loop {
+            // A sibling failed: stop starting new files so the job can end.
+            if self.shared.failed.load(Ordering::Relaxed) {
+                return Ok(());
+            }
+            let Ok(msg) = self.rx.recv().await else {
+                return Ok(()); // channel closed: scan finished and drained
+            };
+            let item = match msg {
+                Ok(item) => item,
+                Err(err) => {
+                    self.shared.failed.store(true, Ordering::Relaxed);
+                    self.rx.close();
+                    return Err(err); // scanner failure
+                }
+            };
+            if !self.shared.started.swap(true, Ordering::Relaxed) {
+                self.shared.set_state(TransferState::Running);
+            }
+            checkpoint(&mut self.ctrl).await?;
+            match self.copy_file(&item).await {
+                Ok(skipped) => {
+                    if skipped {
+                        self.shared.any_skipped.store(true, Ordering::Relaxed);
+                    }
+                    let done = self.shared.files_done.fetch_add(1, Ordering::Relaxed) + 1;
+                    // Force the first completion out so short transfers still
+                    // show life immediately; after that the rate limit rules.
+                    self.shared.emit(done == 1).await;
+                }
+                Err(err) => {
+                    self.shared.failed.store(true, Ordering::Relaxed);
+                    self.rx.close();
+                    return Err(err)
+                        .with_context(|| format!("copying {}", fsops::file_name(&item.src_path)));
+                }
+            }
+        }
     }
 
     /// Copy one file honoring conflicts and resume. Returns true if skipped.
-    async fn copy_file(
-        &mut self,
-        src: Backend,
-        dst: Backend,
-        item: &WorkItem,
-    ) -> anyhow::Result<bool> {
+    async fn copy_file(&mut self, item: &WorkItem) -> anyhow::Result<bool> {
         let name = fsops::file_name(&item.dst_final).to_owned();
-        self.snapshot.current_file = name.clone();
-        self.emit(true).await;
+        self.shared.set_current(&name);
+        self.shared.emit(false).await;
 
+        // Small files skip the `.filepart` stage-and-rename dance: over a
+        // real link its extra round trips cost more than re-sending the
+        // whole file would after an interruption.
+        let use_part = item.size >= RESUME_THRESHOLD;
         let part_path = format!("{}{}", item.dst_final, PART_SUFFIX);
         let mut offset: u64 = 0;
 
         // Leftover partial from an interrupted run: silently continue it.
-        match fsops::stat(dst, &part_path).await {
-            Ok(part) if part.size < item.size => offset = part.size,
-            _ => {}
+        if use_part {
+            match fsops::stat(self.dst, &part_path).await {
+                Ok(part) if part.size < item.size => offset = part.size,
+                _ => {}
+            }
         }
 
-        // Destination already exists: ask the user.
+        // Destination already exists: ask the user. Remember the answer to
+        // the existence probe so we don't have to re-ask the server later.
         let existing = if offset == 0 {
-            fsops::stat(dst, &item.dst_final).await.ok()
+            fsops::stat(self.dst, &item.dst_final).await.ok()
         } else {
             None
         };
+        let mut dst_exists = existing.is_some();
         if let Some(existing) = existing {
-            let decision = if self.overwrite_all {
-                ConflictDecision::Overwrite
-            } else if self.skip_all {
-                ConflictDecision::Skip
-            } else {
-                self.ask_conflict(&name, item.size, existing.size).await?
-            };
+            let decision = self
+                .decide_conflict(&name, item.size, existing.size)
+                .await?;
             match decision {
                 ConflictDecision::Overwrite | ConflictDecision::OverwriteAll => {}
                 ConflictDecision::Resume => {
-                    if existing.size < item.size {
-                        // Continue writing the real file from its length.
-                        fsops::rename(dst, &item.dst_final, &part_path).await?;
-                        offset = existing.size;
-                    } else {
-                        self.snapshot.done_bytes += item.size;
+                    if existing.size >= item.size {
+                        self.shared
+                            .done_bytes
+                            .fetch_add(item.size, Ordering::Relaxed);
                         return Ok(true);
                     }
+                    if use_part {
+                        // Continue writing the real file from its length.
+                        fsops::rename(self.dst, &item.dst_final, &part_path).await?;
+                        offset = existing.size;
+                        dst_exists = false;
+                    }
+                    // For a small file resuming saves nothing: rewrite whole.
                 }
                 ConflictDecision::Skip | ConflictDecision::SkipAll => {
-                    self.snapshot.done_bytes += item.size;
+                    self.shared
+                        .done_bytes
+                        .fetch_add(item.size, Ordering::Relaxed);
                     return Ok(true);
                 }
                 ConflictDecision::CancelJob => anyhow::bail!("cancelled"),
             }
         }
 
-        self.snapshot.done_bytes += offset;
+        self.shared.done_bytes.fetch_add(offset, Ordering::Relaxed);
 
-        let mut reader = open_read(src, &item.src_path, offset).await?;
-        let mut writer = open_write(dst, &part_path, offset).await?;
+        let write_path = if use_part {
+            &part_path
+        } else {
+            &item.dst_final
+        };
+        let mut reader = open_read(self.src, &item.src_path, offset).await?;
+        let mut writer = open_write(self.dst, write_path, offset).await?;
 
         let mut buf = vec![0u8; CHUNK];
         loop {
-            self.checkpoint().await?;
+            checkpoint(&mut self.ctrl).await?;
             let n = reader.read(&mut buf).await.context("read failed")?;
             if n == 0 {
                 break;
             }
             writer.write_all(&buf[..n]).await.context("write failed")?;
-            self.snapshot.done_bytes += n as u64;
-            self.emit(false).await;
+            self.shared
+                .done_bytes
+                .fetch_add(n as u64, Ordering::Relaxed);
+            self.shared.emit(false).await;
         }
         writer.shutdown().await.context("finalizing file")?;
         drop(writer);
         drop(reader);
 
-        // Overwrite semantics: replace the destination atomically-ish.
-        if fsops::exists(dst, &item.dst_final).await {
-            fsops::delete(
-                dst,
-                &FsEntry {
-                    name: name.clone(),
-                    path: item.dst_final.clone(),
-                    is_dir: false,
-                    is_symlink: false,
-                    size: 0,
-                    mtime: None,
-                    mode: None,
-                    owner: None,
-                    group: None,
-                    link_target: None,
-                },
-            )
-            .await
-            .ok();
+        if use_part {
+            // Overwrite semantics: the destination existed and the user
+            // chose to replace it, so move it out of the rename's way.
+            if dst_exists {
+                fsops::delete(
+                    self.dst,
+                    &FsEntry {
+                        name: name.clone(),
+                        path: item.dst_final.clone(),
+                        is_dir: false,
+                        is_symlink: false,
+                        size: 0,
+                        mtime: None,
+                        mode: None,
+                        owner: None,
+                        group: None,
+                        link_target: None,
+                    },
+                )
+                .await
+                .ok();
+            }
+            fsops::rename(self.dst, &part_path, &item.dst_final)
+                .await
+                .context("renaming completed file into place")?;
         }
-        fsops::rename(dst, &part_path, &item.dst_final)
-            .await
-            .context("renaming completed file into place")?;
 
-        // Preserve permissions best-effort.
-        let src_mode = fsops::stat(src, &item.src_path)
-            .await
-            .ok()
-            .and_then(|meta| meta.mode);
-        if let Some(mode) = src_mode {
-            fsops::chmod(dst, &item.dst_final, mode).await.ok();
+        // Preserve permissions best-effort, from the listing we already have.
+        if let Some(mode) = item.mode {
+            fsops::chmod(self.dst, &item.dst_final, mode).await.ok();
         }
         Ok(false)
     }
 
-    async fn ask_conflict(
+    /// Resolve a conflict, serializing prompts across workers and honoring
+    /// sticky "apply to all" answers.
+    async fn decide_conflict(
         &mut self,
         file_name: &str,
         src_size: u64,
         dst_size: u64,
     ) -> anyhow::Result<ConflictDecision> {
-        self.snapshot.state = TransferState::WaitingConflict;
-        self.emit(true).await;
+        if self.shared.overwrite_all.load(Ordering::Relaxed) {
+            return Ok(ConflictDecision::Overwrite);
+        }
+        if self.shared.skip_all.load(Ordering::Relaxed) {
+            return Ok(ConflictDecision::Skip);
+        }
+        let _gate = self.shared.conflict_gate.lock().await;
+        // A sibling may have answered "all" — or cancelled the whole job —
+        // while we waited for the gate; don't prompt the user again.
+        if self.shared.overwrite_all.load(Ordering::Relaxed) {
+            return Ok(ConflictDecision::Overwrite);
+        }
+        if self.shared.skip_all.load(Ordering::Relaxed) {
+            return Ok(ConflictDecision::Skip);
+        }
+        if self.shared.failed.load(Ordering::Relaxed) || self.ctrl.borrow().cancelled {
+            anyhow::bail!("cancelled");
+        }
+
+        self.shared
+            .waiting_conflicts
+            .fetch_add(1, Ordering::Relaxed);
+        self.shared.set_state(TransferState::WaitingConflict);
+        self.shared.emit(true).await;
+
         let (tx, rx) = tokio::sync::oneshot::channel();
-        self.events
+        let sent = self
+            .shared
+            .events
             .send(Event::Conflict(ConflictRequest {
-                transfer_id: self.id,
+                transfer_id: self.shared.id,
                 file_name: file_name.to_owned(),
                 src_size,
                 dst_size,
                 reply: tx,
             }))
-            .await
-            .ok()
-            .context("UI closed")?;
-        let decision = rx.await.unwrap_or(ConflictDecision::CancelJob);
+            .await;
+        let decision = if sent.is_ok() {
+            rx.await.unwrap_or(ConflictDecision::CancelJob)
+        } else {
+            ConflictDecision::CancelJob
+        };
+
+        if self
+            .shared
+            .waiting_conflicts
+            .fetch_sub(1, Ordering::Relaxed)
+            == 1
+        {
+            self.shared.set_state(TransferState::Running);
+            self.shared.emit(true).await;
+        }
         match decision {
-            ConflictDecision::OverwriteAll => self.overwrite_all = true,
-            ConflictDecision::SkipAll => self.skip_all = true,
+            ConflictDecision::OverwriteAll => {
+                self.shared.overwrite_all.store(true, Ordering::Relaxed)
+            }
+            ConflictDecision::SkipAll => self.shared.skip_all.store(true, Ordering::Relaxed),
             _ => {}
         }
-        self.snapshot.state = TransferState::Running;
-        self.emit(true).await;
         Ok(decision)
     }
 }
 
 /// Walks the source tree on its own task, creating destination directories
-/// and streaming files to copy. Runs concurrently with the copy loop so the
-/// transfer and the count happen at the same time.
+/// and streaming files to copy. Runs concurrently with the copy workers so
+/// the transfer and the count happen at the same time.
 struct Scanner {
     src: Backend,
     dst: Backend,
@@ -467,24 +669,8 @@ struct Scanner {
 }
 
 impl Scanner {
-    /// Block while paused, and stop when cancelled — so a paused transfer
-    /// doesn't keep hitting the remote, and a cancel halts the walk.
-    async fn checkpoint(&mut self) -> anyhow::Result<()> {
-        loop {
-            let ctrl = *self.ctrl.borrow();
-            if ctrl.cancelled {
-                anyhow::bail!("cancelled");
-            }
-            if !ctrl.paused {
-                return Ok(());
-            }
-            let mut ctrl_rx = self.ctrl.clone();
-            ctrl_rx.changed().await.ok();
-        }
-    }
-
     async fn walk(&mut self, entry: &FsEntry, dst_dir: &str) -> anyhow::Result<()> {
-        self.checkpoint().await?;
+        checkpoint(&mut self.ctrl).await?;
         let dst_path = fsops::join(dst_dir, &entry.name);
         if entry.is_dir {
             // Create the directory before streaming any of its files, so the
@@ -509,9 +695,10 @@ impl Scanner {
                 src_path: entry.path.clone(),
                 dst_final: dst_path,
                 size: entry.size,
+                mode: entry.mode,
             };
-            // A send error means the copier stopped (bailed or was
-            // cancelled); stop walking rather than keep producing.
+            // A send error means the copiers stopped (bailed or cancelled);
+            // stop walking rather than keep producing.
             if self.tx.send(Ok(item)).await.is_err() {
                 anyhow::bail!("copy stopped");
             }

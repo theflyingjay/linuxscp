@@ -27,16 +27,39 @@ pub fn show(
     let has_dir = entries.iter().any(|e| e.is_dir && !e.is_symlink);
 
     // --- Read-only details -------------------------------------------------
-    let info = adw::PreferencesGroup::new();
-    let row = |title: &str, subtitle: &str| {
-        let row = adw::ActionRow::builder()
-            .title(title)
-            .subtitle(subtitle)
-            .build();
-        row.add_css_class("property");
-        row.set_subtitle_selectable(true);
-        info.add(&row);
-        row
+    // A dense label grid (not ActionRows) so the whole dialog — including
+    // the permission grid and the recursive checkbox — fits without
+    // scrolling even on small screens.
+    let info_grid = gtk::Grid::builder()
+        .row_spacing(4)
+        .column_spacing(18)
+        .build();
+    let next_row = Rc::new(Cell::new(0i32));
+    let add_info = {
+        let info_grid = info_grid.clone();
+        let next_row = next_row.clone();
+        move |title: &str, value: &str| -> gtk::Label {
+            let r = next_row.get();
+            next_row.set(r + 1);
+            let t = gtk::Label::builder()
+                .label(title)
+                .halign(gtk::Align::Start)
+                .valign(gtk::Align::Baseline)
+                .build();
+            t.add_css_class("dim-label");
+            let v = gtk::Label::builder()
+                .label(value)
+                .halign(gtk::Align::Start)
+                .valign(gtk::Align::Baseline)
+                .hexpand(true)
+                .selectable(true)
+                .max_width_chars(34)
+                .build();
+            v.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
+            info_grid.attach(&t, 0, r, 1, 1);
+            info_grid.attach(&v, 1, r, 1, 1);
+            v
+        }
     };
 
     let where_label = match backend {
@@ -47,47 +70,114 @@ pub fn show(
     };
 
     let heading;
-    // Rows whose values arrive after the recursive scan completes.
-    let mut contents_row = None;
-    let mut size_row = None;
+    // Directory totals are only computed on demand: walking a big remote
+    // tree costs a request per directory and would bog down both the dialog
+    // and anything else using the session.
+    let mut contents_value = None;
+    let mut size_value = None;
 
     if entries.len() == 1 {
         let entry = &entries[0];
         heading = entry.name.clone();
-        row("Location", &fsops::parent(&entry.path));
-        row("Type", &type_description(entry));
+        add_info("Location", &fsops::parent(&entry.path));
+        add_info("Type", &type_description(entry));
         if entry.is_dir {
-            contents_row = Some(row("Contents", "Calculating…"));
-            size_row = Some(row("Size", "Calculating…"));
+            contents_value = Some(add_info("Contents", "Not calculated"));
+            size_value = Some(add_info("Size", "Not calculated"));
         } else {
-            row("Size", &exact_size(entry.size));
+            add_info("Size", &exact_size(entry.size));
         }
-        row("Modified", &format_mtime(entry.mtime));
+        add_info("Modified", &format_mtime(entry.mtime));
         if let Some(target) = &entry.link_target {
-            row("Link target", target);
+            add_info("Link target", target);
         }
-        row("Stored on", &where_label);
+        add_info("Stored on", &where_label);
     } else {
         heading = format!("{} Items", entries.len());
-        row("Location", &fsops::parent(&entries[0].path));
-        contents_row = Some(row("Contents", "Calculating…"));
-        size_row = Some(row("Size", "Calculating…"));
-        row("Stored on", &where_label);
+        add_info("Location", &fsops::parent(&entries[0].path));
+        if has_dir {
+            contents_value = Some(add_info("Contents", "Not calculated"));
+            size_value = Some(add_info("Size", "Not calculated"));
+        } else {
+            // All plain files: the listing already knows the answer.
+            add_info("Contents", &format!("{} files", entries.len()));
+            add_info(
+                "Size",
+                &exact_size(entries.iter().map(|e| e.size).sum::<u64>()),
+            );
+        }
+        add_info("Stored on", &where_label);
+    }
+
+    // "Calculate" fills the directory totals on demand; it rides beside the
+    // Contents/Size rows so it costs no extra height.
+    if let (Some(contents_value), Some(size_value)) = (&contents_value, &size_value) {
+        let calc_btn = gtk::Button::builder()
+            .label("Calculate")
+            .valign(gtk::Align::Center)
+            .build();
+        let contents_grid_row = if entries.len() == 1 { 2 } else { 1 };
+        info_grid.attach(&calc_btn, 2, contents_grid_row, 1, 2);
+        let contents_value = contents_value.clone();
+        let size_value = size_value.clone();
+        let entries_for_scan = entries.clone();
+        calc_btn.connect_clicked(move |btn| {
+            btn.set_sensitive(false);
+            contents_value.set_label("Calculating…");
+            size_value.set_label("Calculating…");
+            let entries = entries_for_scan.clone();
+            let handle = runtime().spawn(async move { fsops::disk_usage(backend, &entries).await });
+            let contents_value = contents_value.clone();
+            let size_value = size_value.clone();
+            let btn = btn.clone();
+            glib::spawn_future_local(async move {
+                let usage = match handle.await {
+                    Ok(Ok(usage)) => usage,
+                    _ => {
+                        contents_value.set_label("Unavailable");
+                        size_value.set_label("Unavailable");
+                        btn.set_sensitive(true);
+                        return;
+                    }
+                };
+                contents_value.set_label(&format!(
+                    "{} {}, {} {}",
+                    usage.files,
+                    if usage.files == 1 { "file" } else { "files" },
+                    usage.dirs,
+                    if usage.dirs == 1 { "folder" } else { "folders" },
+                ));
+                size_value.set_label(&exact_size(usage.bytes));
+                btn.set_visible(false);
+            });
+        });
     }
 
     // --- Owner / group (editable) ------------------------------------------
     let initial_owner = common_value(&entries, |e| e.owner.clone());
     let initial_group = common_value(&entries, |e| e.group.clone());
 
-    let ident = adw::PreferencesGroup::new();
-    let owner_row = adw::EntryRow::builder().title("Owner").build();
-    owner_row.set_text(&initial_owner);
-    owner_row.set_activates_default(true);
-    let group_row = adw::EntryRow::builder().title("Group").build();
-    group_row.set_text(&initial_group);
-    group_row.set_activates_default(true);
-    ident.add(&owner_row);
-    ident.add(&group_row);
+    let ident = gtk::Grid::builder()
+        .row_spacing(6)
+        .column_spacing(18)
+        .build();
+    let ident_entry = |title: &str, initial: &str, grid_row: i32| {
+        let label = gtk::Label::builder()
+            .label(title)
+            .halign(gtk::Align::Start)
+            .build();
+        label.add_css_class("dim-label");
+        let entry = gtk::Entry::builder()
+            .text(initial)
+            .hexpand(true)
+            .activates_default(true)
+            .build();
+        ident.attach(&label, 0, grid_row, 1, 1);
+        ident.attach(&entry, 1, grid_row, 1, 1);
+        entry
+    };
+    let owner_row = ident_entry("Owner", &initial_owner, 0);
+    let group_row = ident_entry("Group", &initial_group, 1);
 
     // --- Permissions grid ---------------------------------------------------
     let perms = Permissions::new(initial_mode(&entries));
@@ -108,7 +198,7 @@ pub fn show(
     perm_group.add(&perm_box);
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
-    content.append(&info);
+    content.append(&info_grid);
     content.append(&ident);
     content.append(&perm_group);
 
@@ -122,6 +212,7 @@ pub fn show(
     dialog.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
     dialog.set_extra_child(Some(&content));
 
+    let owner_focus = owner_row.clone();
     {
         let perms = perms.clone();
         let backend_for_apply = backend;
@@ -168,36 +259,9 @@ pub fn show(
     }
 
     dialog.present(Some(&parent));
-
-    // Fill in the recursive totals without blocking the dialog.
-    if contents_row.is_some() || size_row.is_some() {
-        let entries_for_scan = entries.clone();
-        let handle =
-            runtime().spawn(async move { fsops::disk_usage(backend, &entries_for_scan).await });
-        glib::spawn_future_local(async move {
-            let usage = match handle.await {
-                Ok(Ok(usage)) => usage,
-                _ => {
-                    for row in [&contents_row, &size_row].into_iter().flatten() {
-                        row.set_subtitle("Unavailable");
-                    }
-                    return;
-                }
-            };
-            if let Some(row) = &contents_row {
-                row.set_subtitle(&format!(
-                    "{} {}, {} {}",
-                    usage.files,
-                    if usage.files == 1 { "file" } else { "files" },
-                    usage.dirs,
-                    if usage.dirs == 1 { "folder" } else { "folders" },
-                ));
-            }
-            if let Some(row) = &size_row {
-                row.set_subtitle(&exact_size(usage.bytes));
-            }
-        });
-    }
+    // Keep focus off the selectable info labels (which would show an
+    // all-selected highlight); start in the first editable field instead.
+    owner_focus.grab_focus();
 }
 
 fn show_error(parent: &gtk::Widget, message: &str) {

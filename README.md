@@ -40,8 +40,9 @@ can manage root-owned files, and every transfer is **resumable**.
   changing anything in `sshd_config`.
 - **Robust transfers** — a queue with live progress, speed and ETA; pause, resume and cancel;
   recursive directory copies; conflict prompts (overwrite / resume / skip). Scanning and
-  copying run in parallel, so large trees start transferring immediately while the file
-  count is still climbing.
+  copying run in parallel and several files are in flight at once, so large trees start
+  transferring immediately and folders full of small files aren't bottlenecked by
+  per-file round trips.
 - **Resume across disconnects** — interrupted files are staged as `.filepart` and continued
   from their offset on the next try.
 - **Full file management** — create folders, rename, delete (recursive), new symlinks, and

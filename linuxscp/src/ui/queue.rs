@@ -267,7 +267,9 @@ fn running_detail(snap: &TransferSnapshot) -> String {
 
 fn format_eta(seconds: f64) -> String {
     let s = seconds as u64;
-    if s >= 3600 {
+    if s >= 48 * 3600 {
+        format!("{}d {}h", s / 86_400, (s % 86_400) / 3600)
+    } else if s >= 3600 {
         format!("{}h {}m", s / 3600, (s % 3600) / 60)
     } else if s >= 60 {
         format!("{}m {}s", s / 60, s % 60)
