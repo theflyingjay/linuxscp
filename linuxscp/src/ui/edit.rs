@@ -127,9 +127,11 @@ impl EditManager {
             return;
         }
         // Download already on its way; the editor opens when it lands.
-        let downloading = self.pending.borrow().values().any(
-            |p| matches!(p, Pending::Download(dl) if dl.key == key),
-        );
+        let downloading = self
+            .pending
+            .borrow()
+            .values()
+            .any(|p| matches!(p, Pending::Download(dl) if dl.key == key));
         if downloading {
             return;
         }
