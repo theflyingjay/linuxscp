@@ -437,7 +437,8 @@ impl Job {
             started: AtomicBool::new(false),
             any_skipped: AtomicBool::new(false),
             failed: AtomicBool::new(false),
-            overwrite_all: AtomicBool::new(false),
+            // Pre-answered conflict policy: skip the dialog entirely.
+            overwrite_all: AtomicBool::new(request.overwrite),
             skip_all: AtomicBool::new(false),
             conflict_gate: tokio::sync::Mutex::new(()),
             waiting_conflicts: AtomicU32::new(0),

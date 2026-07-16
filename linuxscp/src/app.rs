@@ -8,6 +8,7 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 
 use crate::ui::connect_dialog::{self, SiteManagerHandlers};
+use crate::ui::edit::EditManager;
 use crate::ui::pane::Pane;
 use crate::ui::prompts;
 use crate::ui::properties;
@@ -49,6 +50,8 @@ pub struct App {
     session_specs: RefCell<HashMap<SessionId, ConnectSpec>>,
     clipboard: RefCell<Option<ClipboardState>>,
     notifier: crate::ui::notify::Notifier,
+    /// Double-click editing: temp copies, save watching, re-uploads.
+    edit: Rc<EditManager>,
 }
 
 impl App {
@@ -144,6 +147,7 @@ impl App {
         let notifier = crate::ui::notify::Notifier::new(app);
         let hidden = settings.show_hidden;
         let left_width = settings.left_width;
+        let edit = EditManager::new(&window, &toasts, events_tx.clone());
 
         let this = Rc::new(Self {
             window,
@@ -159,6 +163,7 @@ impl App {
             session_specs: RefCell::new(HashMap::new()),
             clipboard: RefCell::new(None),
             notifier,
+            edit,
         });
 
         this.wire_tabs();
@@ -363,6 +368,15 @@ impl App {
             }
             pane.view.add_controller(focus);
 
+            // New folder button: same flow as F7 / the context menu.
+            {
+                let this = self.clone();
+                let pane_for_btn = pane.clone();
+                pane.new_folder_button.connect_clicked(move |_| {
+                    this.mkdir_in(pane_for_btn.clone());
+                });
+            }
+
             // Connect / disconnect buttons.
             {
                 let this = self.clone();
@@ -387,6 +401,15 @@ impl App {
                 let this = self.clone();
                 pane.setup_drop_target(move |payload, dst_pane| {
                     this.transfer_into(payload.source, payload.items, &dst_pane);
+                });
+            }
+
+            // Double-click / Enter on a regular file: open it in the editor.
+            {
+                let this = self.clone();
+                let pane_for_edit = pane.clone();
+                pane.set_on_file_activate(move |entry| {
+                    this.edit.open(pane_for_edit.backend(), entry);
                 });
             }
         }
@@ -616,6 +639,7 @@ impl App {
         let shortcuts: &[(&str, &str)] = &[
             ("Tab", "Switch active pane"),
             ("Enter", "Open directory"),
+            ("Double-click / Enter", "Edit file in text editor"),
             ("Backspace", "Parent directory"),
             ("F5", "Copy to other pane"),
             ("F6", "Move to other pane"),
@@ -756,6 +780,7 @@ impl App {
             items,
             dst_dir: dst.current_dir(),
             move_src,
+            overwrite: false,
         };
         transfers::start(request, self.events_tx.clone());
     }
@@ -876,6 +901,7 @@ impl App {
             items,
             dst_dir: dst_pane.current_dir(),
             move_src: false,
+            overwrite: false,
         };
         transfers::start(request, self.events_tx.clone());
     }
@@ -969,6 +995,7 @@ impl App {
                     items: clip.items.clone(),
                     dst_dir,
                     move_src: clip.cut,
+                    overwrite: false,
                 },
                 self.events_tx.clone(),
             );
@@ -1011,6 +1038,7 @@ impl App {
                                 items: leftover,
                                 dst_dir,
                                 move_src: true,
+                                overwrite: false,
                             },
                             events,
                         );
@@ -1061,6 +1089,7 @@ impl App {
                                     items,
                                     dst_dir,
                                     move_src: false,
+                                    overwrite: false,
                                 },
                                 this.events_tx.clone(),
                             );
@@ -1401,6 +1430,9 @@ impl App {
                     Event::Conflict(request) => prompts::show_conflict(&this.window, request),
                     Event::TransferUpdate(snapshot) => {
                         this.on_transfer_snapshot(&snapshot);
+                        // Edit downloads/uploads piggyback on the queue;
+                        // the manager reacts when its jobs finish.
+                        this.edit.on_job_terminal(&snapshot);
                         this.queue.update(snapshot);
                     }
                     Event::SessionClosed { id, reason } => {

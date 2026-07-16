@@ -41,10 +41,14 @@ type RowDragSlot = Rc<RefCell<Option<Box<dyn Fn(u32) -> Option<gtk::gdk::Content
 /// Opens the context menu at view coordinates (x, y).
 type ContextMenuHandler = Box<dyn Fn(f64, f64)>;
 
+/// Called when a non-directory row is activated (double-click / Enter).
+type FileActivateHandler = Box<dyn Fn(FsEntry)>;
+
 pub struct Pane {
     pub root: gtk::Box,
     pub view: gtk::ColumnView,
     pub path_entry: gtk::Entry,
+    pub new_folder_button: gtk::Button,
     pub connect_button: gtk::Button,
     pub disconnect_button: gtk::Button,
     pub conn_chip: gtk::Label,
@@ -59,6 +63,8 @@ pub struct Pane {
     show_hidden_flag: Rc<Cell<bool>>,
     /// Opens the context menu at view coordinates; installed by the app.
     context_menu: RefCell<Option<ContextMenuHandler>>,
+    /// Handles activating a regular file (edit); installed by the app.
+    file_activate: RefCell<Option<FileActivateHandler>>,
     pub state: RefCell<PaneState>,
 }
 
@@ -119,11 +125,14 @@ impl Pane {
         home_button.set_tooltip_text(Some("Home directory"));
         let refresh_button = gtk::Button::from_icon_name("view-refresh-symbolic");
         refresh_button.set_tooltip_text(Some("Refresh (Ctrl+R)"));
+        let new_folder_button = gtk::Button::from_icon_name("folder-new-symbolic");
+        new_folder_button.set_tooltip_text(Some("New folder (F7)"));
         let nav_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         nav_box.add_css_class("linked");
         nav_box.append(&up_button);
         nav_box.append(&home_button);
         nav_box.append(&refresh_button);
+        nav_box.append(&new_folder_button);
 
         let path_entry = gtk::Entry::builder().hexpand(true).build();
 
@@ -170,6 +179,7 @@ impl Pane {
             root,
             view,
             path_entry,
+            new_folder_button,
             connect_button,
             disconnect_button,
             conn_chip,
@@ -180,6 +190,7 @@ impl Pane {
             status,
             show_hidden_flag: show_hidden,
             context_menu: RefCell::new(None),
+            file_activate: RefCell::new(None),
             state: RefCell::new(PaneState {
                 backend: Backend::Local,
                 dir: "/".into(),
@@ -319,6 +330,10 @@ impl Pane {
     /// the pane has adjusted focus and selection).
     pub fn set_context_menu(&self, open: impl Fn(f64, f64) + 'static) {
         *self.context_menu.borrow_mut() = Some(Box::new(open));
+    }
+
+    pub fn set_on_file_activate(&self, open: impl Fn(FsEntry) + 'static) {
+        *self.file_activate.borrow_mut() = Some(Box::new(open));
     }
 
     /// Wire this pane as a drop target. `on_drop` receives the payload and
@@ -477,6 +492,8 @@ impl Pane {
         let entry = obj.downcast_ref::<EntryObject>().unwrap().entry();
         if entry.is_dir {
             self.navigate(entry.path);
+        } else if let Some(open) = self.file_activate.borrow().as_ref() {
+            open(entry);
         }
     }
 

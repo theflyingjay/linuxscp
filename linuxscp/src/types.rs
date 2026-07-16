@@ -193,6 +193,9 @@ pub struct TransferRequest {
     pub dst_dir: String,
     /// Delete sources after a fully successful copy (F6 move).
     pub move_src: bool,
+    /// Overwrite existing destination files without asking. Used by edit
+    /// re-uploads, where the destination existing is the normal case.
+    pub overwrite: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
