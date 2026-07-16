@@ -227,11 +227,24 @@ pub enum TransferKind {
     Attributes,
 }
 
+/// Which way a copy/move crosses the local/remote boundary, so the queue
+/// can badge each row (and its history) with an upload or download arrow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransferDirection {
+    /// Local → remote.
+    Upload,
+    /// Remote → local.
+    Download,
+}
+
 #[derive(Debug, Clone)]
 pub struct TransferSnapshot {
     pub id: TransferId,
     pub title: String,
     pub kind: TransferKind,
+    /// Upload/download when the job crosses the local/remote boundary;
+    /// `None` for local↔local, remote↔remote and mutation jobs.
+    pub direction: Option<TransferDirection>,
     pub state: TransferState,
     pub current_file: String,
     pub done_bytes: u64,

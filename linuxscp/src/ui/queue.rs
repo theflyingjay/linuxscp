@@ -10,13 +10,16 @@ use gtk::glib;
 
 use super::entry_object::format_size;
 use linuxscp::transfers;
-use linuxscp::types::{TransferAction, TransferId, TransferKind, TransferSnapshot, TransferState};
+use linuxscp::types::{
+    TransferAction, TransferDirection, TransferId, TransferKind, TransferSnapshot, TransferState,
+};
 
 struct Row {
     root: gtk::Box,
     title: gtk::Label,
     detail: gtk::Label,
     progress: gtk::ProgressBar,
+    direction: gtk::Image,
     pause_btn: gtk::Button,
     cancel_btn: gtk::Button,
 }
@@ -81,6 +84,24 @@ impl QueueView {
         });
 
         row.title.set_text(&snapshot.title);
+        // Direction badge: stays on the row for its whole life, including
+        // the dismissable history entry, so finished jobs still read as
+        // uploads or downloads at a glance.
+        match snapshot.direction {
+            Some(TransferDirection::Upload) => {
+                row.direction.set_icon_name(Some("go-up-symbolic"));
+                row.direction.add_css_class("upload");
+                row.direction.set_tooltip_text(Some("Upload"));
+                row.direction.set_visible(true);
+            }
+            Some(TransferDirection::Download) => {
+                row.direction.set_icon_name(Some("go-down-symbolic"));
+                row.direction.add_css_class("download");
+                row.direction.set_tooltip_text(Some("Download"));
+                row.direction.set_visible(true);
+            }
+            None => row.direction.set_visible(false),
+        }
         let is_op = matches!(
             snapshot.kind,
             TransferKind::Delete | TransferKind::Attributes
@@ -194,6 +215,13 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     text_box.append(&progress);
     text_box.append(&detail);
 
+    // Which way the bytes cross the local/remote boundary (green ↑ upload,
+    // blue ↓ download). Hidden until a snapshot says the job has one.
+    let direction = gtk::Image::new();
+    direction.add_css_class("transfer-direction");
+    direction.set_valign(gtk::Align::Center);
+    direction.set_visible(false);
+
     let pause_btn = gtk::Button::from_icon_name("media-playback-pause-symbolic");
     pause_btn.add_css_class("flat");
     pause_btn.set_valign(gtk::Align::Center);
@@ -232,6 +260,8 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     let root = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     root.append(&text_box);
     root.append(&pause_btn);
+    // Keep the badge immediately left of the cancel/dismiss "x".
+    root.append(&direction);
     root.append(&cancel_btn);
 
     Row {
@@ -239,6 +269,7 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
         title,
         detail,
         progress,
+        direction,
         pause_btn,
         cancel_btn,
     }

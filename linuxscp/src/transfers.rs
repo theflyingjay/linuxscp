@@ -23,8 +23,8 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt
 use tokio::sync::watch;
 
 use crate::types::{
-    Backend, ConflictDecision, ConflictRequest, Event, FsEntry, TransferAction, TransferId,
-    TransferKind, TransferRequest, TransferSnapshot, TransferState,
+    Backend, ConflictDecision, ConflictRequest, Event, FsEntry, TransferAction, TransferDirection,
+    TransferId, TransferKind, TransferRequest, TransferSnapshot, TransferState,
 };
 use crate::{fsops, sessions};
 
@@ -198,6 +198,9 @@ where
                 id,
                 title: title.clone(),
                 kind,
+                // Mutations change things in place; nothing moves between
+                // the local and remote sides.
+                direction: None,
                 state,
                 current_file: String::new(),
                 done_bytes: 0,
@@ -396,6 +399,15 @@ impl Job {
                 request.items.len()
             )
         };
+        let direction = match (
+            request.src_backend.is_remote(),
+            request.dst_backend.is_remote(),
+        ) {
+            (false, true) => Some(TransferDirection::Upload),
+            (true, false) => Some(TransferDirection::Download),
+            // local↔local and remote↔remote copies have no direction.
+            _ => None,
+        };
         let template = TransferSnapshot {
             id,
             title,
@@ -404,6 +416,7 @@ impl Job {
             } else {
                 TransferKind::Copy
             },
+            direction,
             state: TransferState::Queued,
             current_file: String::new(),
             done_bytes: 0,

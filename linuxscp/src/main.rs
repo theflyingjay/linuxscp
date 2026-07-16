@@ -118,7 +118,11 @@ fn load_css() {
              border: 1px dashed alpha(currentColor, 0.35);\n\
              border-radius: 7px;\n\
              color: alpha(currentColor, 0.8);\n\
-         }",
+         }\n\
+         /* Queue direction badges: green up-arrow for uploads, blue\n\
+            down-arrow for downloads (GNOME palette, ok in both themes). */\n\
+         image.transfer-direction.upload { color: #26a269; }\n\
+         image.transfer-direction.download { color: #3584e4; }",
     );
     gtk::style_context_add_provider_for_display(
         &display,
