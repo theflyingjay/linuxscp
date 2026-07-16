@@ -43,6 +43,14 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.1.4" date="2026-07-16">
+      <description>
+        <ul>
+          <li>Refactor downloading check in EditManager for improved readability</li>
+          <li>Add double-click editing for files and enhance transfer handling</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.3" date="2026-07-16">
       <description>
         <ul>
