@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.1.3" date="2026-07-16">
+      <description>
+        <ul>
+          <li>Add transfer direction badges to the UI and update transfer handling</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.2" date="2026-07-16">
       <description>
         <ul>
