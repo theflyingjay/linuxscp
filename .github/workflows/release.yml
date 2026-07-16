@@ -12,6 +12,9 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # The Auto Release workflow pushes tags with the workflow GITHUB_TOKEN,
+  # which never triggers `push` events — it dispatches this instead.
+  workflow_dispatch:
 
 permissions:
   contents: write

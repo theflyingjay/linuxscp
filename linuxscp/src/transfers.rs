@@ -970,10 +970,7 @@ impl AsyncWrite for Stream {
         }
     }
 
-    fn poll_shutdown(
-        mut self: Pin<&mut Self>,
-        cx: &mut task::Context<'_>,
-    ) -> Poll<io::Result<()>> {
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<io::Result<()>> {
         match &mut *self {
             Stream::Local(f) => Pin::new(f).poll_shutdown(cx),
             Stream::Remote(f) => Pin::new(f).poll_shutdown(cx),

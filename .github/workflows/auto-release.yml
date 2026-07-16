@@ -1,0 +1,84 @@
+name: Auto Release
+
+# Cuts a release automatically once CI passes on main: bumps the version
+# (scripts/cut-release.sh), records the commit subjects since the last tag
+# as release notes in the AppStream metainfo, commits "Release vX.Y.Z",
+# tags it, and dispatches the Release workflow that builds the .debs.
+#
+# Steer it from the pushed head commit's message:
+#   [release:minor]  bump the minor version instead (new features)
+#   [release:major]  bump the major version (breaking changes)
+#   [skip release]   don't cut a release for this push
+# The default is a patch bump (0.1.1 -> 0.1.2), matching a bug-fix push.
+#
+# The release commit is pushed with the workflow's GITHUB_TOKEN. GitHub
+# never runs workflows for pushes made with that token, so this can't
+# retrigger CI or itself — but it also means the v* tag push can't fire
+# the Release workflow, hence the explicit dispatch at the end.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: write
+
+# One cut at a time; a queued run for a stale SHA skips on the guard below.
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  cut-release:
+    # Only pushes: workflow_run's branch filter also matches PRs whose head
+    # branch is named "main" (e.g. from forks); those must never release.
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      !contains(github.event.workflow_run.head_commit.message, '[skip release]') &&
+      !startsWith(github.event.workflow_run.head_commit.message, 'Release v')
+    runs-on: ubuntu-latest
+    env:
+      # Bump applied when the commit message doesn't say otherwise.
+      DEFAULT_BUMP: patch
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          # cut-release.sh needs the tags and history for release notes.
+          fetch-depth: 0
+
+      - name: Bump version, tag, and start the deb build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_MSG: ${{ github.event.workflow_run.head_commit.message }}
+        run: |
+          # Release exactly the tree CI just tested. If main has already
+          # moved on, skip: the newer push's own CI run releases both.
+          if [ "$(git rev-parse HEAD)" != "$HEAD_SHA" ]; then
+            echo "main moved past $HEAD_SHA; skipping"
+            exit 0
+          fi
+
+          LEVEL="$DEFAULT_BUMP"
+          case "$HEAD_MSG" in
+            *"[release:major]"*) LEVEL=major ;;
+            *"[release:minor]"*) LEVEL=minor ;;
+            *"[release:patch]"*) LEVEL=patch ;;
+          esac
+
+          NEW="$(scripts/cut-release.sh "$LEVEL")"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release v$NEW"
+          git tag "v$NEW"
+          # Atomic: if a racing push to main lands first, nothing (commit
+          # or tag) is pushed, and that push's own CI run cuts the release.
+          git push --atomic origin main "v$NEW"
+
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "v$NEW"
