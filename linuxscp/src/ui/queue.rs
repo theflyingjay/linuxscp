@@ -73,7 +73,9 @@ impl QueueView {
         let mut rows = self.rows.borrow_mut();
         let row = rows.entry(snapshot.id).or_insert_with(|| {
             let row = build_row(self, snapshot.id);
-            self.list.append(&row.root);
+            // Newest job on top, so the most recent transfer/delete is
+            // visible without scrolling down the queue.
+            self.list.prepend(&row.root);
             self.revealer.set_reveal_child(true);
             row
         });

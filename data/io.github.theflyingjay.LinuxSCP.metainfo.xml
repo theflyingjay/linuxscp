@@ -33,6 +33,15 @@
   </developer>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="0.1.1" date="2026-07-15">
+      <description>
+        <p>Quality-of-life improvements:</p>
+        <ul>
+          <li>The transfer queue now shows the newest job at the top, so the latest transfer or delete is visible without scrolling</li>
+          <li>Files and folders can be dragged between panes in a single motion — no need to select them first</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-07-11">
       <description>
         <p>Initial release.</p>

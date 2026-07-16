@@ -34,6 +34,10 @@ pub struct PaneState {
 /// Handler invoked on a row right-click: (model position, view x, view y).
 type RowMenuSlot = Rc<RefCell<Option<Box<dyn Fn(u32, f64, f64)>>>>;
 
+/// Builds the drag payload for a drag that started on the row at the given
+/// model position; installed by the pane once it is constructed.
+type RowDragSlot = Rc<RefCell<Option<Box<dyn Fn(u32) -> Option<gtk::gdk::ContentProvider>>>>>;
+
 /// Opens the context menu at view coordinates (x, y).
 type ContextMenuHandler = Box<dyn Fn(f64, f64)>;
 
@@ -99,7 +103,8 @@ impl Pane {
         // knows not to clear the selection it just made.
         let row_click_handled = Rc::new(Cell::new(false));
         let row_menu: RowMenuSlot = Rc::new(RefCell::new(None));
-        add_columns(&view, &row_menu);
+        let row_drag: RowDragSlot = Rc::new(RefCell::new(None));
+        add_columns(&view, &row_menu, &row_drag);
 
         let scroller = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Automatic)
@@ -279,7 +284,33 @@ impl Pane {
             pane.view.add_controller(gesture);
         }
 
-        pane.setup_drag_source();
+        // Drag payload builder for the per-row drag sources (attached to the
+        // cells in `add_columns`). Starting a drag on a row that isn't part
+        // of the selection retargets the selection to just that row, so a
+        // single press-and-drag works without selecting the file first;
+        // dragging a row that is already selected carries the whole
+        // selection along.
+        {
+            let p = pane.clone();
+            *row_drag.borrow_mut() = Some(Box::new(move |position| {
+                if position < p.parent_rows() {
+                    return None; // the ".." row is not draggable
+                }
+                if !p.selection.is_selected(position) {
+                    p.selection.select_item(position, true);
+                }
+                let items: Vec<DropPayloadItem> = p
+                    .selected_entries()
+                    .into_iter()
+                    .map(DropPayloadItem)
+                    .collect();
+                let payload = DragPayload {
+                    source: p.backend(),
+                    items,
+                };
+                Some(gtk::gdk::ContentProvider::for_value(&payload.to_value()))
+            }));
+        }
 
         pane
     }
@@ -288,28 +319,6 @@ impl Pane {
     /// the pane has adjusted focus and selection).
     pub fn set_context_menu(&self, open: impl Fn(f64, f64) + 'static) {
         *self.context_menu.borrow_mut() = Some(Box::new(open));
-    }
-
-    fn setup_drag_source(self: &Rc<Self>) {
-        let drag = gtk::DragSource::new();
-        drag.set_actions(gtk::gdk::DragAction::COPY);
-        let this = self.clone();
-        drag.connect_prepare(move |_, _, _| {
-            let items: Vec<DropPayloadItem> = this
-                .selected_entries()
-                .into_iter()
-                .map(DropPayloadItem)
-                .collect();
-            if items.is_empty() {
-                return None;
-            }
-            let payload = DragPayload {
-                source: this.backend(),
-                items,
-            };
-            Some(gtk::gdk::ContentProvider::for_value(&payload.to_value()))
-        });
-        self.view.add_controller(drag);
     }
 
     /// Wire this pane as a drop target. `on_drop` receives the payload and
@@ -544,12 +553,13 @@ impl Pane {
     }
 }
 
-fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot) {
+fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot, row_drag: &RowDragSlot) {
     // Name column with icon.
     let name_factory = gtk::SignalListItemFactory::new();
     {
         let view = view.clone();
         let row_menu = row_menu.clone();
+        let row_drag = row_drag.clone();
         name_factory.connect_setup(move |_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().unwrap();
             let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 8);
@@ -561,6 +571,7 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot) {
             hbox.append(&label);
             item.set_child(Some(&hbox));
             attach_row_menu_gesture(item, hbox.upcast_ref(), &view, &row_menu);
+            attach_row_drag_source(item, hbox.upcast_ref(), &row_drag);
         });
     }
     name_factory.connect_bind(|_, item| {
@@ -585,7 +596,7 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot) {
     })));
     view.append_column(&name_col);
 
-    let size_col = text_column(view, row_menu, "Size", false, |e| {
+    let size_col = text_column(view, row_menu, row_drag, "Size", false, |e| {
         if e.is_dir {
             String::new()
         } else {
@@ -595,11 +606,13 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot) {
     size_col.set_sorter(Some(&entry_sorter(|a, b| a.size.cmp(&b.size))));
     view.append_column(&size_col);
 
-    let mtime_col = text_column(view, row_menu, "Modified", false, |e| format_mtime(e.mtime));
+    let mtime_col = text_column(view, row_menu, row_drag, "Modified", false, |e| {
+        format_mtime(e.mtime)
+    });
     mtime_col.set_sorter(Some(&entry_sorter(|a, b| a.mtime.cmp(&b.mtime))));
     view.append_column(&mtime_col);
 
-    let perm_col = text_column(view, row_menu, "Permissions", true, |e| {
+    let perm_col = text_column(view, row_menu, row_drag, "Permissions", true, |e| {
         if is_parent_row(e) {
             String::new()
         } else {
@@ -609,7 +622,7 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot) {
     perm_col.set_sorter(Some(&entry_sorter(|a, b| a.mode.cmp(&b.mode))));
     view.append_column(&perm_col);
 
-    let owner_col = text_column(view, row_menu, "Owner", true, |e| {
+    let owner_col = text_column(view, row_menu, row_drag, "Owner", true, |e| {
         match (&e.owner, &e.group) {
             (Some(o), Some(g)) => format!("{o}:{g}"),
             (Some(o), None) => o.clone(),
@@ -657,9 +670,29 @@ fn attach_row_menu_gesture(
     cell.add_controller(gesture);
 }
 
+/// Per-cell drag source so a drag can start on any row in one motion — no
+/// need to select the file first. The cell knows its row through the
+/// `ListItem`, and the pane's `RowDragSlot` handler turns that row (or the
+/// existing selection containing it) into the drag payload.
+fn attach_row_drag_source(item: &gtk::ListItem, cell: &gtk::Widget, row_drag: &RowDragSlot) {
+    let drag = gtk::DragSource::new();
+    drag.set_actions(gtk::gdk::DragAction::COPY);
+    let item = item.clone();
+    let row_drag = row_drag.clone();
+    drag.connect_prepare(move |_, _, _| {
+        let position = item.position();
+        if position == gtk::INVALID_LIST_POSITION {
+            return None;
+        }
+        row_drag.borrow().as_ref().and_then(|build| build(position))
+    });
+    cell.add_controller(drag);
+}
+
 fn text_column(
     view: &gtk::ColumnView,
     row_menu: &RowMenuSlot,
+    row_drag: &RowDragSlot,
     title: &str,
     monospace: bool,
     getter: impl Fn(&FsEntry) -> String + 'static,
@@ -668,6 +701,7 @@ fn text_column(
     {
         let view = view.clone();
         let row_menu = row_menu.clone();
+        let row_drag = row_drag.clone();
         factory.connect_setup(move |_, item| {
             let item = item.downcast_ref::<gtk::ListItem>().unwrap();
             let label = gtk::Label::new(None);
@@ -678,6 +712,7 @@ fn text_column(
             label.add_css_class("numeric");
             item.set_child(Some(&label));
             attach_row_menu_gesture(item, label.upcast_ref(), &view, &row_menu);
+            attach_row_drag_source(item, label.upcast_ref(), &row_drag);
         });
     }
     let getter = Rc::new(getter);
