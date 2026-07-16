@@ -18,6 +18,8 @@ jump hosts, keys, and agents you already use on the command line — because it 
 system OpenSSH binary under the hood. It also handles **`sudo` / `su -` elevation** so you
 can manage root-owned files, and every transfer is **resumable**.
 
+![The LinuxSCP main window: a dual-pane commander layout with session tabs](docs/dual-pane.png)
+
 ## Features
 
 - **Dual-pane commander UI** — local on one side, remote on the other, `Tab` to switch,
@@ -56,6 +58,8 @@ can manage root-owned files, and every transfer is **resumable**.
   host), reconnect on drop, and remembered preferences.
 
 ## Authentication and saved sites
+
+![The Site Manager: ~/.ssh/config hosts, saved sites in folders, and inline site details](docs/site-manager.png)
 
 Open the **Site Manager** (the server button in either pane's header, or automatically at
 launch). From there you can:

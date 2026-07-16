@@ -9,14 +9,17 @@
 //! what makes a "large folder with many files" fast on a real network.
 
 use std::collections::HashMap;
-use std::io::SeekFrom;
+use std::io::{self, SeekFrom};
+use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::task::{self, Poll};
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
+use russh_sftp::client::fs::File as RemoteFile;
 use russh_sftp::protocol::OpenFlags;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::sync::watch;
 
 use crate::types::{
@@ -699,24 +702,39 @@ impl Worker {
             &item.dst_final
         };
         let mut reader = open_read(self.src, &item.src_path, offset).await?;
-        let mut writer = open_write(self.dst, write_path, offset).await?;
+        let mut writer = match open_write(self.dst, write_path, offset).await {
+            Ok(writer) => writer,
+            Err(err) => {
+                reader.close().await;
+                return Err(err);
+            }
+        };
 
         let mut buf = vec![0u8; CHUNK];
-        loop {
-            checkpoint(&mut self.ctrl).await?;
-            let n = reader.read(&mut buf).await.context("read failed")?;
-            if n == 0 {
-                break;
+        let copied: anyhow::Result<()> = async {
+            loop {
+                checkpoint(&mut self.ctrl).await?;
+                let n = reader.read(&mut buf).await.context("read failed")?;
+                if n == 0 {
+                    break;
+                }
+                writer.write_all(&buf[..n]).await.context("write failed")?;
+                self.shared
+                    .done_bytes
+                    .fetch_add(n as u64, Ordering::Relaxed);
+                self.shared.emit(false).await;
             }
-            writer.write_all(&buf[..n]).await.context("write failed")?;
-            self.shared
-                .done_bytes
-                .fetch_add(n as u64, Ordering::Relaxed);
-            self.shared.emit(false).await;
+            writer.shutdown().await.context("finalizing file")?;
+            Ok(())
         }
-        writer.shutdown().await.context("finalizing file")?;
-        drop(writer);
-        drop(reader);
+        .await;
+        // Settle both handles before surfacing the outcome (see [`Stream`]);
+        // on success the writer was already closed by its shutdown above.
+        reader.close().await;
+        if copied.is_err() {
+            writer.close().await;
+        }
+        copied?;
 
         if use_part {
             // Overwrite semantics: the destination existed and the user
@@ -873,11 +891,97 @@ impl Scanner {
     }
 }
 
-async fn open_read(
-    backend: Backend,
-    path: &str,
-    offset: u64,
-) -> anyhow::Result<Box<dyn AsyncRead + Send + Unpin>> {
+/// One endpoint of a copy. A concrete type rather than a boxed trait object
+/// so the copy loop can settle handles explicitly: dropping a remote
+/// [`RemoteFile`] sends its close packet fire-and-forget, and russh-sftp
+/// (2.3.0) never decrements its client-side open-handle counter on that
+/// path. Each drop then permanently burns one of the handle slots the
+/// server advertised via `limits@openssh.com` (~1000 on stock OpenSSH),
+/// after which every open on the session fails with "Limit exceeded:
+/// handle limit reached". Only the awaited close performed by `shutdown()`
+/// keeps the counter honest.
+enum Stream {
+    Local(tokio::fs::File),
+    Remote(RemoteFile),
+}
+
+impl Stream {
+    /// Explicitly close a remote handle, waiting for the server's ack so
+    /// the session's handle accounting stays correct (see type docs).
+    /// Best-effort: a handle that won't settle within the grace period is
+    /// dropped as before — one leaked counter slot — so a dead connection
+    /// can delay a worker but never wedge it.
+    async fn close(&mut self) {
+        const GRACE: Duration = Duration::from_secs(30);
+        let Stream::Remote(file) = self else {
+            return; // local files release their fd on drop
+        };
+        let settle = async {
+            // After a failed or cancelled copy, shutdown surfaces each
+            // queued write error before performing the close itself, so it
+            // can take one attempt per errored in-flight write (at most
+            // russh-sftp's max_concurrent_writes, 8) before the one that
+            // closes. More attempts than that aren't going to succeed.
+            for _ in 0..10 {
+                match file.shutdown().await {
+                    Ok(()) => return true,
+                    // Session torn down: the handle died with it.
+                    Err(err) if err.kind() == io::ErrorKind::BrokenPipe => return true,
+                    Err(_) => {}
+                }
+            }
+            false
+        };
+        if !matches!(tokio::time::timeout(GRACE, settle).await, Ok(true)) {
+            tracing::warn!("remote file failed to close; leaking a handle slot");
+        }
+    }
+}
+
+impl AsyncRead for Stream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
+        match &mut *self {
+            Stream::Local(f) => Pin::new(f).poll_read(cx, buf),
+            Stream::Remote(f) => Pin::new(f).poll_read(cx, buf),
+        }
+    }
+}
+
+impl AsyncWrite for Stream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        match &mut *self {
+            Stream::Local(f) => Pin::new(f).poll_write(cx, buf),
+            Stream::Remote(f) => Pin::new(f).poll_write(cx, buf),
+        }
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<io::Result<()>> {
+        match &mut *self {
+            Stream::Local(f) => Pin::new(f).poll_flush(cx),
+            Stream::Remote(f) => Pin::new(f).poll_flush(cx),
+        }
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+    ) -> Poll<io::Result<()>> {
+        match &mut *self {
+            Stream::Local(f) => Pin::new(f).poll_shutdown(cx),
+            Stream::Remote(f) => Pin::new(f).poll_shutdown(cx),
+        }
+    }
+}
+
+async fn open_read(backend: Backend, path: &str, offset: u64) -> anyhow::Result<Stream> {
     match backend {
         Backend::Local => {
             let mut file = tokio::fs::File::open(path)
@@ -886,7 +990,7 @@ async fn open_read(
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Box::new(file))
+            Ok(Stream::Local(file))
         }
         Backend::Remote(id) => {
             let sftp = sessions::get(id).context("session is closed")?.sftp;
@@ -895,18 +999,16 @@ async fn open_read(
                 .await
                 .with_context(|| format!("opening remote {path}"))?;
             if offset > 0 {
+                // Never touches the server for SeekFrom::Start, so this
+                // can't fail and leak the just-opened handle.
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Box::new(file))
+            Ok(Stream::Remote(file))
         }
     }
 }
 
-async fn open_write(
-    backend: Backend,
-    path: &str,
-    offset: u64,
-) -> anyhow::Result<Box<dyn AsyncWrite + Send + Unpin>> {
+async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result<Stream> {
     match backend {
         Backend::Local => {
             let mut opts = tokio::fs::OpenOptions::new();
@@ -921,7 +1023,7 @@ async fn open_write(
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Box::new(file))
+            Ok(Stream::Local(file))
         }
         Backend::Remote(id) => {
             let sftp = sessions::get(id).context("session is closed")?.sftp;
@@ -937,7 +1039,7 @@ async fn open_write(
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Box::new(file))
+            Ok(Stream::Remote(file))
         }
     }
 }

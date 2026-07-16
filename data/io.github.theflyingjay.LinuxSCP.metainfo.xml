@@ -32,6 +32,16 @@
     <name>Jacob Petrosky</name>
   </developer>
   <content_rating type="oars-1.1" />
+  <screenshots>
+    <screenshot type="default">
+      <image>https://theflyingjay.github.io/linuxscp/dual-pane.png</image>
+      <caption>Dual-pane commander layout with local and remote files side by side</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://theflyingjay.github.io/linuxscp/site-manager.png</image>
+      <caption>Site manager: ~/.ssh/config hosts, saved sites in folders, inline editing</caption>
+    </screenshot>
+  </screenshots>
   <releases>
     <release version="0.1.1" date="2026-07-15">
       <description>
