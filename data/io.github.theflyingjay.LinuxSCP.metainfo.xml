@@ -43,6 +43,14 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.1.2" date="2026-07-16">
+      <description>
+        <ul>
+          <li>Add auto-release workflow and cut-release script</li>
+          <li>Add screenshots to README and metainfo, enhance transfer handling</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.1" date="2026-07-15">
       <description>
         <p>Quality-of-life improvements:</p>
