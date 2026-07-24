@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.1.5" date="2026-07-24">
+      <description>
+        <ul>
+          <li>Create SECURITY.md</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-07-16">
       <description>
         <ul>
