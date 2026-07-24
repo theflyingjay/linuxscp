@@ -3,7 +3,7 @@ resolver = "3"
 members = ["linuxscp", "linuxscp-askpass"]
 
 [workspace.package]
-version = "0.1.5"
+version = "0.1.6"
 edition = "2024"
 # Debian 13 "Trixie" ships rustc 1.85 and building there from source is a
 # supported path — keep this floor in mind (and clippy MSRV-aware) before
