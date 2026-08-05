@@ -232,13 +232,27 @@ impl Pane {
                 .connect_selection_changed(move |_, _, _| p.update_status());
         }
         {
-            // Backspace = up, when the list has focus.
+            // Backspace = up; a plain printable key = type-ahead jump.
+            // Both only when the list has focus.
             let p = pane.clone();
             let keys = gtk::EventControllerKey::new();
             keys.connect_key_pressed(move |_, key, _, modifier| {
                 if modifier.is_empty() && key == gtk::gdk::Key::BackSpace {
                     p.go_up();
                     return glib::Propagation::Stop;
+                }
+                // Shift is allowed (uppercase letters); Ctrl/Alt combos are
+                // shortcuts, and Space stays GTK's select-row key.
+                let plain = !modifier.intersects(
+                    gtk::gdk::ModifierType::CONTROL_MASK | gtk::gdk::ModifierType::ALT_MASK,
+                );
+                if plain {
+                    if let Some(ch) = key.to_unicode() {
+                        if !ch.is_control() && ch != ' ' {
+                            p.type_ahead(ch);
+                            return glib::Propagation::Stop;
+                        }
+                    }
                 }
                 glib::Propagation::Proceed
             });
@@ -519,6 +533,50 @@ impl Pane {
     pub fn focused_entry(&self) -> Option<FsEntry> {
         let selected = self.selected_entries();
         selected.into_iter().next()
+    }
+
+    /// Type-ahead: jump the selection to the next row (in view order,
+    /// wrapping around) whose name starts with `ch`, case-insensitively.
+    /// The view always sorts directories before files, so repeated presses
+    /// cycle through matching folders first, then matching files. Does
+    /// nothing when no name starts with `ch`.
+    fn type_ahead(&self, ch: char) {
+        let total = self.selection.n_items();
+        let first = self.parent_rows(); // never match the ".." row
+        if total <= first {
+            return;
+        }
+        let want = ch.to_lowercase().next().unwrap_or(ch);
+        // Start after the first selected row so repeated presses advance
+        // through the matches instead of sticking on the first one.
+        let selected = self.selection.selection();
+        let start = if selected.is_empty() {
+            first
+        } else {
+            (selected.minimum() + 1).max(first)
+        };
+        let count = total - first;
+        for step in 0..count {
+            let pos = first + (start - first + step) % count;
+            let Some(obj) = self.selection.item(pos) else {
+                continue;
+            };
+            let name = obj.downcast_ref::<EntryObject>().unwrap().entry().name;
+            let matches = name
+                .chars()
+                .next()
+                .is_some_and(|c| c.to_lowercase().next() == Some(want));
+            if matches {
+                self.selection.select_item(pos, true);
+                self.view.scroll_to(
+                    pos,
+                    None,
+                    gtk::ListScrollFlags::SELECT | gtk::ListScrollFlags::FOCUS,
+                    None,
+                );
+                return;
+            }
+        }
     }
 
     fn update_status(&self) {
