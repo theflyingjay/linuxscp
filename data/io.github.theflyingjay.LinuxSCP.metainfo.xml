@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.1.7" date="2026-08-05">
+      <description>
+        <ul>
+          <li>Enhance keyboard navigation and type-ahead functionality in Pane</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-07-24">
       <description>
         <ul>
