@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.1.8" date="2026-08-18">
+      <description>
+        <ul>
+          <li>GSC nonsense</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.7" date="2026-08-05">
       <description>
         <ul>
