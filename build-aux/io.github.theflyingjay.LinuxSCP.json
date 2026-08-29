@@ -1,7 +1,7 @@
 {
     "app-id": "io.github.theflyingjay.LinuxSCP",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "47",
+    "runtime-version": "50",
     "sdk": "org.gnome.Sdk",
     "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
     "command": "linuxscp",
@@ -18,7 +18,8 @@
     "build-options": {
         "append-path": "/usr/lib/sdk/rust-stable/bin",
         "env": {
-            "CARGO_HOME": "/run/build/linuxscp/cargo"
+            "CARGO_HOME": "/run/build/linuxscp/cargo",
+            "CARGO_NET_OFFLINE": "true"
         }
     },
     "comment": "SSH connectivity uses the host's ssh via flatpak-spawn --host; the app talks to org.freedesktop.Flatpak to reach the host OpenSSH, keys and agent.",
@@ -39,7 +40,8 @@
                 {
                     "type": "dir",
                     "path": ".."
-                }
+                },
+                "cargo-sources.json"
             ]
         }
     ]
