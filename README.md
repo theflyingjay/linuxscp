@@ -181,6 +181,10 @@ flatpak-builder --user --install build build-aux/io.github.theflyingjay.LinuxSCP
 The Flatpak reaches the host's `ssh`, keys and agent via the host portal, so your
 `~/.ssh/config` continues to work inside the sandbox.
 
+The build runs offline: `build-aux/cargo-sources.json` pins every crate from
+`Cargo.lock` so flatpak-builder can fetch them up front. After changing
+dependencies, run `make flatpak-sources` to regenerate it — CI fails if it's stale.
+
 ## Development & testing
 
 Unit tests run anywhere. The end-to-end SFTP tests use a throwaway local sshd:

@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Flatpak cargo sources match Cargo.lock
+        run: ./scripts/flatpak-cargo-sources.py --check
+
       - name: Install GTK4 and libadwaita
         run: |
           sudo apt-get update

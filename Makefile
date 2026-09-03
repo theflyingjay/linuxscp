@@ -6,7 +6,7 @@ BINDIR = $(DESTDIR)$(PREFIX)/bin
 DATADIR = $(DESTDIR)$(PREFIX)/share
 APP_ID = io.github.theflyingjay.LinuxSCP
 
-.PHONY: all build release install uninstall test deb clean
+.PHONY: all build release install uninstall test deb flatpak-sources clean
 
 all: release
 
@@ -31,6 +31,11 @@ install: release
 
 deb:
 	./scripts/build-deb.sh
+
+# The Flatpak builds offline from the crates pinned in this file; rerun after
+# any dependency change (CI fails if it drifts from Cargo.lock).
+flatpak-sources:
+	./scripts/flatpak-cargo-sources.py
 
 uninstall:
 	rm -f $(BINDIR)/linuxscp $(BINDIR)/linuxscp-askpass
