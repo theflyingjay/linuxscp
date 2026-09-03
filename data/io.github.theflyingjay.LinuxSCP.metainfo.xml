@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.1.9" date="2026-09-03">
+      <description>
+        <ul>
+          <li>Fix cargo build in `flatpak`</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.8" date="2026-08-18">
       <description>
         <ul>
