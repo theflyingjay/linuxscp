@@ -1,0 +1,39 @@
+name: Security audit
+
+# Checks Cargo.lock against the RustSec advisory database for crates with
+# known vulnerabilities, or that were yanked or are unmaintained.
+#
+# On pushes and pull requests it runs only when the dependency set changes
+# and fails the job if anything is flagged (for PRs from forks the token is
+# read-only, so results go to the job log instead of a check annotation).
+# The weekly schedule catches advisories published after a dependency was
+# added; on that trigger the action opens an issue per new advisory.
+
+on:
+  push:
+    branches: [main]
+    paths: ["Cargo.toml", "Cargo.lock", "**/Cargo.toml", ".github/workflows/audit.yml"]
+  pull_request:
+    paths: ["Cargo.toml", "Cargo.lock", "**/Cargo.toml", ".github/workflows/audit.yml"]
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write # publish the result as a check run
+      issues: write # scheduled runs open an issue per new advisory
+    steps:
+      - uses: actions/checkout@v4
+
+      # Maintained by the RustSec project (the cargo-audit authors); pinned to
+      # a commit so a moved tag can't change what runs here.
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

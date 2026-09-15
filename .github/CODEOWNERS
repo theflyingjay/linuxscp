@@ -1,0 +1,33 @@
+# Code owners are automatically requested to review pull requests that touch
+# the paths below. Everything defaults to the maintainer; the paths listed
+# explicitly are the security-sensitive surfaces of an SFTP client and
+# deserve a slower, line-by-line read on any outside contribution.
+#
+# Later rules take precedence over earlier ones.
+
+*                                   @theflyingjay
+
+# Anything that shapes the ssh command line, the remote sudo/su bootstrap
+# script, or the password/passphrase path.
+/linuxscp/src/ssh/                  @theflyingjay
+/linuxscp-askpass/                  @theflyingjay
+
+# Keyring access and persisted connection settings.
+/linuxscp/src/secrets.rs            @theflyingjay
+/linuxscp/src/settings.rs           @theflyingjay
+/linuxscp/src/sessions.rs           @theflyingjay
+
+# Dependency set: the supply-chain surface. A Cargo.lock change should be
+# explained in the PR and cross-checked against crates.io.
+/Cargo.toml                         @theflyingjay
+/Cargo.lock                         @theflyingjay
+/linuxscp/Cargo.toml                @theflyingjay
+/linuxscp-askpass/Cargo.toml        @theflyingjay
+/build-aux/cargo-sources.json       @theflyingjay
+
+# CI, release pipeline, and packaging: these run with repository secrets
+# and produce what users install.
+/.github/                           @theflyingjay
+/scripts/                           @theflyingjay
+/build-aux/                         @theflyingjay
+/Makefile                           @theflyingjay

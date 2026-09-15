@@ -224,6 +224,22 @@ cargo test -p linuxscp --test sftp_roundtrip -- --ignored
 `scripts/test-server.sh run` starts the test server and launches the app pointed at it
 (host alias `testbox`; the fake `su` password is `secret123`).
 
+### Contributing
+
+Pull requests are welcome. `main` only accepts changes through a pull request with a
+green CI run, and CI is strict, so run the same checks locally before pushing:
+
+```bash
+cargo fmt --all
+cargo clippy --all-targets -- -D warnings
+cargo test --all-targets
+```
+
+`cargo test --lib` alone does not compile the integration tests under `linuxscp/tests/`,
+so signature changes are easy to miss without `--all-targets`. Changes to `Cargo.lock`,
+`linuxscp/src/ssh/`, or the CI and release workflows get extra scrutiny; please explain
+them in the PR description.
+
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE). Free for everyone, forever.
