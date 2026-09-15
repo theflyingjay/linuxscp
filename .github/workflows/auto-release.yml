@@ -11,10 +11,14 @@ name: Auto Release
 #   [skip release]   don't cut a release for this push
 # The default is a patch bump (0.1.1 -> 0.1.2), matching a bug-fix push.
 #
-# The release commit is pushed with the workflow's GITHUB_TOKEN. GitHub
-# never runs workflows for pushes made with that token, so this can't
-# retrigger CI or itself — but it also means the v* tag push can't fire
-# the Release workflow, hence the explicit dispatch at the end.
+# The release commit is pushed over SSH with a write deploy key
+# (RELEASE_DEPLOY_KEY) rather than GITHUB_TOKEN, for two reasons: the
+# "Protect main" ruleset requires a pull request and a green CI check for
+# every change to main, and a deploy key is the only bot identity a
+# personal repo can put on the ruleset's bypass list; and unlike
+# GITHUB_TOKEN pushes, deploy-key pushes fire workflows, so the v* tag
+# push starts the Release workflow by itself. The resulting CI run on the
+# "Release vX.Y.Z" commit is excluded from re-releasing by the guard below.
 
 on:
   workflow_run:
@@ -22,9 +26,10 @@ on:
     types: [completed]
     branches: [main]
 
+# The token only needs to read the checkout; the push authenticates with
+# the deploy key.
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 # One cut at a time; a queued run for a stale SHA skips on the guard below.
 concurrency:
@@ -50,10 +55,11 @@ jobs:
           ref: main
           # cut-release.sh needs the tags and history for release notes.
           fetch-depth: 0
+          # Pushes go over SSH as the deploy key (see header comment).
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
-      - name: Bump version, tag, and start the deb build
+      - name: Bump version and tag
         env:
-          GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           HEAD_MSG: ${{ github.event.workflow_run.head_commit.message }}
         run: |
@@ -79,6 +85,5 @@ jobs:
           git tag "v$NEW"
           # Atomic: if a racing push to main lands first, nothing (commit
           # or tag) is pushed, and that push's own CI run cuts the release.
+          # The tag push triggers the Release workflow (see header comment).
           git push --atomic origin main "v$NEW"
-
-          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "v$NEW"

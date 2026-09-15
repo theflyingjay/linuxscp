@@ -12,8 +12,8 @@ name: Release
 on:
   push:
     tags: ["v*"]
-  # The Auto Release workflow pushes tags with the workflow GITHUB_TOKEN,
-  # which never triggers `push` events — it dispatches this instead.
+  # Manual re-run for a tag whose build failed. (Auto Release's tag push
+  # uses a deploy key, so it triggers the `push` event above normally.)
   workflow_dispatch:
 
 permissions:
