@@ -403,6 +403,12 @@ impl App {
                     this.transfer_into(payload.source, payload.items, &dst_pane);
                 });
             }
+            {
+                let this = self.clone();
+                pane.setup_external_drop_target(move |paths, dst_pane| {
+                    this.transfer_external_into(paths, &dst_pane);
+                });
+            }
 
             // Double-click / Enter on a regular file: open it in the editor.
             {
@@ -904,6 +910,33 @@ impl App {
         }
         let request = TransferRequest {
             src_backend,
+            dst_backend: dst_pane.backend(),
+            items,
+            dst_dir: dst_pane.current_dir(),
+            move_src: false,
+            overwrite: false,
+            overwrite_in_place: false,
+        };
+        transfers::start(request, self.events_tx.clone());
+    }
+
+    /// Copy files dragged in from an external application (e.g. a file
+    /// manager) into a pane's directory. The source is always the local
+    /// filesystem, since that is the only side GTK exposes as plain paths.
+    pub fn transfer_external_into(
+        self: &Rc<Self>,
+        paths: Vec<std::path::PathBuf>,
+        dst_pane: &Rc<Pane>,
+    ) {
+        let (items, errors) = fsops::local::entries_from_paths(&paths);
+        for (path, err) in errors {
+            self.toast(&format!("Could not read {path}: {err}"));
+        }
+        if items.is_empty() {
+            return;
+        }
+        let request = TransferRequest {
+            src_backend: Backend::Local,
             dst_backend: dst_pane.backend(),
             items,
             dst_dir: dst_pane.current_dir(),

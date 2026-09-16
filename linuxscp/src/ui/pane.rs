@@ -366,6 +366,34 @@ impl Pane {
         self.view.add_controller(target);
     }
 
+    /// Wire this pane as a drop target for files dragged in from outside
+    /// the app (e.g. a Dolphin/Nautilus window). GTK exposes such drags as
+    /// a `gdk::FileList`, a separate controller from the internal
+    /// `DragPayload` one set up in `setup_drop_target`.
+    pub fn setup_external_drop_target(
+        self: &Rc<Self>,
+        on_drop: impl Fn(Vec<std::path::PathBuf>, Rc<Pane>) + 'static,
+    ) {
+        let target = gtk::DropTarget::new(
+            gtk::gdk::FileList::static_type(),
+            gtk::gdk::DragAction::COPY,
+        );
+        let this = self.clone();
+        let on_drop = std::rc::Rc::new(on_drop);
+        target.connect_drop(move |_, value, _, _| {
+            let Ok(list) = value.get::<gtk::gdk::FileList>() else {
+                return false;
+            };
+            let paths: Vec<_> = list.files().into_iter().filter_map(|f| f.path()).collect();
+            if paths.is_empty() {
+                return false;
+            }
+            on_drop(paths, this.clone());
+            true
+        });
+        self.view.add_controller(target);
+    }
+
     pub fn backend(&self) -> Backend {
         self.state.borrow().backend
     }

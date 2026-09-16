@@ -582,6 +582,24 @@ pub mod local {
         Ok(out)
     }
 
+    /// Builds `FsEntry`s for arbitrary local paths (e.g. files dropped in
+    /// from an external file manager). Paths that no longer resolve are
+    /// skipped and reported back alongside the error that caused it.
+    pub fn entries_from_paths(
+        paths: &[std::path::PathBuf],
+    ) -> (Vec<FsEntry>, Vec<(String, std::io::Error)>) {
+        let mut entries = Vec::new();
+        let mut errors = Vec::new();
+        for path in paths {
+            let path_str = path.to_string_lossy().into_owned();
+            match std::fs::symlink_metadata(path) {
+                Ok(meta) => entries.push(entry_from_meta(&path_str, &meta)),
+                Err(err) => errors.push((path_str, err)),
+            }
+        }
+        (entries, errors)
+    }
+
     pub fn entry_from_meta(path: &str, meta: &std::fs::Metadata) -> FsEntry {
         let is_symlink = meta.is_symlink();
         // For symlinks show the target's kind so double-click works.
@@ -738,6 +756,37 @@ mod tests {
         assert!(!file.is_dir);
         assert_eq!(file.size, 5);
         assert!(entries.iter().any(|e| e.name == "sub" && e.is_dir));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn entries_from_paths_reports_files_and_missing_paths() {
+        let dir = std::env::temp_dir().join("linuxscp-test-entries-from-paths");
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("dropped.txt");
+        std::fs::write(&file, b"hello world").unwrap();
+        let missing = dir.join("does-not-exist.txt");
+
+        let (entries, errors) =
+            local::entries_from_paths(&[file.clone(), dir.clone(), missing.clone()]);
+
+        assert_eq!(
+            entries.len(),
+            2,
+            "the file and the directory should resolve"
+        );
+        let found_file = entries.iter().find(|e| e.name == "dropped.txt").unwrap();
+        assert!(!found_file.is_dir);
+        assert_eq!(found_file.size, 11);
+        let found_dir = entries
+            .iter()
+            .find(|e| e.path == dir.to_string_lossy())
+            .unwrap();
+        assert!(found_dir.is_dir);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].0, missing.to_string_lossy());
+
         std::fs::remove_dir_all(&dir).ok();
     }
 }
