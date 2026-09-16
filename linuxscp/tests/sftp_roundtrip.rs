@@ -64,7 +64,7 @@ fn sftp_roundtrip_with_resume() {
         answerer.abort();
         sessions::register(
             1,
-            sessions::SessionHandle::new(conn.sftp.clone(), conn.cancel.clone(), "testbox".into()),
+            sessions::SessionHandle::new(conn.sftp.clone(), conn.cancel.clone(), "testbox".into(), String::new()),
         );
         let remote = Backend::Remote(1);
 
@@ -276,7 +276,7 @@ fn remote_scan_and_copy_overlap() {
         answerer.abort();
         sessions::register(
             4,
-            sessions::SessionHandle::new(conn.sftp.clone(), conn.cancel.clone(), "testbox".into()),
+            sessions::SessionHandle::new(conn.sftp.clone(), conn.cancel.clone(), "testbox".into(), String::new()),
         );
         let remote = Backend::Remote(4);
 
@@ -402,7 +402,7 @@ fn su_elevation_pty_flow() {
             .expect("elevated connect failed");
         sessions::register(
             2,
-            sessions::SessionHandle::new(conn.sftp.clone(), conn.cancel.clone(), "testbox".into()),
+            sessions::SessionHandle::new(conn.sftp.clone(), conn.cancel.clone(), "testbox".into(), String::new()),
         );
 
         // The elevated SFTP session must be fully functional.

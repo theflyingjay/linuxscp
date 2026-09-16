@@ -428,11 +428,19 @@ impl App {
             .find_map(|pane| pane.session_id());
         match remote {
             Some(id) => {
-                let host = sessions::get(id)
-                    .map(|h| h.host)
+                let handle = sessions::get(id);
+                let use_name = self.settings.borrow().tab_shows_name;
+                let name = self
+                    .session_specs
+                    .borrow()
+                    .get(&id)
+                    .map(|spec| spec.display_name.clone())
+                    .filter(|name| use_name && !name.is_empty());
+                let text = name
+                    .or_else(|| handle.as_ref().map(|h| h.host.clone()))
                     .unwrap_or_else(|| "Remote".into());
-                page.set_title(&host);
-                page.set_tooltip(&host);
+                page.set_title(&text);
+                page.set_tooltip(&text);
                 page.set_icon(Some(&themed_icon("network-server-symbolic")));
             }
             None => {
@@ -627,8 +635,30 @@ impl App {
         group.add(&sound_row);
         group.add(&desktop_row);
 
+        let tabs_group = adw::PreferencesGroup::builder()
+            .title("Tabs")
+            .description("How connected tabs are labeled")
+            .build();
+        let tab_name_row = adw::SwitchRow::builder()
+            .title("Show site name on tabs")
+            .subtitle("Show the saved site's name on the tab instead of its host")
+            .active(self.settings.borrow().tab_shows_name)
+            .build();
+        {
+            let this = self.clone();
+            tab_name_row.connect_active_notify(move |row| {
+                let active = row.is_active();
+                this.with_settings_saved(|s| s.tab_shows_name = active);
+                for ws in this.workspaces.borrow().iter() {
+                    this.refresh_tab_title(ws);
+                }
+            });
+        }
+        tabs_group.add(&tab_name_row);
+
         let page = adw::PreferencesPage::new();
         page.add(&group);
+        page.add(&tabs_group);
         let dialog = adw::PreferencesDialog::new();
         dialog.set_title("Preferences");
         dialog.add(&page);
@@ -1211,17 +1241,25 @@ impl App {
             },
             move_site: {
                 let this = self.clone();
-                Box::new(move |site_id, dest_id| {
+                Box::new(move |site_id, dest_id, before_id, append_to_end| {
                     this.with_settings_saved(|settings| {
-                        settings.sites.move_site_to(&site_id, &dest_id);
+                        if append_to_end {
+                            settings.sites.move_site_to_end(&site_id, &dest_id);
+                        } else {
+                            settings
+                                .sites
+                                .move_site_to(&site_id, &dest_id, before_id.as_deref());
+                        }
                     });
                 })
             },
             move_folder: {
                 let this = self.clone();
-                Box::new(move |folder_id, dest_id| {
+                Box::new(move |folder_id, dest_id, before_id| {
                     this.with_settings_saved(|settings| {
-                        settings.sites.move_folder_to(&folder_id, &dest_id);
+                        settings
+                            .sites
+                            .move_folder_to(&folder_id, &dest_id, before_id.as_deref());
                     });
                 })
             },

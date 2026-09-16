@@ -53,16 +53,25 @@ pub struct SessionHandle {
     pub sftp: Arc<SftpSession>,
     pub cancel: CancellationToken,
     pub host: String,
+    /// Saved site's name, if the connection was started from one (used
+    /// for the tab title when "Use Name as tab description" is on).
+    pub display_name: String,
     /// Lazily-loaded remote id → name maps (see [`IdNames`]).
     pub id_names: Arc<tokio::sync::OnceCell<IdNames>>,
 }
 
 impl SessionHandle {
-    pub fn new(sftp: Arc<SftpSession>, cancel: CancellationToken, host: String) -> Self {
+    pub fn new(
+        sftp: Arc<SftpSession>,
+        cancel: CancellationToken,
+        host: String,
+        display_name: String,
+    ) -> Self {
         Self {
             sftp,
             cancel,
             host,
+            display_name,
             id_names: Arc::new(tokio::sync::OnceCell::new()),
         }
     }

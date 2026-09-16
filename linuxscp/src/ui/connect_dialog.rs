@@ -29,10 +29,12 @@ pub struct SiteManagerHandlers {
     pub save_site: Box<dyn Fn(Site, SecretUpdate, String)>,
     pub delete_site: Box<dyn Fn(String)>,
     pub add_folder: Box<dyn Fn(String, String)>,
-    /// Move a site (by id) into a folder (by id; "" = root).
-    pub move_site: Box<dyn Fn(String, String)>,
-    /// Move a folder (by id), subtree included, into a folder ("" = root).
-    pub move_folder: Box<dyn Fn(String, String)>,
+    /// Move a site (by id) into a folder (by id; "" = root), inserting it
+    /// before the given site id or appending when `to_end` is true.
+    pub move_site: Box<dyn Fn(String, String, Option<String>, bool)>,
+    /// Move a folder (by id), subtree included, into a folder ("" = root),
+    /// optionally before a sibling folder.
+    pub move_folder: Box<dyn Fn(String, String, Option<String>)>,
     pub delete_folder: Box<dyn Fn(String)>,
     /// Build a spec for a saved site id (loads its secret from the keyring).
     pub spec_for_site: Box<dyn Fn(String) -> Option<ConnectSpec>>,
@@ -117,7 +119,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
     // actual move logic is filled in later. Args: drag payload
     // ("site:<id>" or "folder:<id>"), target row (None = the list
     // background, meaning the root).
-    type MoveHandler = Box<dyn Fn(String, Option<TreeNode>)>;
+    type MoveHandler = Box<dyn Fn(String, Option<TreeNode>, bool)>;
     let on_move: Rc<RefCell<Option<MoveHandler>>> = Rc::new(RefCell::new(None));
 
     // Single-line rows (like the file lists) so large site collections stay
@@ -179,7 +181,8 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
             {
                 let item = item.downgrade();
                 let on_move = on_move.clone();
-                target.connect_drop(move |_, value, _, _| {
+                let row_for_drop = row.clone();
+                target.connect_drop(move |_, value, _, y| {
                     let Ok(site_id) = value.get::<String>() else {
                         return false;
                     };
@@ -189,7 +192,10 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
                     let node = item.item().and_downcast::<TreeNode>();
                     match on_move.borrow().as_ref() {
                         Some(cb) => {
-                            cb(site_id, node);
+                            let before_target = node
+                                .as_ref()
+                                .is_some_and(|_| y < f64::from(row_for_drop.height()) / 2.0);
+                            cb(site_id, node, before_target);
                             true
                         }
                         None => false,
@@ -231,7 +237,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
             };
             match on_move.borrow().as_ref() {
                 Some(cb) => {
-                    cb(site_id, None);
+                    cb(site_id, None, false);
                     true
                 }
                 None => false,
@@ -410,27 +416,41 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
         })
     };
 
-    // Drag & drop: move the dragged site or folder into the target folder
-    // (dropping onto a site targets its containing folder; the background
-    // = root), then rebuild with the moved row kept selected. Impossible
-    // folder moves (into themselves or their own subtree) are no-ops.
+    // Drag & drop: the upper half of a folder row inserts before that folder;
+    // the lower half moves into it. Sites are inserted before their row, and
+    // the background targets the root.
     {
         let handlers = handlers.clone();
         let rebuild = rebuild.clone();
-        *on_move.borrow_mut() = Some(Box::new(move |payload, target| {
+        *on_move.borrow_mut() = Some(Box::new(move |payload, target, before_target| {
             let Some((kind, id)) = payload.split_once(':') else {
                 return;
             };
-            let dest = match &target {
-                None => String::new(),
-                Some(node) if node.is_folder() => node.id(),
-                Some(node) => (handlers.tree)()
-                    .parent_id_of(&node.id())
-                    .unwrap_or_default(),
+            let (dest, before_id) = match &target {
+                None => (String::new(), None),
+                Some(node) if node.is_folder() && before_target => (
+                    (handlers.tree)()
+                        .parent_id_of(&node.id())
+                        .unwrap_or_default(),
+                    Some(node.id()),
+                ),
+                Some(node) if node.is_folder() => (node.id(), None),
+                Some(node) => {
+                    let tree = (handlers.tree)();
+                    let dest = tree.parent_id_of(&node.id()).unwrap_or_default();
+                    let before_id = if before_target {
+                        Some(node.id())
+                    } else {
+                        tree.next_site_id_of(&node.id())
+                    };
+                    (dest, before_id)
+                }
             };
+            let append_to_end = matches!(&target, Some(node) if !node.is_folder() && !before_target)
+                && before_id.is_none();
             match kind {
-                "folder" => (handlers.move_folder)(id.to_string(), dest),
-                _ => (handlers.move_site)(id.to_string(), dest),
+                "folder" => (handlers.move_folder)(id.to_string(), dest, before_id),
+                _ => (handlers.move_site)(id.to_string(), dest, before_id, append_to_end),
             }
             rebuild(Some(id.to_string()));
         }));
