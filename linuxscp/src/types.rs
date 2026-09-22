@@ -156,6 +156,10 @@ pub struct ConnectSpec {
     /// Never serialized; secrets live in the OS keyring.
     #[serde(skip)]
     pub secret: Option<String>,
+    /// Saved site's name, for the tab title when that preference is on.
+    /// Empty for connections not started from a saved site.
+    #[serde(default)]
+    pub display_name: String,
 }
 
 impl ConnectSpec {
@@ -171,6 +175,7 @@ impl ConnectSpec {
             sftp_server_path: None,
             extra_ssh_args: Vec::new(),
             secret: None,
+            display_name: String::new(),
         }
     }
 }
