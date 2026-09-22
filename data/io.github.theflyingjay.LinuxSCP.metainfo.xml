@@ -43,6 +43,14 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.2.0" date="2026-09-22">
+      <description>
+        <ul>
+          <li>Add tab naming preference and drag-to-reorder site list (#3)</li>
+          <li>Add drag-and-drop upload from external file managers (#7)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.14" date="2026-09-15">
       <description>
         <ul>
