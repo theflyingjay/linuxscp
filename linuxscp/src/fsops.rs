@@ -567,6 +567,7 @@ pub mod local {
     use super::*;
     use std::collections::HashMap;
     use std::os::unix::fs::MetadataExt;
+    use std::path::Path;
     use std::sync::{Mutex, OnceLock};
 
     pub fn list_dir(path: &str) -> anyhow::Result<Vec<FsEntry>> {
@@ -580,6 +581,56 @@ pub mod local {
             out.push(entry_from_meta(&child.to_string_lossy(), &meta));
         }
         Ok(out)
+    }
+
+    /// Builds `FsEntry`s for arbitrary local paths (e.g. files dropped in
+    /// from an external file manager). Paths that no longer resolve are
+    /// skipped and reported back alongside the error that caused it.
+    pub fn entries_from_paths(
+        paths: &[std::path::PathBuf],
+    ) -> (Vec<FsEntry>, Vec<(String, std::io::Error)>) {
+        let mut entries = Vec::new();
+        let mut errors = Vec::new();
+        for path in paths {
+            let path_str = path.to_string_lossy().into_owned();
+            match std::fs::symlink_metadata(path) {
+                Ok(meta) => entries.push(entry_from_meta(&path_str, &meta)),
+                Err(err) => errors.push((path_str, err)),
+            }
+        }
+        (entries, errors)
+    }
+
+    /// How copying a local `entry` into the local directory `dst_dir`
+    /// would fold back onto its own source. Both cases have to be caught
+    /// before the transfer starts: the copy loop truncates a destination
+    /// before it reads the source (so a file below the `.filepart`
+    /// threshold copied onto itself is emptied), and a directory copied
+    /// into itself keeps finding the copies it has just made.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum SelfCopy {
+        /// The copy would land on the very file or directory being copied.
+        OntoItself,
+        /// A directory copied into itself or one of its descendants.
+        IntoItself,
+    }
+
+    /// Detect a [`SelfCopy`] for `entry` dropped into `dst_dir`. Paths are
+    /// canonicalized where they exist, so the same place reached through a
+    /// symlink is still recognized.
+    pub fn self_copy(entry: &FsEntry, dst_dir: &str) -> Option<SelfCopy> {
+        fn canonical(path: &Path) -> PathBuf {
+            std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+        }
+        let dst = canonical(Path::new(dst_dir));
+        let src = canonical(Path::new(&entry.path));
+        if canonical(&dst.join(&entry.name)) == src {
+            return Some(SelfCopy::OntoItself);
+        }
+        if entry.is_dir && dst.starts_with(&src) {
+            return Some(SelfCopy::IntoItself);
+        }
+        None
     }
 
     pub fn entry_from_meta(path: &str, meta: &std::fs::Metadata) -> FsEntry {
@@ -739,5 +790,81 @@ mod tests {
         assert_eq!(file.size, 5);
         assert!(entries.iter().any(|e| e.name == "sub" && e.is_dir));
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn entries_from_paths_reports_files_and_missing_paths() {
+        let dir = std::env::temp_dir().join("linuxscp-test-entries-from-paths");
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("dropped.txt");
+        std::fs::write(&file, b"hello world").unwrap();
+        let missing = dir.join("does-not-exist.txt");
+
+        let (entries, errors) =
+            local::entries_from_paths(&[file.clone(), dir.clone(), missing.clone()]);
+
+        assert_eq!(
+            entries.len(),
+            2,
+            "the file and the directory should resolve"
+        );
+        let found_file = entries.iter().find(|e| e.name == "dropped.txt").unwrap();
+        assert!(!found_file.is_dir);
+        assert_eq!(found_file.size, 11);
+        let found_dir = entries
+            .iter()
+            .find(|e| e.path == dir.to_string_lossy())
+            .unwrap();
+        assert!(found_dir.is_dir);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].0, missing.to_string_lossy());
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn self_copy_detects_drops_onto_and_into_the_source() {
+        use super::local::SelfCopy;
+
+        let base = std::env::temp_dir().join("linuxscp-test-self-copy");
+        std::fs::remove_dir_all(&base).ok();
+        let dir = base.join("dir");
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        std::fs::create_dir_all(base.join("dir2")).unwrap();
+        std::fs::write(dir.join("f.txt"), b"data").unwrap();
+        std::os::unix::fs::symlink(&dir, base.join("link")).unwrap();
+        let s = |p: &std::path::Path| p.to_string_lossy().into_owned();
+
+        let (entries, _) = local::entries_from_paths(&[dir.join("f.txt"), dir.clone()]);
+        let (file, folder) = (&entries[0], &entries[1]);
+
+        // A file dropped into the directory it already lives in.
+        assert_eq!(local::self_copy(file, &s(&dir)), Some(SelfCopy::OntoItself));
+        // ...also when that directory is reached through a symlink.
+        assert_eq!(
+            local::self_copy(file, &s(&base.join("link"))),
+            Some(SelfCopy::OntoItself)
+        );
+        // A directory dropped into its own parent lands on itself; into
+        // itself or a descendant it would recurse.
+        assert_eq!(
+            local::self_copy(folder, &s(&base)),
+            Some(SelfCopy::OntoItself)
+        );
+        assert_eq!(
+            local::self_copy(folder, &s(&dir)),
+            Some(SelfCopy::IntoItself)
+        );
+        assert_eq!(
+            local::self_copy(folder, &s(&dir.join("sub"))),
+            Some(SelfCopy::IntoItself)
+        );
+        // Unrelated destinations, including a sibling sharing a name
+        // prefix, are fine.
+        assert_eq!(local::self_copy(file, &s(&base.join("dir2"))), None);
+        assert_eq!(local::self_copy(folder, &s(&base.join("dir2"))), None);
+
+        std::fs::remove_dir_all(&base).ok();
     }
 }

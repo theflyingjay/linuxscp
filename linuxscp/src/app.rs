@@ -403,6 +403,12 @@ impl App {
                     this.transfer_into(payload.source, payload.items, &dst_pane);
                 });
             }
+            {
+                let this = self.clone();
+                pane.setup_external_drop_target(move |paths, dst_pane| {
+                    this.transfer_external_into(paths, &dst_pane);
+                });
+            }
 
             // Double-click / Enter on a regular file: open it in the editor.
             {
@@ -907,6 +913,65 @@ impl App {
             dst_backend: dst_pane.backend(),
             items,
             dst_dir: dst_pane.current_dir(),
+            move_src: false,
+            overwrite: false,
+            overwrite_in_place: false,
+        };
+        transfers::start(request, self.events_tx.clone());
+    }
+
+    /// Copy files dragged in from an external application (e.g. a file
+    /// manager) into a pane's directory. The source is always the local
+    /// filesystem, since that is the only side GTK exposes as plain paths.
+    pub fn transfer_external_into(
+        self: &Rc<Self>,
+        paths: Vec<std::path::PathBuf>,
+        dst_pane: &Rc<Pane>,
+    ) {
+        let (mut items, errors) = fsops::local::entries_from_paths(&paths);
+        for (path, err) in errors {
+            self.toast(&format!("Could not read {path}: {err}"));
+        }
+        let dst_dir = dst_pane.current_dir();
+        // Unlike pane-to-pane drags, an external drop may target the local
+        // pane, so the same-backend guard in `transfer_into` doesn't apply.
+        // Refuse the drops that would copy a file onto itself or a folder
+        // into itself; see `fsops::local::SelfCopy` for why.
+        if dst_pane.backend() == Backend::Local {
+            let mut onto_itself = Vec::new();
+            let mut into_itself = Vec::new();
+            items.retain(|item| match fsops::local::self_copy(item, &dst_dir) {
+                None => true,
+                Some(fsops::local::SelfCopy::OntoItself) => {
+                    onto_itself.push(item.name.clone());
+                    false
+                }
+                Some(fsops::local::SelfCopy::IntoItself) => {
+                    into_itself.push(item.name.clone());
+                    false
+                }
+            });
+            if !onto_itself.is_empty() {
+                self.toast(&format!(
+                    "Already in this folder: {}",
+                    onto_itself.join(", ")
+                ));
+            }
+            if !into_itself.is_empty() {
+                self.toast(&format!(
+                    "Cannot copy a folder into itself: {}",
+                    into_itself.join(", ")
+                ));
+            }
+        }
+        if items.is_empty() {
+            return;
+        }
+        let request = TransferRequest {
+            src_backend: Backend::Local,
+            dst_backend: dst_pane.backend(),
+            items,
+            dst_dir,
             move_src: false,
             overwrite: false,
             overwrite_in_place: false,
