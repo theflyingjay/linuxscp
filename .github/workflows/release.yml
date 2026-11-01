@@ -44,10 +44,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install GTK4 and libadwaita
+      - name: Install GTK4, libadwaita and libsecret
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev build-essential
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libsecret-1-dev build-essential
 
       - uses: dtolnay/rust-toolchain@stable
 

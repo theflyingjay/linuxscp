@@ -13,7 +13,8 @@
         "--device=dri",
         "--filesystem=home",
         "--filesystem=xdg-run/ssh-agent",
-        "--talk-name=org.freedesktop.Flatpak"
+        "--talk-name=org.freedesktop.Flatpak",
+        "--talk-name=org.freedesktop.secrets"
     ],
     "build-options": {
         "append-path": "/usr/lib/sdk/rust-stable/bin",
@@ -22,7 +23,7 @@
             "CARGO_NET_OFFLINE": "true"
         }
     },
-    "comment": "SSH connectivity uses the host's ssh via flatpak-spawn --host; the app talks to org.freedesktop.Flatpak to reach the host OpenSSH, keys and agent.",
+    "comment": "SSH connectivity uses the host's ssh via flatpak-spawn --host; the app talks to org.freedesktop.Flatpak to reach the host OpenSSH, keys and agent. Saved passwords go to the host keyring over org.freedesktop.secrets (libsecret ships in the GNOME runtime).",
     "modules": [
         {
             "name": "linuxscp",

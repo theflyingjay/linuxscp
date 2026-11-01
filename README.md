@@ -150,17 +150,18 @@ flowchart LR
 
 ## Building from source
 
-You need a Rust toolchain and the GTK4 / libadwaita development packages.
+You need a Rust toolchain and the GTK4, libadwaita and libsecret development packages
+(libsecret is the keyring client; the runtime library is already on every GNOME desktop).
 
 ```bash
 # Debian / Ubuntu
-sudo apt install libgtk-4-dev libadwaita-1-dev build-essential
+sudo apt install libgtk-4-dev libadwaita-1-dev libsecret-1-dev build-essential
 
 # Fedora
-sudo dnf install gtk4-devel libadwaita-devel
+sudo dnf install gtk4-devel libadwaita-devel libsecret-devel
 
 # Arch
-sudo pacman -S gtk4 libadwaita
+sudo pacman -S gtk4 libadwaita libsecret
 
 # Then build the app and askpass helper, then run
 cargo build --workspace

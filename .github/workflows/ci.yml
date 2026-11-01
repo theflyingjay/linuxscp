@@ -17,10 +17,10 @@ jobs:
       - name: Flatpak cargo sources match Cargo.lock
         run: ./scripts/flatpak-cargo-sources.py --check
 
-      - name: Install GTK4 and libadwaita
+      - name: Install GTK4, libadwaita and libsecret
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev openssh-server openssh-client
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libsecret-1-dev openssh-server openssh-client
 
       - uses: dtolnay/rust-toolchain@stable
         with:
