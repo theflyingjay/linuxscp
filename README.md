@@ -217,7 +217,7 @@ Unit tests run anywhere. The end-to-end SFTP tests use a throwaway local sshd:
 ```bash
 cargo test                                          # unit tests
 ./scripts/test-server.sh start                      # local sshd on 127.0.0.1:2299
-cargo test -p linuxscp --test sftp_roundtrip -- --ignored
+cargo test -p linuxscp --test sftp_roundtrip --test connect_auth -- --ignored --test-threads=1
 ./scripts/test-server.sh stop
 ```
 

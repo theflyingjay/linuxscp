@@ -43,5 +43,5 @@ jobs:
       - name: Integration tests (local sshd)
         run: |
           ./scripts/test-server.sh start
-          cargo test -p linuxscp --test sftp_roundtrip -- --ignored --test-threads=1
+          cargo test -p linuxscp --test sftp_roundtrip --test connect_auth -- --ignored --test-threads=1
           ./scripts/test-server.sh stop

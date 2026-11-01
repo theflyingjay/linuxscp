@@ -22,6 +22,9 @@ type Preset = Arc<Mutex<Option<String>>>;
 pub struct AskpassServer {
     pub sock_path: PathBuf,
     cancel: CancellationToken,
+    /// Set when the user cancels a password/passphrase prompt; see
+    /// [`Self::aborted`].
+    aborted: CancellationToken,
 }
 
 impl AskpassServer {
@@ -44,7 +47,9 @@ impl AskpassServer {
 
         let preset: Preset = Arc::new(Mutex::new(preset));
         let cancel = CancellationToken::new();
+        let aborted = CancellationToken::new();
         let cancel_child = cancel.clone();
+        let aborted_child = aborted.clone();
         let path_for_task = sock_path.clone();
         tokio::spawn(async move {
             loop {
@@ -52,10 +57,14 @@ impl AskpassServer {
                     _ = cancel_child.cancelled() => break,
                     accepted = listener.accept() => {
                         let Ok((stream, _)) = accepted else { break };
-                        let events = events.clone();
-                        let preset = preset.clone();
+                        let client = Client {
+                            events: events.clone(),
+                            preset: preset.clone(),
+                            cancel: cancel_child.clone(),
+                            aborted: aborted_child.clone(),
+                        };
                         tokio::spawn(async move {
-                            if let Err(err) = handle_client(stream, events, preset).await {
+                            if let Err(err) = handle_client(stream, client).await {
                                 tracing::warn!("askpass client error: {err:#}");
                             }
                         });
@@ -65,7 +74,19 @@ impl AskpassServer {
             let _ = std::fs::remove_file(&path_for_task);
         });
 
-        Ok(Self { sock_path, cancel })
+        Ok(Self {
+            sock_path,
+            cancel,
+            aborted,
+        })
+    }
+
+    /// Fires when the user cancels a password or passphrase prompt. ssh on
+    /// its own treats that as an empty answer and asks again (up to
+    /// NumberOfPasswordPrompts times); the connection attempt should stop
+    /// instead.
+    pub fn aborted(&self) -> CancellationToken {
+        self.aborted.clone()
     }
 
     /// Environment variables the spawned ssh process needs.
@@ -107,11 +128,22 @@ fn helper_path() -> Option<PathBuf> {
         .find(|p| p.is_file())
 }
 
-async fn handle_client(
-    mut stream: UnixStream,
+/// What one helper connection needs from the server.
+struct Client {
     events: async_channel::Sender<Event>,
     preset: Preset,
-) -> anyhow::Result<()> {
+    /// The server's lifetime: once it ends, so does any prompt still open.
+    cancel: CancellationToken,
+    aborted: CancellationToken,
+}
+
+async fn handle_client(mut stream: UnixStream, client: Client) -> anyhow::Result<()> {
+    let Client {
+        events,
+        preset,
+        cancel,
+        aborted,
+    } = client;
     let mut len = [0u8; 4];
     stream.read_exact(&mut len).await?;
     let len = u32::from_be_bytes(len) as usize;
@@ -146,12 +178,25 @@ async fn handle_client(
         .ok()
         .context("UI event channel closed")?;
 
-    let answer = rx.await.unwrap_or(None);
+    // Wait for the user — unless the connection attempt ends first, in which
+    // case dropping `rx` is what lets the UI dismiss the stale dialog.
+    let answer = tokio::select! {
+        answer = rx => answer.unwrap_or(None),
+        _ = cancel.cancelled() => return Ok(()),
+    };
     let (status, payload): (u8, &[u8]) = match (&answer, kind) {
         (Some(_), PromptKind::YesNo) => (1, b""),
         (Some(text), PromptKind::Secret) => (0, text.as_bytes()),
         (None, _) => (2, b""),
     };
+    if answer.is_none() && kind == PromptKind::Secret {
+        // Cancel means "stop", not "try an empty password": end the attempt
+        // before ssh asks again. The helper may already be gone by the time
+        // we answer it, which is fine.
+        aborted.cancel();
+        let _ = reply(&mut stream, status, payload).await;
+        return Ok(());
+    }
     reply(&mut stream, status, payload).await
 }
 
