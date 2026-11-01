@@ -43,6 +43,15 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.2.1" date="2026-11-01">
+      <description>
+        <ul>
+          <li>Store secrets through libsecret instead of the keyring crate (#15)</li>
+          <li>Fix slow interactive logins (Duo) timing out the SFTP handshake (#14)</li>
+          <li>Update tokio to 1.54.1 for RUSTSEC-2026-0386 (#13)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-09-22">
       <description>
         <ul>
