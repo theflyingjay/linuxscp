@@ -6,14 +6,15 @@
 //! WinSCP uses, so root file management works without touching sshd config.
 
 use std::pin::Pin;
-use std::process::Stdio;
-use std::sync::Arc;
+use std::process::{ExitStatus, Stdio};
+use std::sync::{Arc, Mutex};
 use std::task::{Context as TaskContext, Poll};
+use std::time::Duration;
 
 use anyhow::Context;
 use russh_sftp::client::SftpSession;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
-use tokio::process::{Child, ChildStdin, ChildStdout, Command};
+use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio_util::sync::CancellationToken;
 
 use super::askpass::AskpassServer;
@@ -31,6 +32,18 @@ const NOSERVER: &[u8] = b"LSCP_NOSERVER";
 const PASS_PROMPT: &[u8] = b"LSCP_PASS:";
 const SU_PROMPT: &[u8] = b"Password:";
 
+/// Budget for the SFTP handshake. It cannot complete until ssh has
+/// authenticated, and an interactive login — a password typed by hand, a
+/// Duo push, a one-time code — takes as long as the user needs, so this is
+/// only a backstop: ssh exiting (bad credentials, the server's
+/// LoginGraceTime, connection refused) or the user cancelling a prompt ends
+/// a doomed attempt right away.
+const HANDSHAKE_TIMEOUT_SECS: u64 = 300;
+/// Per-request timeout once the session is up.
+const REQUEST_TIMEOUT_SECS: u64 = 30;
+/// How long to wait for ssh's last words on stderr after it exits.
+const STDERR_SETTLE: Duration = Duration::from_millis(500);
+
 pub struct Connection {
     pub sftp: Arc<SftpSession>,
     pub initial_dir: String,
@@ -44,6 +57,7 @@ pub async fn connect(
     events: async_channel::Sender<Event>,
 ) -> anyhow::Result<Connection> {
     let askpass = AskpassServer::spawn(events.clone(), spec.secret.clone())?;
+    let aborted = askpass.aborted();
 
     let mut cmd = Command::new("ssh");
     cmd.stdin(Stdio::piped())
@@ -85,63 +99,27 @@ pub async fn connect(
         .context("spawning ssh (is OpenSSH installed?)")?;
     let stdin = child.stdin.take().expect("piped stdin");
     let mut stdout = child.stdout.take().expect("piped stdout");
-    let stderr = child.stderr.take().expect("piped stderr");
-
-    // Collect ssh's stderr for error reporting; it is the only place
-    // messages like "Permission denied (publickey)" show up.
-    let stderr_buf = Arc::new(std::sync::Mutex::new(Vec::<u8>::new()));
-    {
-        let stderr_buf = stderr_buf.clone();
-        tokio::spawn(async move {
-            let mut reader = tokio::io::BufReader::new(stderr);
-            let mut chunk = [0u8; 4096];
-            loop {
-                use tokio::io::AsyncReadExt as _;
-                match reader.read(&mut chunk).await {
-                    Ok(0) | Err(_) => break,
-                    Ok(n) => {
-                        let mut buf = stderr_buf.lock().unwrap();
-                        buf.extend_from_slice(&chunk[..n]);
-                        let excess = buf.len().saturating_sub(16 * 1024);
-                        if excess > 0 {
-                            buf.drain(..excess);
-                        }
-                    }
-                }
-            }
-        });
-    }
-    let ssh_error = {
-        let stderr_buf = stderr_buf.clone();
-        move || {
-            let buf = stderr_buf.lock().unwrap();
-            let text = String::from_utf8_lossy(&buf);
-            let lines: Vec<&str> = text
-                .lines()
-                .filter(|l| !l.trim().is_empty() && !l.contains("Pseudo-terminal"))
-                .collect();
-            lines
-                .into_iter()
-                .rev()
-                .take(4)
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect::<Vec<_>>()
-                .join("\n")
-        }
-    };
+    let mut stderr = StderrTail::spawn(child.stderr.take().expect("piped stderr"));
 
     // For elevated sessions, drive the password prompt until the remote
     // bootstrap reports the pty is raw and sftp-server is about to start.
     let mut stdin = stdin;
     let mut leftover = Vec::new();
     if spec.elevation != Elevation::None {
-        match drive_elevation(&spec, &mut stdout, &mut stdin, &mut child, &events).await {
+        let driven = drive_elevation(
+            &spec,
+            &mut stdout,
+            &mut stdin,
+            &mut child,
+            &events,
+            &aborted,
+        )
+        .await;
+        match driven {
             Ok(rest) => leftover = rest,
             Err(err) => {
                 let _ = child.kill().await;
-                let detail = ssh_error();
+                let detail = stderr.settled().await;
                 if detail.is_empty() {
                     return Err(err);
                 }
@@ -156,20 +134,48 @@ pub async fn connect(
         prefix: leftover,
     };
 
-    let sftp = match SftpSession::new(stream).await {
-        Ok(sftp) => Arc::new(sftp),
-        Err(err) => {
+    // The handshake's INIT sits in ssh's stdin pipe until authentication is
+    // done, so rather than trusting a timer, race it against the ways an
+    // attempt ends early: ssh exiting, or the user cancelling a prompt.
+    let config = russh_sftp::client::Config {
+        request_timeout_secs: HANDSHAKE_TIMEOUT_SECS,
+        ..Default::default()
+    };
+    let sftp = tokio::select! {
+        result = SftpSession::new_with_config(stream, config) => match result {
+            Ok(sftp) => Arc::new(sftp),
+            Err(err) => {
+                let _ = child.kill().await;
+                let detail = stderr.settled().await;
+                let base = handshake_error(err, &spec.host);
+                return Err(if detail.is_empty() {
+                    base
+                } else {
+                    base.context(detail)
+                });
+            }
+        },
+        status = child.wait() => {
+            // ssh gave up before sftp-server ever answered: wrong password,
+            // LoginGraceTime, unreachable host. Its stderr says which.
+            let detail = stderr.settled().await;
+            if aborted.is_cancelled() {
+                anyhow::bail!("connection cancelled");
+            }
+            if detail.is_empty() {
+                anyhow::bail!(
+                    "ssh exited before the SFTP session started ({})",
+                    describe_exit(status)
+                );
+            }
+            anyhow::bail!(detail);
+        }
+        _ = aborted.cancelled() => {
             let _ = child.kill().await;
-            let detail = ssh_error();
-            let base = anyhow::Error::new(err).context("establishing SFTP session");
-            return Err(if detail.is_empty() {
-                base
-            } else {
-                base.context(detail)
-            });
+            anyhow::bail!("connection cancelled");
         }
     };
-    sftp.set_timeout(30);
+    sftp.set_timeout(REQUEST_TIMEOUT_SECS);
 
     let initial_dir = match &spec.remote_dir {
         Some(dir) => sftp
@@ -192,13 +198,11 @@ pub async fn connect(
             tokio::select! {
                 status = child.wait() => {
                     if !cancel.is_cancelled() {
-                        let reason = {
-                            let detail = ssh_error();
-                            if detail.is_empty() {
-                                format!("ssh exited: {status:?}")
-                            } else {
-                                detail
-                            }
+                        let detail = stderr.settled().await;
+                        let reason = if detail.is_empty() {
+                            format!("ssh exited ({})", describe_exit(status))
+                        } else {
+                            detail
                         };
                         let _ = events.send(Event::SessionClosed { id, reason }).await;
                     }
@@ -232,10 +236,16 @@ fn apply_auth_args(cmd: &mut Command, spec: &ConnectSpec) {
     match spec.auth {
         AuthMethod::Agent => {}
         AuthMethod::Password => {
-            // Force password/keyboard-interactive so ssh actually prompts
-            // (routed to our askpass), rather than silently using a key.
+            // Force an interactive login so ssh actually prompts (routed to
+            // our askpass) rather than silently using a key. keyboard-
+            // interactive goes first, as in OpenSSH's own default order: it
+            // is what PAM stacks such as Duo require, and those servers
+            // reject plain password auth outright, so trying it first only
+            // burned the saved password and produced "Permission denied,
+            // please try again". A server offering only password auth is
+            // unaffected, since ssh skips methods it doesn't advertise.
             cmd.arg("-o")
-                .arg("PreferredAuthentications=password,keyboard-interactive")
+                .arg("PreferredAuthentications=keyboard-interactive,password")
                 .arg("-o")
                 .arg("PubkeyAuthentication=no")
                 .arg("-o")
@@ -279,14 +289,89 @@ fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
 
+/// Turn a failed handshake into something a user can act on.
+fn handshake_error(err: russh_sftp::client::error::Error, host: &str) -> anyhow::Error {
+    match err {
+        russh_sftp::client::error::Error::Timeout => anyhow::anyhow!(
+            "no response from the SFTP server on {host} after {HANDSHAKE_TIMEOUT_SECS} seconds"
+        ),
+        err => anyhow::Error::new(err).context("establishing SFTP session"),
+    }
+}
+
+fn describe_exit(status: std::io::Result<ExitStatus>) -> String {
+    match status {
+        Ok(status) => status.to_string(),
+        Err(err) => format!("wait failed: {err}"),
+    }
+}
+
+/// ssh's stderr, collected in the background. It is the only place messages
+/// like "Permission denied (publickey)" show up, so it is what the user gets
+/// to see when an attempt fails.
+struct StderrTail {
+    buf: Arc<Mutex<Vec<u8>>>,
+    reader: Option<tokio::task::JoinHandle<()>>,
+}
+
+impl StderrTail {
+    fn spawn(mut stderr: ChildStderr) -> Self {
+        let buf = Arc::new(Mutex::new(Vec::<u8>::new()));
+        let reader = {
+            let buf = buf.clone();
+            tokio::spawn(async move {
+                let mut chunk = [0u8; 4096];
+                loop {
+                    match stderr.read(&mut chunk).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => {
+                            let mut buf = buf.lock().unwrap();
+                            buf.extend_from_slice(&chunk[..n]);
+                            let excess = buf.len().saturating_sub(16 * 1024);
+                            if excess > 0 {
+                                buf.drain(..excess);
+                            }
+                        }
+                    }
+                }
+            })
+        };
+        Self {
+            buf,
+            reader: Some(reader),
+        }
+    }
+
+    /// The last few meaningful lines, for once ssh has exited (or been
+    /// killed). Waits briefly for the reader to drain what ssh wrote on its
+    /// way out, so a final "Permission denied" isn't lost to the race
+    /// between the exit status arriving and the pipe becoming readable.
+    async fn settled(&mut self) -> String {
+        if let Some(reader) = self.reader.take() {
+            let _ = tokio::time::timeout(STDERR_SETTLE, reader).await;
+        }
+        let buf = self.buf.lock().unwrap();
+        let text = String::from_utf8_lossy(&buf);
+        let lines: Vec<&str> = text
+            .lines()
+            .filter(|l| !l.trim().is_empty() && !l.contains("Pseudo-terminal"))
+            .collect();
+        let skip = lines.len().saturating_sub(4);
+        lines[skip..].join("\n")
+    }
+}
+
 /// Scan bootstrap output, answering password prompts via the UI, until the
 /// READY sentinel. Returns bytes read past the sentinel (start of SFTP data).
+/// `aborted` is the askpass server's signal that the user cancelled ssh's
+/// own login prompt, which ends the attempt here too.
 async fn drive_elevation(
     spec: &ConnectSpec,
     stdout: &mut ChildStdout,
     stdin: &mut ChildStdin,
     child: &mut Child,
     events: &async_channel::Sender<Event>,
+    aborted: &CancellationToken,
 ) -> anyhow::Result<Vec<u8>> {
     let mut buf: Vec<u8> = Vec::new();
     let mut asked = 0u32;
@@ -338,7 +423,13 @@ async fn drive_elevation(
                 anyhow::bail!("timed out waiting for elevation on {}", spec.host)
             }
             status = child.wait() => {
-                anyhow::bail!("ssh exited during elevation ({status:?})");
+                if aborted.is_cancelled() {
+                    anyhow::bail!("connection cancelled");
+                }
+                anyhow::bail!("ssh exited during elevation ({})", describe_exit(status));
+            }
+            _ = aborted.cancelled() => {
+                anyhow::bail!("connection cancelled");
             }
         };
         if n == 0 {
@@ -433,5 +524,29 @@ mod tests {
         }
         let with_path = bootstrap_script(Elevation::Sudo, Some("/opt/sftp server"));
         assert!(with_path.contains("'/opt/sftp server'"));
+    }
+
+    /// Password logins must try keyboard-interactive before password: PAM
+    /// stacks such as Duo only work through the former, and a server that
+    /// offers only password auth is unaffected by the order.
+    #[test]
+    fn password_auth_prefers_keyboard_interactive() {
+        let mut spec = ConnectSpec::new("example.edu");
+        spec.auth = AuthMethod::Password;
+        let mut cmd = Command::new("ssh");
+        apply_auth_args(&mut cmd, &spec);
+        let args: Vec<String> = cmd
+            .as_std()
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            args.contains(&"PreferredAuthentications=keyboard-interactive,password".to_string()),
+            "{args:?}"
+        );
+        assert!(
+            args.contains(&"PubkeyAuthentication=no".to_string()),
+            "{args:?}"
+        );
     }
 }

@@ -1,15 +1,49 @@
 //! Modal prompts driven by background events: ssh passwords, host-key
 //! confirmations and transfer conflicts.
 
-use adw::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::task::Poll;
 
-use linuxscp::types::{ConflictDecision, ConflictRequest, PromptKind, PromptRequest};
+use adw::prelude::*;
+use gtk::glib;
+
+use linuxscp::types::{ConflictDecision, ConflictRequest, PromptKind, PromptRequest, Reply};
 
 pub fn show_prompt(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
     match request.kind {
         PromptKind::Secret => show_secret(parent, request),
         PromptKind::YesNo => show_yes_no(parent, request),
     }
+}
+
+/// The reply channel of an open prompt, shared between the dialog's response
+/// handler and the watcher that dismisses it; `None` once answered.
+type SharedReply<T> = Rc<RefCell<Option<Reply<T>>>>;
+
+/// Close `dialog` if the backend stops waiting for the answer — the ssh
+/// attempt failed, was cancelled or timed out — so a stale password prompt
+/// isn't left sitting under the "Connection Failed" alert. Resolves to the
+/// handle the response handler must abort once the user has answered.
+fn dismiss_when_abandoned<T: 'static>(
+    dialog: &adw::AlertDialog,
+    reply: &SharedReply<T>,
+) -> glib::JoinHandle<()> {
+    let dialog = dialog.clone();
+    let reply = reply.clone();
+    glib::spawn_future_local(async move {
+        let abandoned = std::future::poll_fn(|cx| match reply.borrow_mut().as_mut() {
+            Some(tx) => tx.poll_closed(cx).map(|()| true),
+            None => Poll::Ready(false),
+        })
+        .await;
+        if abandoned {
+            // Taking the sender first means the response handler, which
+            // close() triggers with the close response, has nothing to send.
+            reply.borrow_mut().take();
+            dialog.close();
+        }
+    })
 }
 
 fn show_secret(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
@@ -29,10 +63,12 @@ fn show_secret(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
         .build();
     dialog.set_extra_child(Some(&entry));
 
-    let reply = std::cell::RefCell::new(Some(request.reply));
+    let reply: SharedReply<Option<String>> = Rc::new(RefCell::new(Some(request.reply)));
+    let watcher = dismiss_when_abandoned(&dialog, &reply);
     let entry_clone = entry.clone();
     dialog.connect_response(None, move |dialog, response| {
         if let Some(reply) = reply.borrow_mut().take() {
+            watcher.abort();
             let answer = if response == "ok" {
                 Some(entry_clone.text().to_string())
             } else {
@@ -58,9 +94,11 @@ fn show_yes_no(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
     dialog.add_response("yes", "Yes");
     dialog.set_response_appearance("yes", adw::ResponseAppearance::Suggested);
 
-    let reply = std::cell::RefCell::new(Some(request.reply));
+    let reply: SharedReply<Option<String>> = Rc::new(RefCell::new(Some(request.reply)));
+    let watcher = dismiss_when_abandoned(&dialog, &reply);
     dialog.connect_response(None, move |dialog, response| {
         if let Some(reply) = reply.borrow_mut().take() {
+            watcher.abort();
             let answer = (response == "yes").then(|| "yes".to_string());
             let _ = reply.send(answer);
         }
