@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.2.2" date="2026-11-02">
+      <description>
+        <ul>
+          <li>Open remote terminals with the session's connection settings (#16)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-11-01">
       <description>
         <ul>

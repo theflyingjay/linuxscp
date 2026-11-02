@@ -754,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "linuxscp"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -779,7 +779,7 @@ dependencies = [
 
 [[package]]
 name = "linuxscp-askpass"
-version = "0.2.1"
+version = "0.2.2"
 
 [[package]]
 name = "lock_api"
