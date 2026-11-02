@@ -18,9 +18,11 @@ jobs:
         run: ./scripts/flatpak-cargo-sources.py --check
 
       - name: Install GTK4, libadwaita and libsecret
+        # tcsh: the remote-terminal unit test runs its command under every
+        # shell it finds, and csh is the one with the odd syntax.
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libsecret-1-dev openssh-server openssh-client
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libsecret-1-dev openssh-server openssh-client tcsh
 
       - uses: dtolnay/rust-toolchain@stable
         with:

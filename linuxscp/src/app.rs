@@ -892,7 +892,9 @@ impl App {
     }
 
     /// Open a terminal at the active pane's directory. For remote panes this
-    /// launches ssh into the host, cd-ing to the current directory.
+    /// launches ssh into the same account the pane is browsing — with the
+    /// session's login name, port, key and other settings — cd-ing to the
+    /// current directory.
     fn open_terminal(self: &Rc<Self>) {
         let pane = self.active_pane();
         let dir = pane.current_dir();
@@ -900,22 +902,18 @@ impl App {
         let result = match pane.backend() {
             Backend::Local => spawn_terminal(terminal.as_deref(), Some(&dir), None),
             Backend::Remote(id) => {
-                let Some(handle) = sessions::get(id) else {
+                let Some(spec) = self.session_specs.borrow().get(&id).cloned() else {
                     self.toast("Session is closed");
                     return;
                 };
-                // ssh <host> -t "cd <dir>; exec $SHELL -l"
-                let remote_cmd = format!(
-                    "cd {} 2>/dev/null; exec \"$SHELL\" -l",
-                    shell_words::quote(&dir)
-                );
-                let ssh_args = vec![
-                    "-t".to_string(),
-                    handle.host.clone(),
-                    "--".to_string(),
-                    remote_cmd,
-                ];
-                spawn_terminal(terminal.as_deref(), None, Some(ssh_args))
+                // Elevated (sudo/su) sessions open the terminal as the login
+                // user; if the directory is root-only the remote cd fails
+                // quietly and the shell starts in the home directory.
+                spawn_terminal(
+                    terminal.as_deref(),
+                    None,
+                    Some(ssh::terminal::command(&spec, &dir)),
+                )
             }
         };
         if let Err(err) = result {
@@ -1588,11 +1586,11 @@ impl App {
 }
 
 /// Launch a terminal emulator, optionally in a working directory or running
-/// an ssh command. Tries a configured terminal first, then common ones.
+/// a command (full argv). Tries a configured terminal first, then common ones.
 fn spawn_terminal(
     configured: Option<&str>,
     workdir: Option<&str>,
-    ssh_args: Option<Vec<String>>,
+    command: Option<Vec<String>>,
 ) -> std::io::Result<()> {
     // (binary, arg that precedes a command to execute)
     const CANDIDATES: &[(&str, &str)] = &[
@@ -1623,12 +1621,11 @@ fn spawn_terminal(
     if let Some(dir) = workdir {
         cmd.current_dir(dir);
     }
-    if let Some(ssh_args) = ssh_args {
+    if let Some(argv) = command {
         if !exec_flag.is_empty() {
             cmd.arg(&exec_flag);
         }
-        cmd.arg("ssh");
-        cmd.args(ssh_args);
+        cmd.args(argv);
     }
     cmd.spawn().map(|_| ())
 }

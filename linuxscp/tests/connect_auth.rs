@@ -131,6 +131,62 @@ fn cancelled_prompt_ends_the_attempt() {
     });
 }
 
+/// "Open Terminal Here" on a remote pane runs ssh with the session's
+/// settings (here: login name, port, key, extra arguments) and a remote
+/// command that cds into the pane's directory before starting the login
+/// shell. Without a tty (`-T` in place of `-t`) that shell reads commands
+/// from stdin, so `pwd` reports where it landed — end to end through sshd
+/// and the real login shell.
+#[test]
+#[ignore = "requires the local test sshd from scripts/test-server.sh"]
+fn terminal_ssh_lands_in_the_pane_directory() {
+    let dir = format!("{TEST_DIR}/term dir's {{a,b}}");
+    std::fs::create_dir_all(&dir).expect("creating the target dir");
+    let user = Command::new("id")
+        .arg("-un")
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .expect("id -un");
+
+    let mut spec = ConnectSpec::new("127.0.0.1");
+    spec.port = Some(TEST_PORT);
+    spec.user = Some(user);
+    spec.auth = AuthMethod::Key;
+    spec.identity_file = Some(format!("{TEST_DIR}/home/.ssh/id_ed25519"));
+    spec.extra_ssh_args = vec![
+        "-F".into(),
+        "/dev/null".into(),
+        "-o".into(),
+        format!("UserKnownHostsFile={TEST_DIR}/home/.ssh/known_hosts"),
+        "-o".into(),
+        "StrictHostKeyChecking=accept-new".into(),
+    ];
+    let args: Vec<String> = ssh::terminal::ssh_args(&spec, &dir)
+        .into_iter()
+        .map(|arg| if arg == "-t" { "-T".to_string() } else { arg })
+        .collect();
+
+    let output = Command::new("ssh")
+        .args(&args)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .and_then(|mut child| {
+            use std::io::Write as _;
+            child.stdin.take().unwrap().write_all(b"pwd\nexit\n")?;
+            child.wait_with_output()
+        })
+        .expect("running ssh");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success() && stdout.contains(&dir),
+        "ssh {args:?}\nstatus {:?}\nstdout: {stdout}\nstderr: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 #[test]
 #[ignore = "requires the local test sshd from scripts/test-server.sh"]
 fn ssh_exit_fails_fast() {
