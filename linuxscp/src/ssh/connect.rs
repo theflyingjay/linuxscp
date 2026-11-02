@@ -67,17 +67,7 @@ pub async fn connect(
     for (key, value) in askpass.ssh_env()? {
         cmd.env(key, value);
     }
-    apply_auth_args(&mut cmd, &spec);
-    // Debug/power-user hook: extra ssh arguments for every connection.
-    if let Ok(args) = std::env::var("LINUXSCP_SSH_ARGS")
-        .map_err(anyhow::Error::from)
-        .and_then(|extra| Ok(shell_words::split(&extra)?))
-    {
-        cmd.args(args);
-    }
-    for arg in &spec.extra_ssh_args {
-        cmd.arg(arg);
-    }
+    cmd.args(base_ssh_args(&spec));
 
     match spec.elevation {
         Elevation::None => {
@@ -225,13 +215,20 @@ pub async fn connect(
     })
 }
 
-/// Translate the spec's connection and auth settings into ssh arguments.
-fn apply_auth_args(cmd: &mut Command, spec: &ConnectSpec) {
+/// The ssh arguments that make a connection reach the same account the same
+/// way, whatever the session is for: port, login name, auth settings, then
+/// the `LINUXSCP_SSH_ARGS` debug hook and the spec's own extra arguments.
+/// Everything up to (but not including) the destination host, so callers
+/// append `host` and whatever command or subsystem they need.
+pub fn base_ssh_args(spec: &ConnectSpec) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
     if let Some(port) = spec.port {
-        cmd.arg("-p").arg(port.to_string());
+        args.push("-p".into());
+        args.push(port.to_string());
     }
     if let Some(user) = spec.user.as_deref().filter(|u| !u.is_empty()) {
-        cmd.arg("-l").arg(user);
+        args.push("-l".into());
+        args.push(user.into());
     }
     match spec.auth {
         AuthMethod::Agent => {}
@@ -244,21 +241,35 @@ fn apply_auth_args(cmd: &mut Command, spec: &ConnectSpec) {
             // burned the saved password and produced "Permission denied,
             // please try again". A server offering only password auth is
             // unaffected, since ssh skips methods it doesn't advertise.
-            cmd.arg("-o")
-                .arg("PreferredAuthentications=keyboard-interactive,password")
-                .arg("-o")
-                .arg("PubkeyAuthentication=no")
-                .arg("-o")
-                .arg("NumberOfPasswordPrompts=3");
+            for opt in [
+                "PreferredAuthentications=keyboard-interactive,password",
+                "PubkeyAuthentication=no",
+                "NumberOfPasswordPrompts=3",
+            ] {
+                args.push("-o".into());
+                args.push(opt.into());
+            }
         }
         AuthMethod::Key => {
             if let Some(path) = spec.identity_file.as_deref().filter(|p| !p.is_empty()) {
                 // IdentitiesOnly stops the agent from offering other keys
                 // first, so the chosen PEM is actually the one tried.
-                cmd.arg("-i").arg(path).arg("-o").arg("IdentitiesOnly=yes");
+                args.push("-i".into());
+                args.push(path.into());
+                args.push("-o".into());
+                args.push("IdentitiesOnly=yes".into());
             }
         }
     }
+    // Debug/power-user hook: extra ssh arguments for every connection.
+    if let Some(extra) = std::env::var("LINUXSCP_SSH_ARGS")
+        .ok()
+        .and_then(|extra| shell_words::split(&extra).ok())
+    {
+        args.extend(extra);
+    }
+    args.extend(spec.extra_ssh_args.iter().cloned());
+    args
 }
 
 /// Remote bootstrap for elevated sessions. Runs under `ssh -tt`, so it owns
@@ -285,7 +296,9 @@ fn bootstrap_script(elevation: Elevation, server_override: Option<&str>) -> Stri
     }
 }
 
-fn shell_quote(s: &str) -> String {
+/// Single-quote `s` for a POSIX shell (also understood by csh and fish, which
+/// matters where the remote login shell is not POSIX).
+pub(crate) fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
 
@@ -533,13 +546,7 @@ mod tests {
     fn password_auth_prefers_keyboard_interactive() {
         let mut spec = ConnectSpec::new("example.edu");
         spec.auth = AuthMethod::Password;
-        let mut cmd = Command::new("ssh");
-        apply_auth_args(&mut cmd, &spec);
-        let args: Vec<String> = cmd
-            .as_std()
-            .get_args()
-            .map(|a| a.to_string_lossy().into_owned())
-            .collect();
+        let args = base_ssh_args(&spec);
         assert!(
             args.contains(&"PreferredAuthentications=keyboard-interactive,password".to_string()),
             "{args:?}"
@@ -548,5 +555,61 @@ mod tests {
             args.contains(&"PubkeyAuthentication=no".to_string()),
             "{args:?}"
         );
+    }
+
+    /// The exact-sequence tests assume the debug hook is not set in the
+    /// environment running them.
+    fn debug_hook_is_unset() -> bool {
+        std::env::var_os("LINUXSCP_SSH_ARGS").is_none()
+    }
+
+    /// Everything that selects the account and the route comes first, the
+    /// spec's extra arguments last, and the host is left to the caller.
+    #[test]
+    fn base_args_cover_port_user_key_and_extras() {
+        if !debug_hook_is_unset() {
+            return;
+        }
+        let mut spec = ConnectSpec::new("example.edu");
+        spec.port = Some(2222);
+        spec.user = Some("alice".into());
+        spec.auth = AuthMethod::Key;
+        spec.identity_file = Some("/home/alice/.ssh/cluster.pem".into());
+        spec.extra_ssh_args = vec!["-J".into(), "bastion".into()];
+        let args = base_ssh_args(&spec);
+        let expected: Vec<String> = [
+            "-p",
+            "2222",
+            "-l",
+            "alice",
+            "-i",
+            "/home/alice/.ssh/cluster.pem",
+            "-o",
+            "IdentitiesOnly=yes",
+            "-J",
+            "bastion",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        assert_eq!(args, expected);
+        assert!(!args.iter().any(|a| a == "example.edu"));
+    }
+
+    /// Agent auth with nothing else set adds no arguments at all, so ssh's
+    /// own config and defaults apply untouched.
+    #[test]
+    fn base_args_are_empty_for_plain_agent_auth() {
+        if !debug_hook_is_unset() {
+            return;
+        }
+        let spec = ConnectSpec::new("example.edu");
+        assert!(base_ssh_args(&spec).is_empty());
+        // A blank user or identity path is treated as unset.
+        let mut blank = ConnectSpec::new("example.edu");
+        blank.user = Some(String::new());
+        blank.auth = AuthMethod::Key;
+        blank.identity_file = Some(String::new());
+        assert!(base_ssh_args(&blank).is_empty());
     }
 }
