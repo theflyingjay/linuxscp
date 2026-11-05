@@ -110,7 +110,8 @@ pub enum AuthMethod {
     Agent,
     /// Interactive password (optionally remembered in the keyring).
     Password,
-    /// A specific private key / PEM file (optionally with a saved passphrase).
+    /// A specific private key file (optionally with a saved passphrase).
+    /// OpenSSH or PEM format; a PuTTY `.ppk` is converted on selection.
     Key,
 }
 
@@ -121,7 +122,7 @@ impl AuthMethod {
         match self {
             AuthMethod::Agent => "SSH agent / default keys",
             AuthMethod::Password => "Password",
-            AuthMethod::Key => "Key file (PEM)",
+            AuthMethod::Key => "Key file (OpenSSH or PuTTY .ppk)",
         }
     }
 }
