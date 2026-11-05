@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.3.0" date="2026-11-05">
+      <description>
+        <ul>
+          <li>Import PuTTY .ppk keys from the Site Manager (#17)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.2" date="2026-11-02">
       <description>
         <ul>
