@@ -65,9 +65,12 @@ On other distributions, install the [Flatpak](#flatpak) or
   with a new site appearing in the list as you type its name. A search box filters the
   folder tree, the saved sites, and the `~/.ssh/config` hosts together; sites and whole
   folders can be dragged between folders. Set the username, override the port, choose
-  password or PEM-key authentication, pick the elevation mode and a landing directory per
+  password or key-file authentication, pick the elevation mode and a landing directory per
   site. Passwords and key passphrases are stored in the OS keyring (Secret Service /
   gnome-keyring), never in plain text.
+- **Bring your PuTTY keys** — pick a `.ppk` from WinSCP or PuTTY as a site's key file and
+  LinuxSCP converts it to an OpenSSH key in `~/.ssh` (protected with the same passphrase,
+  if you like); the original `.ppk` is left untouched.
 - **Zero-config connections too** — still reads `~/.ssh/config` (aliases, `ProxyJump`,
   `ControlMaster`, `IdentityFile`, agent and FIDO/hardware keys) by using your real `ssh` —
   and the config file itself can be edited right inside the site manager.
@@ -107,7 +110,14 @@ launch). From there you can:
 - Choose how to authenticate:
   - **SSH agent / default keys** — defer to your agent and `~/.ssh/config` (the default).
   - **Password** — typed each time, or saved to the keyring and auto-filled.
-  - **Key file (PEM)** — pick a private key; an optional passphrase can be saved too.
+  - **Key file** — pick a private key in OpenSSH or PEM format; an optional passphrase
+    can be saved too. A PuTTY **`.ppk`** (the format WinSCP, PuTTY and FileZilla on
+    Windows use, versions 2 and 3) is recognised on selection and converted: LinuxSCP
+    shows the key's type, fingerprint and comment, asks for its passphrase, writes an
+    OpenSSH copy to `~/.ssh` — never overwriting anything, encrypted with the same
+    passphrase unless you say otherwise — and points the site at the copy. The `.ppk`
+    itself is not modified. RSA, ECDSA and Ed25519 keys convert; DSA keys cannot be used
+    because OpenSSH has dropped them.
 - Set a per-site **elevation** mode (`sudo` / `su -`) and a **remote directory** to open in.
 
 Secrets live in the OS keyring keyed by an opaque site id; `settings.json` only records
@@ -218,9 +228,14 @@ Unit tests run anywhere. The end-to-end SFTP tests use a throwaway local sshd:
 ```bash
 cargo test                                          # unit tests
 ./scripts/test-server.sh start                      # local sshd on 127.0.0.1:2299
-cargo test -p linuxscp --test sftp_roundtrip --test connect_auth -- --ignored --test-threads=1
+cargo test -p linuxscp --test sftp_roundtrip --test connect_auth --test ppk_import -- --ignored --test-threads=1
 ./scripts/test-server.sh stop
 ```
+
+The PuTTY key importer is tested against committed `.ppk` fixtures
+(`linuxscp/src/ssh/testdata/ppk/`, throwaway keys made by `puttygen`), so those tests
+need nothing installed; `ppk_import` additionally logs into the test sshd with the
+converted keys.
 
 `scripts/test-server.sh run` starts the test server and launches the app pointed at it
 (host alias `testbox`; the fake `su` password is `secret123`).

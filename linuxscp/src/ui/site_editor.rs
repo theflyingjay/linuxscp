@@ -1,14 +1,21 @@
 //! Inline editor form for a saved site: host, port, user, auth (password or
-//! PEM key), elevation and landing directory. Embedded in the site manager's
+//! key file), elevation and landing directory. Embedded in the site manager's
 //! right-hand pane (WinSCP-style) rather than shown as a separate modal.
+//!
+//! Picking a PuTTY `.ppk` as the key file opens the import sheet
+//! ([`super::key_import`]): OpenSSH cannot read that format, so the key is
+//! converted once and the form points at the converted copy instead.
 
 use std::cell::{Cell, RefCell};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
 
+use super::key_import;
 use linuxscp::settings::Site;
+use linuxscp::ssh::ppk;
 use linuxscp::types::{AuthMethod, Elevation};
 
 /// What to do with the site's stored secret after editing.
@@ -37,6 +44,9 @@ pub struct SiteForm {
     port_row: adw::EntryRow,
     auth_row: adw::ComboRow,
     key_row: adw::ActionRow,
+    /// Shown when the selected key file is a PuTTY `.ppk`; opens the
+    /// import sheet for it.
+    convert_button: gtk::Button,
     secret_row: adw::PasswordEntryRow,
     elevation_row: adw::ComboRow,
     dir_row: adw::EntryRow,
@@ -82,6 +92,17 @@ impl SiteForm {
             .title("Key file")
             .subtitle("None selected")
             .build();
+        let convert_button = gtk::Button::builder()
+            .label("Convert…")
+            .valign(gtk::Align::Center)
+            .visible(false)
+            .tooltip_text(
+                "This is a PuTTY key (.ppk), which OpenSSH cannot read. \
+                 Convert it to an OpenSSH key to use it.",
+            )
+            .build();
+        convert_button.add_css_class("warning");
+        key_row.add_suffix(&convert_button);
         let key_button = gtk::Button::from_icon_name("document-open-symbolic");
         key_button.set_valign(gtk::Align::Center);
         key_button.add_css_class("flat");
@@ -116,6 +137,7 @@ impl SiteForm {
             port_row,
             auth_row,
             key_row,
+            convert_button,
             secret_row,
             elevation_row,
             dir_row,
@@ -163,18 +185,47 @@ impl SiteForm {
                     let start = if ssh_dir.is_dir() { ssh_dir } else { dir };
                     dialog.set_initial_folder(Some(&gtk::gio::File::for_path(start)));
                 }
+                // Keys have no reliable extension, so "All files" stays the
+                // default; the PuTTY filter is there to make .ppk import
+                // discoverable.
+                let all_files = gtk::FileFilter::new();
+                all_files.set_name(Some("All files"));
+                all_files.add_pattern("*");
+                let putty = gtk::FileFilter::new();
+                putty.set_name(Some("PuTTY private keys (*.ppk)"));
+                putty.add_suffix("ppk");
+                let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
+                filters.append(&all_files);
+                filters.append(&putty);
+                dialog.set_filters(Some(&filters));
+                dialog.set_default_filter(Some(&all_files));
+
                 let win = button.root().and_downcast::<gtk::Window>();
                 let weak = weak.clone();
+                let button = button.clone();
                 dialog.open(win.as_ref(), gtk::gio::Cancellable::NONE, move |res| {
                     let Some(form) = weak.upgrade() else { return };
-                    if let Ok(file) = res {
-                        if let Some(path) = file.path() {
-                            let text = path.to_string_lossy().into_owned();
-                            form.key_row.set_subtitle(&text);
-                            *form.key_path.borrow_mut() = Some(text);
-                        }
+                    let Some(path) = res.ok().and_then(|file| file.path()) else {
+                        return;
+                    };
+                    if ppk::is_ppk_file(&path) {
+                        // Leave the previous selection in place until the
+                        // import succeeds (or is cancelled).
+                        Self::import_ppk(&form, &button, path);
+                    } else {
+                        form.set_key_path(Some(path.to_string_lossy().into_owned()));
                     }
                 });
+            });
+        }
+        {
+            let weak = Rc::downgrade(&form);
+            form.convert_button.connect_clicked(move |button| {
+                let Some(form) = weak.upgrade() else { return };
+                let Some(path) = form.key_path.borrow().clone() else {
+                    return;
+                };
+                Self::import_ppk(&form, button, PathBuf::from(path));
             });
         }
 
@@ -185,6 +236,31 @@ impl SiteForm {
     /// Report live edits of name/host/user/port as (display name, summary).
     pub fn set_on_changed(&self, callback: impl Fn(String, String) + 'static) {
         *self.on_changed.borrow_mut() = Some(Box::new(callback));
+    }
+
+    /// Record the chosen key file and flag it if it is a PuTTY key.
+    fn set_key_path(&self, path: Option<String>) {
+        let path = path.filter(|p| !p.is_empty());
+        self.key_row
+            .set_subtitle(path.as_deref().unwrap_or("None selected"));
+        self.convert_button
+            .set_visible(path.as_deref().is_some_and(looks_like_ppk));
+        *self.key_path.borrow_mut() = path;
+    }
+
+    /// Open the import sheet for `source`; on success the converted key
+    /// becomes the site's key file, and a passphrase the converted key was
+    /// protected with is offered in the passphrase field so Save can keep
+    /// it in the keyring.
+    fn import_ppk(form: &Rc<Self>, parent: &impl IsA<gtk::Widget>, source: PathBuf) {
+        let weak = Rc::downgrade(form);
+        key_import::show(parent, source, move |imported, passphrase| {
+            let Some(form) = weak.upgrade() else { return };
+            form.set_key_path(Some(imported.private_path.to_string_lossy().into_owned()));
+            if let Some(passphrase) = passphrase {
+                form.secret_row.set_text(&passphrase);
+            }
+        });
     }
 
     fn emit_changed(&self) {
@@ -213,9 +289,7 @@ impl SiteForm {
                 .position(|a| *a == site.auth)
                 .unwrap_or(0) as u32,
         );
-        self.key_row
-            .set_subtitle(site.identity_file.as_deref().unwrap_or("None selected"));
-        *self.key_path.borrow_mut() = site.identity_file.clone();
+        self.set_key_path(site.identity_file.clone());
         self.elevation_row.set_selected(
             Elevation::ALL
                 .iter()
@@ -325,4 +399,12 @@ impl SiteForm {
                 (_, false) => "Password",
             });
     }
+}
+
+/// Cheap check for sites saved with a `.ppk` path (before import existed,
+/// or typed in by hand). Connecting sniffs the file contents regardless.
+fn looks_like_ppk(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("ppk"))
 }

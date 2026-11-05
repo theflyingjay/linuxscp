@@ -2,6 +2,7 @@ pub mod config_editor;
 pub mod connect_dialog;
 pub mod edit;
 pub mod entry_object;
+pub mod key_import;
 pub mod notify;
 pub mod pane;
 pub mod prompts;

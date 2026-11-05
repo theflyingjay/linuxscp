@@ -10,6 +10,22 @@ repository.workspace = true
 
 [dependencies]
 adw = { version = "0.8", package = "libadwaita", features = ["v1_5"] }
+# PuTTY .ppk import (src/ssh/ppk.rs): the PPK container is decoded here and
+# re-emitted as an OpenSSH private key with ssh-key, so WinSCP users can
+# reuse their keys without puttygen. Pure Rust, no C libraries. ssh-key's
+# `rsa` feature is deliberately off: it would pull in the `rsa` crate
+# (RUSTSEC-2023-0071) and we only serialize RSA components, never sign.
+aes = "0.8"
+argon2 = { version = "0.5", default-features = false, features = ["zeroize"] }
+base64ct = { version = "1.6", features = ["alloc"] }
+cbc = "0.1"
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+# Not `std`: that feature's weak `rsa?/std` edge would list the unused `rsa`
+# crate in Cargo.lock, where cargo-audit would still flag it.
+ssh-key = { version = "0.6", default-features = false, features = ["alloc", "ecdsa", "ed25519", "encryption", "getrandom"] }
+zeroize = "1"
 anyhow = "1.0.103"
 async-channel = "2.5.0"
 dirs = "6.0.0"

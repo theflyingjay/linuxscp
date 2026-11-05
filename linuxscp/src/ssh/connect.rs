@@ -22,6 +22,26 @@ use crate::types::{
     AuthMethod, ConnectSpec, Elevation, Event, PromptKind, PromptRequest, SessionId,
 };
 
+/// A PuTTY `.ppk` handed to `ssh -i` fails with "invalid format" and then
+/// falls through to a password prompt, which reads as a wrong password.
+/// Catch it up front and say what to do instead.
+fn reject_ppk_identity(spec: &ConnectSpec) -> anyhow::Result<()> {
+    if spec.auth != AuthMethod::Key {
+        return Ok(());
+    }
+    let Some(path) = spec.identity_file.as_deref().filter(|p| !p.is_empty()) else {
+        return Ok(());
+    };
+    if super::ppk::is_ppk_file(std::path::Path::new(path)) {
+        anyhow::bail!(
+            "{path} is a PuTTY private key (.ppk), which OpenSSH cannot read. \
+             Open the site in the Site Manager and choose Convert… next to the key \
+             file to turn it into an OpenSSH key."
+        );
+    }
+    Ok(())
+}
+
 /// Well-known sftp-server locations across distros, tried in order.
 const SFTP_SERVER_CANDIDATES: &str = "/usr/lib/openssh/sftp-server \
      /usr/libexec/openssh/sftp-server /usr/lib/ssh/sftp-server \
@@ -56,6 +76,7 @@ pub async fn connect(
     spec: ConnectSpec,
     events: async_channel::Sender<Event>,
 ) -> anyhow::Result<Connection> {
+    reject_ppk_identity(&spec)?;
     let askpass = AskpassServer::spawn(events.clone(), spec.secret.clone())?;
     let aborted = askpass.aborted();
 
@@ -611,5 +632,38 @@ mod tests {
         blank.auth = AuthMethod::Key;
         blank.identity_file = Some(String::new());
         assert!(base_ssh_args(&blank).is_empty());
+    }
+
+    /// A PuTTY key as the identity file is refused before ssh is spawned,
+    /// with a message that points at the converter; anything else (OpenSSH
+    /// keys, missing files, other auth methods) is left for ssh to judge.
+    #[test]
+    fn ppk_identity_files_are_rejected_up_front() {
+        let fixtures =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/ssh/testdata/ppk");
+        let ppk = fixtures.join("ed25519-v3-aes.ppk");
+        let openssh = fixtures.join("ed25519.openssh");
+
+        let mut spec = ConnectSpec::new("example.edu");
+        spec.auth = AuthMethod::Key;
+        spec.identity_file = Some(ppk.to_string_lossy().into_owned());
+        let message = reject_ppk_identity(&spec).unwrap_err().to_string();
+        assert!(message.contains("PuTTY"), "{message}");
+        assert!(message.contains("Convert"), "{message}");
+        assert!(message.contains(&*ppk.to_string_lossy()), "{message}");
+
+        spec.identity_file = Some(openssh.to_string_lossy().into_owned());
+        assert!(reject_ppk_identity(&spec).is_ok());
+        spec.identity_file = Some(fixtures.join("missing").to_string_lossy().into_owned());
+        assert!(reject_ppk_identity(&spec).is_ok());
+        spec.identity_file = Some(String::new());
+        assert!(reject_ppk_identity(&spec).is_ok());
+
+        // The same .ppk path is ignored unless key auth is selected.
+        spec.identity_file = Some(ppk.to_string_lossy().into_owned());
+        spec.auth = AuthMethod::Agent;
+        assert!(reject_ppk_identity(&spec).is_ok());
+        spec.auth = AuthMethod::Password;
+        assert!(reject_ppk_identity(&spec).is_ok());
     }
 }
