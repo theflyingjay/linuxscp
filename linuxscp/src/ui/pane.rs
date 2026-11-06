@@ -1,12 +1,13 @@
 //! One file-browser pane (local or remote), commander style.
 
 use std::cell::{Cell, RefCell};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
 use gtk::{gio, glib};
 
 use super::entry_object::{EntryObject, format_mtime, format_size};
+use super::path_completion::PathCompletion;
 use linuxscp::runtime::runtime;
 use linuxscp::types::{Backend, FsEntry};
 use linuxscp::{fsops, sessions};
@@ -48,6 +49,8 @@ pub struct Pane {
     pub root: gtk::Box,
     pub view: gtk::ColumnView,
     pub path_entry: gtk::Entry,
+    /// Folder suggestions shown under `path_entry` while a path is typed.
+    completion: Rc<PathCompletion>,
     pub new_folder_button: gtk::Button,
     pub connect_button: gtk::Button,
     pub disconnect_button: gtk::Button,
@@ -175,28 +178,53 @@ impl Pane {
         root.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         root.append(&status);
 
-        let pane = Rc::new(Self {
-            root,
-            view,
-            path_entry,
-            new_folder_button,
-            connect_button,
-            disconnect_button,
-            conn_chip,
-            store,
-            parent_store,
-            filter,
-            selection,
-            status,
-            show_hidden_flag: show_hidden,
-            context_menu: RefCell::new(None),
-            file_activate: RefCell::new(None),
-            state: RefCell::new(PaneState {
-                backend: Backend::Local,
-                dir: "/".into(),
-                show_hidden: false,
-                generation: 0,
-            }),
+        // Folder suggestions under the path entry list whatever backend
+        // the pane is on at the time; picking one navigates like Enter.
+        // Weak references keep this from adding a cycle to the pane.
+        let pane = Rc::new_cyclic(|weak: &Weak<Self>| {
+            let completion = PathCompletion::attach(
+                &path_entry,
+                {
+                    let weak = weak.clone();
+                    move || match weak.upgrade() {
+                        Some(p) => (p.backend(), p.show_hidden_flag.get()),
+                        None => (Backend::Local, false),
+                    }
+                },
+                {
+                    let weak = weak.clone();
+                    move |dir| {
+                        if let Some(p) = weak.upgrade() {
+                            p.navigate(dir);
+                            p.view.grab_focus();
+                        }
+                    }
+                },
+            );
+            Self {
+                root,
+                view,
+                path_entry,
+                completion,
+                new_folder_button,
+                connect_button,
+                disconnect_button,
+                conn_chip,
+                store,
+                parent_store,
+                filter,
+                selection,
+                status,
+                show_hidden_flag: show_hidden,
+                context_menu: RefCell::new(None),
+                file_activate: RefCell::new(None),
+                state: RefCell::new(PaneState {
+                    backend: Backend::Local,
+                    dir: "/".into(),
+                    show_hidden: false,
+                    generation: 0,
+                }),
+            }
         });
 
         // Wiring.
@@ -215,6 +243,7 @@ impl Pane {
         {
             let p = pane.clone();
             pane.path_entry.connect_activate(move |entry| {
+                p.completion.dismiss();
                 let path = entry.text().to_string();
                 p.navigate(path);
                 p.view.grab_focus();
@@ -453,7 +482,8 @@ impl Pane {
                     // refreshes of the same directory keep their scroll.
                     let changed_dir = this.state.borrow().dir != dir;
                     this.state.borrow_mut().dir = dir.clone();
-                    this.path_entry.set_text(&dir);
+                    // Quietly: a directory load must not pop suggestions.
+                    this.completion.set_text_quiet(&dir);
                     this.populate(entries);
                     if changed_dir && this.selection.n_items() > 0 {
                         this.view

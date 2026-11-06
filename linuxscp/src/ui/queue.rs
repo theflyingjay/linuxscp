@@ -1,7 +1,7 @@
 //! Bottom transfer queue: one row per job with progress, speed, ETA and
 //! pause/resume/cancel controls.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -24,11 +24,20 @@ struct Row {
     cancel_btn: gtk::Button,
 }
 
+/// Shortest the queue can be dragged: about one row.
+pub const MIN_HEIGHT: i32 = 56;
+
 pub struct QueueView {
-    pub revealer: gtk::Revealer,
+    /// The queue panel. Hidden while there are no jobs; the app docks it
+    /// under the file panes in a vertical paned, so its height is whatever
+    /// the user dragged the divider to.
+    pub root: gtk::Box,
     list: gtk::Box,
     rows: RefCell<HashMap<TransferId, Row>>,
-    /// Jobs the user hasn't dismissed yet (keeps the revealer open).
+    /// Height the panel last had while shown (or should open at), so it
+    /// comes back at the same size and the app can remember it.
+    height: Cell<i32>,
+    /// Fired whenever a job reaches a terminal state (see `set_on_finished`).
     on_finished: RefCell<Option<Box<dyn Fn()>>>,
 }
 
@@ -40,28 +49,40 @@ impl QueueView {
         list.set_margin_start(8);
         list.set_margin_end(8);
 
+        // No height cap: the paned divider above the queue decides how
+        // tall it is, and the list scrolls within that.
         let scroller = gtk::ScrolledWindow::builder()
-            .max_content_height(200)
-            .propagate_natural_height(true)
+            .min_content_height(MIN_HEIGHT)
+            .vexpand(true)
             .child(&list)
             .build();
 
-        let frame = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        frame.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
-        frame.append(&scroller);
-
-        let revealer = gtk::Revealer::builder()
-            .transition_type(gtk::RevealerTransitionType::SlideUp)
-            .reveal_child(false)
-            .child(&frame)
-            .build();
+        let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        root.append(&scroller);
+        root.set_visible(false);
 
         Rc::new(Self {
-            revealer,
+            root,
             list,
             rows: RefCell::new(HashMap::new()),
+            height: Cell::new(MIN_HEIGHT),
             on_finished: RefCell::new(None),
         })
+    }
+
+    /// Height the panel should open at (restored from settings).
+    pub fn set_height(&self, height: i32) {
+        self.height.set(height.max(MIN_HEIGHT));
+    }
+
+    /// The panel's current height while it is shown, otherwise the height
+    /// it last had (or was told to open at).
+    pub fn height(&self) -> i32 {
+        if self.root.is_visible() && self.root.height() > 0 {
+            self.root.height()
+        } else {
+            self.height.get()
+        }
     }
 
     /// Callback fired whenever a transfer reaches any terminal state — Done,
@@ -79,7 +100,7 @@ impl QueueView {
             // Newest job on top, so the most recent transfer/delete is
             // visible without scrolling down the queue.
             self.list.prepend(&row.root);
-            self.revealer.set_reveal_child(true);
+            self.root.set_visible(true);
             row
         });
 
@@ -188,7 +209,11 @@ impl QueueView {
             self.list.remove(&row.root);
         }
         if self.rows.borrow().is_empty() {
-            self.revealer.set_reveal_child(false);
+            // Remember the height while the panel is still allocated.
+            if self.root.height() > 0 {
+                self.height.set(self.root.height());
+            }
+            self.root.set_visible(false);
         }
     }
 }

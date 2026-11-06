@@ -367,6 +367,9 @@ pub struct Settings {
     pub terminal: Option<String>,
     #[serde(default)]
     pub left_width: Option<i32>,
+    /// Height the transfer queue was last dragged to, in pixels.
+    #[serde(default)]
+    pub queue_height: Option<i32>,
     /// Play a sound when a transfer completes.
     #[serde(default = "enabled")]
     pub notify_sound: bool,
@@ -390,6 +393,7 @@ impl Default for Settings {
             bookmarks: Vec::new(),
             terminal: None,
             left_width: None,
+            queue_height: None,
             notify_sound: true,
             notify_desktop: true,
             tab_shows_name: false,

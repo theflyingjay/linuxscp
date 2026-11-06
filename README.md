@@ -59,6 +59,8 @@ On other distributions, install the [Flatpak](#flatpak) or
   and a `..` row at the top of each pane to go up a directory.
 - **Tabbed sessions** — open as many connections as you like, WinSCP-style: each tab is a
   full dual-pane session, and the "New Session" button next to the tabs spawns the next one.
+  Once there are more tabs than fit across the window, `<` `>` arrows appear to flip
+  between them.
 - **Site manager with folders** — organize saved connections in a nested folder tree
   (WinSCP-style), created and edited entirely in-app: `~/.ssh/config` hosts on the left,
   saved sites in the middle, and the selected site's details edited inline on the right,
@@ -80,7 +82,8 @@ On other distributions, install the [Flatpak](#flatpak) or
   recursive directory copies; conflict prompts (overwrite / resume / skip). Scanning and
   copying run in parallel and several files are in flight at once, so large trees start
   transferring immediately and folders full of small files aren't bottlenecked by
-  per-file round trips.
+  per-file round trips. The queue docks under the panes and can be dragged taller or
+  shorter; its height is remembered.
 - **Resume across disconnects** — interrupted files are staged as `.filepart` and continued
   from their offset on the next try.
 - **Full file management** — create folders, rename, delete (recursive), new symlinks, and
@@ -91,7 +94,9 @@ On other distributions, install the [Flatpak](#flatpak) or
 - **Transfer notifications** — when a transfer finishes, LinuxSCP plays a success chime and
   posts a GNOME desktop notification. Both are independently toggleable in Preferences.
 - **Quality of life** — splash screen, "open terminal here" (local shell or `ssh` into the
-  host), reconnect on drop, and remembered preferences.
+  host), reconnect on drop, and remembered preferences. Typing a path in either pane
+  (local or remote) drops down the matching folders as you go: `/mnt/` lists what is in
+  `/mnt`, `Tab` completes the name, and a double-click or `Enter` opens the folder.
 
 ## Authentication and saved sites
 
@@ -134,6 +139,7 @@ whether a secret exists, never its value.
 | `F9` | Properties (permissions, owner, group) | `Ctrl+H` | Toggle hidden files |
 | `Ctrl+C` / `Ctrl+X` | Copy / cut selection | `Ctrl+V` | Paste |
 | `Ctrl+R` | Refresh | `Ctrl+L` | Edit path |
+| `Tab` (in path) | Complete the folder name | `↑` / `↓` (in path) | Pick a suggested folder |
 | `Ctrl+T` | Open terminal here | Right click | Context menu |
 
 ## How it works
