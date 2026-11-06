@@ -14,11 +14,18 @@ use crate::ui::prompts;
 use crate::ui::properties;
 use crate::ui::queue::QueueView;
 use crate::ui::site_editor::SecretUpdate;
+use crate::ui::tab_strip::TabStrip;
 use crate::ui::workspace::Workspace;
 use linuxscp::runtime::runtime;
 use linuxscp::settings::{Folder, Settings, Site};
 use linuxscp::types::{Backend, ConnectSpec, Event, FsEntry, SessionId, TransferRequest};
 use linuxscp::{fsops, secrets, sessions, ssh, transfers};
+
+/// Height the transfer queue opens at until the user drags it.
+const DEFAULT_QUEUE_HEIGHT: i32 = 200;
+/// Thickness of a paned divider in the Adwaita stylesheet; the queue's
+/// height is measured without it.
+const PANED_HANDLE: i32 = 1;
 
 /// Files marked by Copy/Cut, pasted into a pane later.
 #[derive(Clone)]
@@ -36,6 +43,9 @@ pub struct App {
     pub queue: Rc<QueueView>,
     /// WinSCP-style session tabs; each page holds a [`Workspace`].
     tabs: adw::TabView,
+    /// The tab bar strip; only held here so its (weakly bound) signal
+    /// handlers stay wired for the life of the window.
+    _tab_strip: Rc<TabStrip>,
     workspaces: RefCell<Vec<Rc<Workspace>>>,
     /// Window-wide "show hidden files" state, applied to every pane.
     hidden: Cell<bool>,
@@ -86,50 +96,32 @@ impl App {
         terminal_btn.set_action_name(Some("win.terminal"));
         header.pack_start(&terminal_btn);
 
-        // Session tabs (WinSCP-style): a bar under the header plus the view
-        // that shows the selected tab's dual-pane workspace. The bar only
-        // takes the width its tabs need so the "New Session" affordance sits
-        // right next to the last tab, like WinSCP's "New Tab" tab.
+        // Session tabs (WinSCP-style): a strip under the header plus the
+        // view that shows the selected tab's dual-pane workspace. See
+        // `TabStrip` for how the tabs are sized and flipped through.
         let tabs = adw::TabView::new();
         tabs.set_vexpand(true);
-        let tab_bar = adw::TabBar::new();
-        tab_bar.set_view(Some(&tabs));
-        tab_bar.set_autohide(false);
-        tab_bar.set_hexpand(false);
-        // Boxed, bordered tabs (see main.rs CSS) so they read as tabs in
-        // both light and dark mode.
-        tab_bar.add_css_class("session-tabs");
-        let new_session_btn = new_session_button();
+        let tab_strip = TabStrip::new(&tabs);
 
-        // Uniform WinSCP-style tab widths: the bar is sized to a fixed pitch
-        // per tab (scrolling once it would exceed the cap) and the tabs
-        // expand to fill it exactly.
-        let update_strip_width = {
-            let tabs = tabs.clone();
-            let tab_bar = tab_bar.clone();
-            move || {
-                let n = tabs.n_pages().max(1);
-                tab_bar.set_width_request((n * 200).min(640));
-            }
-        };
-        update_strip_width();
-        tabs.connect_n_pages_notify(move |_| update_strip_width());
-
-        let tab_strip = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        tab_strip.add_css_class("session-strip");
-        tab_strip.append(&tab_bar);
-        tab_strip.append(&new_session_btn);
-        let strip_spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        strip_spacer.set_hexpand(true);
-        tab_strip.append(&strip_spacer);
-
-        let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        content.append(&tabs);
-        content.append(&queue.revealer);
+        // The transfer queue docks under the panes in a vertical paned, so
+        // it can be dragged taller or shorter just like the left/right
+        // split. Only the panes resize with the window; the queue keeps the
+        // height it was given. While the queue is hidden (no jobs) the
+        // paned shows the panes alone, with no divider.
+        let content = gtk::Paned::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .start_child(&tabs)
+            .end_child(&queue.root)
+            .resize_start_child(true)
+            .resize_end_child(false)
+            .shrink_start_child(false)
+            .shrink_end_child(false)
+            .vexpand(true)
+            .build();
 
         let toolbar_view = adw::ToolbarView::new();
         toolbar_view.add_top_bar(&header);
-        toolbar_view.add_top_bar(&tab_strip);
+        toolbar_view.add_top_bar(&tab_strip.root);
         toolbar_view.set_content(Some(&content));
 
         let toasts = adw::ToastOverlay::new();
@@ -147,6 +139,7 @@ impl App {
         let notifier = crate::ui::notify::Notifier::new(app);
         let hidden = settings.show_hidden;
         let left_width = settings.left_width;
+        queue.set_height(settings.queue_height.unwrap_or(DEFAULT_QUEUE_HEIGHT));
         let edit = EditManager::new(&window, &toasts, events_tx.clone());
 
         let this = Rc::new(Self {
@@ -154,6 +147,7 @@ impl App {
             toasts,
             queue,
             tabs,
+            _tab_strip: tab_strip.clone(),
             workspaces: RefCell::new(Vec::new()),
             hidden: Cell::new(hidden),
             hidden_btn: hidden_btn.clone(),
@@ -178,13 +172,27 @@ impl App {
 
         {
             let this = this.clone();
-            new_session_btn.connect_clicked(move |_| this.new_session());
+            tab_strip
+                .new_session
+                .connect_clicked(move |_| this.new_session());
         }
         {
             let this = this.clone();
             this.queue
                 .clone()
                 .set_on_finished(move || this.reload_all_panes());
+        }
+        // Open the queue at its remembered height: the paned position is
+        // the height of the panes above it.
+        {
+            let queue = this.queue.clone();
+            let paned = content.clone();
+            this.queue.root.clone().connect_visible_notify(move |root| {
+                let total = paned.height();
+                if root.is_visible() && total > 0 {
+                    paned.set_position((total - queue.height() - PANED_HANDLE).max(0));
+                }
+            });
         }
 
         // Reflect persisted hidden-files preference on the toggle.
@@ -214,6 +222,7 @@ impl App {
         if let Some(width) = width {
             settings.left_width = Some(width);
         }
+        settings.queue_height = Some(self.queue.height());
         settings.save();
     }
 
@@ -1645,22 +1654,4 @@ fn which(bin: &str) -> Option<std::path::PathBuf> {
 
 fn themed_icon(name: &str) -> gio::ThemedIcon {
     gio::ThemedIcon::new(name)
-}
-
-/// The "New Session" affordance shown after the last tab (a "+"-style tab).
-fn new_session_button() -> gtk::Button {
-    let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-    content.append(&gtk::Image::from_icon_name("list-add-symbolic"));
-    content.append(&gtk::Label::new(Some("New Session")));
-    let button = gtk::Button::builder()
-        .child(&content)
-        .tooltip_text("Open a new session tab")
-        .build();
-    button.add_css_class("flat");
-    button.add_css_class("new-session-tab");
-    button.set_margin_start(4);
-    button.set_margin_end(4);
-    button.set_margin_top(4);
-    button.set_margin_bottom(4);
-    button
 }

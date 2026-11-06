@@ -6,3 +6,6 @@
 # flatpak-builder work dirs (README build command uses ./build)
 /build
 /.flatpak-builder
+
+# Local scratch output that has nothing to do with the project.
+/result.json

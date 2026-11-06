@@ -59,6 +59,8 @@ On other distributions, install the [Flatpak](#flatpak) or
   and a `..` row at the top of each pane to go up a directory.
 - **Tabbed sessions** — open as many connections as you like, WinSCP-style: each tab is a
   full dual-pane session, and the "New Session" button next to the tabs spawns the next one.
+  Once there are more tabs than fit across the window, `<` `>` arrows appear to flip
+  between them.
 - **Site manager with folders** — organize saved connections in a nested folder tree
   (WinSCP-style), created and edited entirely in-app: `~/.ssh/config` hosts on the left,
   saved sites in the middle, and the selected site's details edited inline on the right,
@@ -80,7 +82,8 @@ On other distributions, install the [Flatpak](#flatpak) or
   recursive directory copies; conflict prompts (overwrite / resume / skip). Scanning and
   copying run in parallel and several files are in flight at once, so large trees start
   transferring immediately and folders full of small files aren't bottlenecked by
-  per-file round trips.
+  per-file round trips. The queue docks under the panes and can be dragged taller or
+  shorter; its height is remembered.
 - **Resume across disconnects** — interrupted files are staged as `.filepart` and continued
   from their offset on the next try.
 - **Full file management** — create folders, rename, delete (recursive), new symlinks, and

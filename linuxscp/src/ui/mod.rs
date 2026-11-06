@@ -11,5 +11,6 @@ pub mod properties;
 pub mod queue;
 pub mod site_editor;
 pub mod splash;
+pub mod tab_strip;
 pub mod tree_node;
 pub mod workspace;
