@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.4.0" date="2026-11-06">
+      <description>
+        <ul>
+          <li>Path-bar folder suggestions, draggable transfer queue, tab overflow arrows (#18)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-05">
       <description>
         <ul>
