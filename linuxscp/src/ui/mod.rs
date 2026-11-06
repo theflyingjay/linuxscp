@@ -5,6 +5,7 @@ pub mod entry_object;
 pub mod key_import;
 pub mod notify;
 pub mod pane;
+pub mod path_completion;
 pub mod prompts;
 pub mod properties;
 pub mod queue;

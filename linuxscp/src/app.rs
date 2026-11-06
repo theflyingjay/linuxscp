@@ -689,6 +689,11 @@ impl App {
             ("Ctrl+H", "Toggle hidden files"),
             ("Ctrl+R", "Refresh"),
             ("Ctrl+L", "Edit path"),
+            ("Tab", "Complete the folder being typed in the path"),
+            (
+                "Up / Down",
+                "Pick a suggested folder in the path (Enter opens it)",
+            ),
             ("Ctrl+T", "Open terminal here"),
         ];
         let list = gtk::Box::new(gtk::Orientation::Vertical, 0);

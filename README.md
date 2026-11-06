@@ -91,7 +91,9 @@ On other distributions, install the [Flatpak](#flatpak) or
 - **Transfer notifications** — when a transfer finishes, LinuxSCP plays a success chime and
   posts a GNOME desktop notification. Both are independently toggleable in Preferences.
 - **Quality of life** — splash screen, "open terminal here" (local shell or `ssh` into the
-  host), reconnect on drop, and remembered preferences.
+  host), reconnect on drop, and remembered preferences. Typing a path in either pane
+  (local or remote) drops down the matching folders as you go: `/mnt/` lists what is in
+  `/mnt`, `Tab` completes the name, and a double-click or `Enter` opens the folder.
 
 ## Authentication and saved sites
 
@@ -134,6 +136,7 @@ whether a secret exists, never its value.
 | `F9` | Properties (permissions, owner, group) | `Ctrl+H` | Toggle hidden files |
 | `Ctrl+C` / `Ctrl+X` | Copy / cut selection | `Ctrl+V` | Paste |
 | `Ctrl+R` | Refresh | `Ctrl+L` | Edit path |
+| `Tab` (in path) | Complete the folder name | `↑` / `↓` (in path) | Pick a suggested folder |
 | `Ctrl+T` | Open terminal here | Right click | Context menu |
 
 ## How it works
