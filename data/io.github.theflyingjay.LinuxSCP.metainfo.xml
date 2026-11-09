@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.4.1" date="2026-11-09">
+      <description>
+        <ul>
+          <li>Session labels and a persistent activity log for the transfer queue (#19)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-06">
       <description>
         <ul>
