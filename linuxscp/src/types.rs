@@ -281,6 +281,9 @@ pub struct TransferSnapshot {
     /// and `files_total` are lower bounds (still climbing). The UI shows an
     /// indeterminate bar and withholds the ETA until this clears.
     pub scanning: bool,
+    /// Wall-clock time since the job started, pauses included; final in
+    /// the terminal snapshot.
+    pub elapsed: std::time::Duration,
     pub error: Option<String>,
 }
 

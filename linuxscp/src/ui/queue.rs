@@ -1,12 +1,17 @@
-//! Bottom transfer queue: one row per job with progress, speed, ETA and
-//! pause/resume/cancel controls.
+//! Bottom activity log: one row per job (copies, moves, deletes, attribute
+//! changes) showing progress, speed and ETA while it runs, then what
+//! happened, how long it took and when it finished. The panel is always
+//! shown and rows stay until the user removes them (the row's "x" or the
+//! right-click menu), so the record of a session's activity survives the
+//! jobs themselves.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::Duration;
 
 use adw::prelude::*;
-use gtk::glib;
+use gtk::{gio, glib};
 
 use super::entry_object::format_size;
 use linuxscp::transfers;
@@ -25,29 +30,41 @@ struct Row {
     /// Which session the job belongs to, at the right end of the title line.
     session: gtk::Label,
     detail: gtk::Label,
+    /// Elapsed time while the job runs; "duration • finished at" afterwards.
+    timing: gtk::Label,
     progress: gtk::ProgressBar,
     direction: gtk::Image,
     pause_btn: gtk::Button,
     cancel_btn: gtk::Button,
+    /// Last state seen, so the context menu knows which rows are finished.
+    state: Cell<TransferState>,
 }
 
 /// Shortest the queue can be dragged: about one row.
 pub const MIN_HEIGHT: i32 = 56;
 
 pub struct QueueView {
-    /// The queue panel. Hidden while there are no jobs; the app docks it
-    /// under the file panes in a vertical paned, so its height is whatever
-    /// the user dragged the divider to.
+    /// The panel. The app docks it under the file panes in a vertical
+    /// paned, so its height is whatever the user dragged the divider to.
     pub root: gtk::Box,
     list: gtk::Box,
+    /// Placeholder shown while there are no rows.
+    empty: gtk::Label,
     rows: RefCell<HashMap<TransferId, Row>>,
-    /// Height the panel last had while shown (or should open at), so it
-    /// comes back at the same size and the app can remember it.
+    /// Height the panel should open at (restored from settings), used until
+    /// it has been allocated.
     height: Cell<i32>,
     /// Fired whenever a job reaches a terminal state (see `set_on_finished`).
     on_finished: RefCell<Option<Box<dyn Fn()>>>,
     /// Names sessions for the rows' session labels (see `set_session_names`).
     session_names: RefCell<Option<SessionNamer>>,
+    /// Right-click menu over the panel and its actions, enabled per click
+    /// for whatever is under the pointer (see `open_menu`).
+    popover: gtk::PopoverMenu,
+    remove_action: gio::SimpleAction,
+    clear_action: gio::SimpleAction,
+    /// The finished row the menu was opened on (target of "Remove").
+    menu_target: Cell<Option<TransferId>>,
 }
 
 impl QueueView {
@@ -57,6 +74,14 @@ impl QueueView {
         list.set_margin_bottom(6);
         list.set_margin_start(8);
         list.set_margin_end(8);
+
+        // Rows are prepended, so this stays last and is simply hidden while
+        // there are any. It expands so it sits centred in the empty panel.
+        let empty = gtk::Label::new(Some("Transfers and file operations appear here"));
+        empty.add_css_class("dim-label");
+        empty.set_vexpand(true);
+        empty.set_valign(gtk::Align::Center);
+        list.append(&empty);
 
         // No height cap: the paned divider above the queue decides how
         // tall it is, and the list scrolls within that.
@@ -68,16 +93,67 @@ impl QueueView {
 
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         root.append(&scroller);
-        root.set_visible(false);
 
-        Rc::new(Self {
+        let menu = gio::Menu::new();
+        menu.append(Some("Remove"), Some("queue.remove"));
+        menu.append(Some("Clear Finished"), Some("queue.clear-finished"));
+        let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        popover.set_parent(&root);
+        popover.set_has_arrow(false);
+        popover.set_halign(gtk::Align::Start);
+
+        let remove_action = gio::SimpleAction::new("remove", None);
+        let clear_action = gio::SimpleAction::new("clear-finished", None);
+        let group = gio::SimpleActionGroup::new();
+        group.add_action(&remove_action);
+        group.add_action(&clear_action);
+        root.insert_action_group("queue", Some(&group));
+
+        let this = Rc::new(Self {
             root,
             list,
+            empty,
             rows: RefCell::new(HashMap::new()),
             height: Cell::new(MIN_HEIGHT),
             on_finished: RefCell::new(None),
             session_names: RefCell::new(None),
-        })
+            popover,
+            remove_action,
+            clear_action,
+            menu_target: Cell::new(None),
+        });
+
+        {
+            let weak = Rc::downgrade(&this);
+            this.remove_action.connect_activate(move |_, _| {
+                if let Some(queue) = weak.upgrade() {
+                    if let Some(id) = queue.menu_target.take() {
+                        queue.dismiss(id);
+                    }
+                }
+            });
+        }
+        {
+            let weak = Rc::downgrade(&this);
+            this.clear_action.connect_activate(move |_, _| {
+                if let Some(queue) = weak.upgrade() {
+                    queue.clear_finished();
+                }
+            });
+        }
+        {
+            let weak = Rc::downgrade(&this);
+            let gesture = gtk::GestureClick::new();
+            gesture.set_button(3);
+            gesture.connect_pressed(move |_, _, x, y| {
+                if let Some(queue) = weak.upgrade() {
+                    queue.open_menu(x, y);
+                }
+            });
+            this.root.add_controller(gesture);
+        }
+
+        this
     }
 
     /// Height the panel should open at (restored from settings).
@@ -85,10 +161,10 @@ impl QueueView {
         self.height.set(height.max(MIN_HEIGHT));
     }
 
-    /// The panel's current height while it is shown, otherwise the height
-    /// it last had (or was told to open at).
+    /// The panel's current height once it has been allocated, otherwise the
+    /// height it was told to open at.
     pub fn height(&self) -> i32 {
-        if self.root.is_visible() && self.root.height() > 0 {
+        if self.root.height() > 0 {
             self.root.height()
         } else {
             self.height.get()
@@ -136,9 +212,10 @@ impl QueueView {
             // Newest job on top, so the most recent transfer/delete is
             // visible without scrolling down the queue.
             self.list.prepend(&row.root);
-            self.root.set_visible(true);
+            self.empty.set_visible(false);
             row
         });
+        row.state.set(snapshot.state);
 
         row.title.set_text(&snapshot.title);
         // Re-resolved on every snapshot so a flipped tab-naming preference
@@ -149,9 +226,8 @@ impl QueueView {
                 row.session.set_tooltip_text(Some(&text));
             }
         }
-        // Direction badge: stays on the row for its whole life, including
-        // the dismissable history entry, so finished jobs still read as
-        // uploads or downloads at a glance.
+        // Direction badge: stays on the row for its whole life, so finished
+        // jobs still read as uploads or downloads at a glance.
         match snapshot.direction {
             Some(TransferDirection::Upload) => {
                 row.direction.set_icon_name(Some("go-up-symbolic"));
@@ -197,13 +273,16 @@ impl QueueView {
             TransferState::Paused => "Paused".to_string(),
             TransferState::WaitingConflict => "Waiting for answer…".to_string(),
             TransferState::Done => done_detail(&snapshot),
-            TransferState::Failed => snapshot
-                .error
-                .clone()
-                .unwrap_or_else(|| "Failed".to_string()),
-            TransferState::Cancelled => "Cancelled".to_string(),
+            TransferState::Failed => match &snapshot.error {
+                Some(err) => format!("Failed — {err}"),
+                None => "Failed".to_string(),
+            },
+            TransferState::Cancelled => cancelled_detail(&snapshot),
         };
         row.detail.set_text(&detail);
+        if !snapshot.state.is_terminal() {
+            row.timing.set_text(&format_duration(snapshot.elapsed));
+        }
 
         match snapshot.state {
             TransferState::Paused => {
@@ -222,22 +301,37 @@ impl QueueView {
         if snapshot.state.is_terminal() {
             row.pause_btn.set_visible(false);
             row.cancel_btn.set_icon_name("window-close-symbolic");
-            row.cancel_btn.set_tooltip_text(Some("Dismiss"));
-            if snapshot.state == TransferState::Failed {
-                row.detail.add_css_class("error");
-            }
-            if snapshot.state == TransferState::Done {
-                row.progress.set_fraction(1.0);
-                // Completed mutations clear themselves after a moment (the
-                // pane refresh is the real receipt); copies stay dismissable
-                // by hand, and failures always stick around.
-                if is_op {
-                    let queue = self.clone();
-                    let id = snapshot.id;
-                    glib::timeout_add_local_once(std::time::Duration::from_secs(4), move || {
-                        queue.dismiss(id);
-                    });
+            row.cancel_btn.set_tooltip_text(Some("Remove"));
+            // The outcome line is the row's lasting record: colour it by
+            // how the job ended (no longer dimmed, so the colour reads) and
+            // keep the full text reachable when it is too long to fit.
+            row.detail.set_tooltip_text(Some(&detail));
+            match snapshot.state {
+                TransferState::Done => {
+                    row.progress.set_fraction(1.0);
+                    row.detail.remove_css_class("dim-label");
+                    row.detail.add_css_class("success");
                 }
+                TransferState::Failed => {
+                    row.detail.remove_css_class("dim-label");
+                    row.detail.add_css_class("error");
+                }
+                _ => {}
+            }
+            // Terminal snapshots arrive exactly once per job, so this is the
+            // final word on timing: how long it took and when it ended.
+            let finished_at = glib::DateTime::now_local().ok();
+            let clock = finished_at
+                .as_ref()
+                .and_then(|now| now.format("%H:%M:%S").ok());
+            let took = format_duration(snapshot.elapsed);
+            row.timing.set_text(&match &clock {
+                Some(clock) => format!("{took} • {clock}"),
+                None => took.clone(),
+            });
+            if let Some(stamp) = finished_at.and_then(|now| now.format("%Y-%m-%d %H:%M:%S").ok()) {
+                row.timing
+                    .set_tooltip_text(Some(&format!("Finished {stamp}, took {took}")));
             }
             // Terminal states are emitted exactly once, so this fires once
             // per job however it ended: partial results from a cancelled or
@@ -248,17 +342,66 @@ impl QueueView {
         }
     }
 
-    fn dismiss(self: &Rc<Self>, id: TransferId) {
+    fn dismiss(&self, id: TransferId) {
         if let Some(row) = self.rows.borrow_mut().remove(&id) {
             self.list.remove(&row.root);
         }
-        if self.rows.borrow().is_empty() {
-            // Remember the height while the panel is still allocated.
-            if self.root.height() > 0 {
-                self.height.set(self.root.height());
-            }
-            self.root.set_visible(false);
+        self.empty.set_visible(self.rows.borrow().is_empty());
+    }
+
+    /// Remove every row whose job has ended (Done, Failed or Cancelled).
+    fn clear_finished(&self) {
+        let finished: Vec<TransferId> = self
+            .rows
+            .borrow()
+            .iter()
+            .filter(|(_, row)| row.state.get().is_terminal())
+            .map(|(id, _)| *id)
+            .collect();
+        for id in finished {
+            self.dismiss(id);
         }
+    }
+
+    /// Show the right-click menu at (`x`, `y`) in panel coordinates. "Remove"
+    /// targets the finished row under the pointer; "Clear Finished" needs at
+    /// least one finished row. Running jobs are cancelled from their row.
+    fn open_menu(&self, x: f64, y: f64) {
+        let target = self.row_at(x, y).filter(|id| {
+            self.rows
+                .borrow()
+                .get(id)
+                .is_some_and(|row| row.state.get().is_terminal())
+        });
+        self.menu_target.set(target);
+        self.remove_action.set_enabled(target.is_some());
+        let any_finished = self
+            .rows
+            .borrow()
+            .values()
+            .any(|row| row.state.get().is_terminal());
+        self.clear_action.set_enabled(any_finished);
+        self.popover
+            .set_pointing_to(Some(&gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        self.popover.popup();
+    }
+
+    /// The job whose row is under (`x`, `y`) in panel coordinates, if any.
+    fn row_at(&self, x: f64, y: f64) -> Option<TransferId> {
+        let mut widget = self.root.pick(x, y, gtk::PickFlags::DEFAULT)?;
+        // Walk up to the list's direct child, which is a row's root.
+        loop {
+            let parent = widget.parent()?;
+            if &parent == self.list.upcast_ref::<gtk::Widget>() {
+                break;
+            }
+            widget = parent;
+        }
+        self.rows
+            .borrow()
+            .iter()
+            .find(|(_, row)| row.root.upcast_ref::<gtk::Widget>() == &widget)
+            .map(|(id, _)| *id)
     }
 }
 
@@ -288,9 +431,22 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
 
     let detail = gtk::Label::new(None);
     detail.set_xalign(0.0);
+    detail.set_hexpand(true);
     detail.add_css_class("caption");
     detail.add_css_class("dim-label");
     detail.set_ellipsize(gtk::pango::EllipsizeMode::End);
+
+    // Elapsed time while running, then "duration • finished at": the same
+    // quiet caption style as the session label, at the end of the detail line.
+    let timing = gtk::Label::new(None);
+    timing.set_xalign(1.0);
+    timing.set_valign(gtk::Align::Center);
+    timing.add_css_class("caption");
+    timing.add_css_class("dim-label");
+
+    let detail_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    detail_row.append(&detail);
+    detail_row.append(&timing);
 
     let progress = gtk::ProgressBar::new();
     progress.set_hexpand(true);
@@ -300,7 +456,7 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     text_box.set_hexpand(true);
     text_box.append(&title_row);
     text_box.append(&progress);
-    text_box.append(&detail);
+    text_box.append(&detail_row);
 
     // Which way the bytes cross the local/remote boundary (green ↑ upload,
     // blue ↓ download). Hidden until a snapshot says the job has one.
@@ -347,7 +503,7 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     let root = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     root.append(&text_box);
     root.append(&pause_btn);
-    // Keep the badge immediately left of the cancel/dismiss "x".
+    // Keep the badge immediately left of the cancel/remove "x".
     root.append(&direction);
     root.append(&cancel_btn);
 
@@ -356,10 +512,12 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
         title,
         session,
         detail,
+        timing,
         progress,
         direction,
         pause_btn,
         cancel_btn,
+        state: Cell::new(TransferState::Queued),
     }
 }
 
@@ -417,32 +575,77 @@ fn running_detail(snap: &TransferSnapshot) -> String {
     text
 }
 
-/// Detail line for a finished job, per kind.
+/// Detail line for a successfully finished job, per kind. Copies also get
+/// their average throughput, since the live speed is gone from the row.
 fn done_detail(snap: &TransferSnapshot) -> String {
     match snap.kind {
-        TransferKind::Delete => format!(
-            "Removed {} {}",
-            snap.files_done,
-            if snap.files_done == 1 {
-                "item"
-            } else {
-                "items"
+        TransferKind::Delete => format!("Removed {}", count(snap.files_done, "item")),
+        TransferKind::Attributes => format!("Changed {}", count(snap.files_done, "item")),
+        TransferKind::Copy | TransferKind::Move => {
+            let mut text = format!(
+                "Done — {} in {}",
+                format_size(snap.total_bytes),
+                count(snap.files_total, "file")
+            );
+            let secs = snap.elapsed.as_secs_f64();
+            if snap.total_bytes > 0 && secs > 0.0 {
+                let average = (snap.total_bytes as f64 / secs) as u64;
+                text.push_str(&format!(" • {}/s", format_size(average)));
             }
-        ),
-        TransferKind::Attributes => format!(
-            "Changed {} {}",
-            snap.files_done,
-            if snap.files_done == 1 {
-                "item"
+            text
+        }
+    }
+}
+
+/// Detail line for a cancelled job: what had already been done by then,
+/// since a partial copy or deletion has still changed things.
+fn cancelled_detail(snap: &TransferSnapshot) -> String {
+    match snap.kind {
+        TransferKind::Delete => format!("Cancelled — {} removed", snap.files_done),
+        TransferKind::Attributes => format!("Cancelled — {} changed", snap.files_done),
+        TransferKind::Copy | TransferKind::Move => {
+            if snap.scanning {
+                // The totals were still being counted, so only what got
+                // done is certain.
+                format!(
+                    "Cancelled — {} • {}",
+                    format_size(snap.done_bytes),
+                    count(snap.files_done, "file")
+                )
             } else {
-                "items"
+                format!(
+                    "Cancelled — {} of {} • {}/{} files",
+                    format_size(snap.done_bytes),
+                    format_size(snap.total_bytes),
+                    snap.files_done,
+                    snap.files_total
+                )
             }
-        ),
-        TransferKind::Copy | TransferKind::Move => format!(
-            "Done — {} in {} files",
-            format_size(snap.total_bytes),
-            snap.files_total
-        ),
+        }
+    }
+}
+
+/// "1 file" / "3 files".
+fn count(n: u32, noun: &str) -> String {
+    if n == 1 {
+        format!("1 {noun}")
+    } else {
+        format!("{n} {noun}s")
+    }
+}
+
+/// How long a job has been running or took: "< 1 s", "12 s", "1m 05s",
+/// "1h 02m".
+fn format_duration(duration: Duration) -> String {
+    let s = duration.as_secs();
+    if s < 1 {
+        "< 1 s".to_string()
+    } else if s < 60 {
+        format!("{s} s")
+    } else if s < 3600 {
+        format!("{}m {:02}s", s / 60, s % 60)
+    } else {
+        format!("{}h {:02}m", s / 3600, (s % 3600) / 60)
     }
 }
 
@@ -456,5 +659,25 @@ fn format_eta(seconds: f64) -> String {
         format!("{}m {}s", s / 60, s % 60)
     } else {
         format!("{s}s")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn durations_read_naturally() {
+        assert_eq!(format_duration(Duration::from_millis(400)), "< 1 s");
+        assert_eq!(format_duration(Duration::from_secs(12)), "12 s");
+        assert_eq!(format_duration(Duration::from_secs(65)), "1m 05s");
+        assert_eq!(format_duration(Duration::from_secs(3_720)), "1h 02m");
+    }
+
+    #[test]
+    fn counts_pluralise() {
+        assert_eq!(count(1, "file"), "1 file");
+        assert_eq!(count(0, "item"), "0 items");
+        assert_eq!(count(3, "file"), "3 files");
     }
 }

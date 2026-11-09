@@ -106,8 +106,8 @@ impl App {
         // The transfer queue docks under the panes in a vertical paned, so
         // it can be dragged taller or shorter just like the left/right
         // split. Only the panes resize with the window; the queue keeps the
-        // height it was given. While the queue is hidden (no jobs) the
-        // paned shows the panes alone, with no divider.
+        // height it was given. It is always shown, so finished jobs stay on
+        // record until the user clears them.
         let content = gtk::Paned::builder()
             .orientation(gtk::Orientation::Vertical)
             .start_child(&tabs)
@@ -188,16 +188,24 @@ impl App {
             this.queue
                 .set_session_names(move |id| weak.upgrade()?.session_label(id));
         }
-        // Open the queue at its remembered height: the paned position is
-        // the height of the panes above it.
+        // Open the queue at its remembered height. The paned has no size
+        // until its first layout, so ask for that height up front (the
+        // paned honours the end child's minimum when it first splits), then
+        // pin the divider there on the first laid-out frame and drop the
+        // request so the divider can be dragged shorter again. The paned
+        // position is the height of the panes above the queue.
         {
             let queue = this.queue.clone();
-            let paned = content.clone();
-            this.queue.root.clone().connect_visible_notify(move |root| {
+            let saved = queue.height();
+            queue.root.set_height_request(saved);
+            content.add_tick_callback(move |paned, _| {
                 let total = paned.height();
-                if root.is_visible() && total > 0 {
-                    paned.set_position((total - queue.height() - PANED_HANDLE).max(0));
+                if total <= 0 {
+                    return glib::ControlFlow::Continue;
                 }
+                paned.set_position((total - saved - PANED_HANDLE).max(0));
+                queue.root.set_height_request(-1);
+                glib::ControlFlow::Break
             });
         }
 

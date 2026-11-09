@@ -209,6 +209,7 @@ where
     let mut ctrl_rx = register(id);
 
     crate::runtime::runtime().spawn(async move {
+        let started = Instant::now();
         let progress = Arc::new(fsops::OpProgress::default());
         let snapshot = |state: TransferState, error: Option<String>| {
             let total = progress.total.load(Ordering::Relaxed);
@@ -230,6 +231,7 @@ where
                 // Totals unknown (deletes never pre-count; attribute jobs
                 // publish theirs once the work list is built).
                 scanning: total == 0,
+                elapsed: started.elapsed(),
                 error,
             }
         };
@@ -323,6 +325,8 @@ struct Shared {
     last_emit: Mutex<Instant>,
     /// Terminal snapshot sent; silences any stragglers still winding down.
     finished: AtomicBool,
+    /// When the job was queued, for the elapsed time on every snapshot.
+    started_at: Instant,
 }
 
 impl Shared {
@@ -335,6 +339,7 @@ impl Shared {
         t.scanning = !self.discovery.done.load(Ordering::Relaxed);
         t.done_bytes = self.done_bytes.load(Ordering::Relaxed);
         t.files_done = self.files_done.load(Ordering::Relaxed);
+        t.elapsed = self.started_at.elapsed();
         let mut speed = self.speed.lock().unwrap();
         let elapsed = speed.1.elapsed().as_secs_f64();
         if elapsed >= 1.0 {
@@ -446,6 +451,7 @@ impl Job {
             files_total: 0,
             speed_bps: 0.0,
             scanning: true,
+            elapsed: Duration::ZERO,
             error: None,
         };
         let shared = Arc::new(Shared {
@@ -467,6 +473,7 @@ impl Job {
             speed: Mutex::new((0, Instant::now(), 0.0)),
             last_emit: Mutex::new(Instant::now() - Duration::from_secs(1)),
             finished: AtomicBool::new(false),
+            started_at: Instant::now(),
         });
         Self {
             request,
