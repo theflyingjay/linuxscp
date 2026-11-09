@@ -11,12 +11,19 @@ use gtk::glib;
 use super::entry_object::format_size;
 use linuxscp::transfers;
 use linuxscp::types::{
-    TransferAction, TransferDirection, TransferId, TransferKind, TransferSnapshot, TransferState,
+    SessionId, TransferAction, TransferDirection, TransferId, TransferKind, TransferSnapshot,
+    TransferState,
 };
+
+/// Names a session for the rows' session labels (see
+/// [`QueueView::set_session_names`]).
+type SessionNamer = Box<dyn Fn(SessionId) -> Option<String>>;
 
 struct Row {
     root: gtk::Box,
     title: gtk::Label,
+    /// Which session the job belongs to, at the right end of the title line.
+    session: gtk::Label,
     detail: gtk::Label,
     progress: gtk::ProgressBar,
     direction: gtk::Image,
@@ -39,6 +46,8 @@ pub struct QueueView {
     height: Cell<i32>,
     /// Fired whenever a job reaches a terminal state (see `set_on_finished`).
     on_finished: RefCell<Option<Box<dyn Fn()>>>,
+    /// Names sessions for the rows' session labels (see `set_session_names`).
+    session_names: RefCell<Option<SessionNamer>>,
 }
 
 impl QueueView {
@@ -67,6 +76,7 @@ impl QueueView {
             rows: RefCell::new(HashMap::new()),
             height: Cell::new(MIN_HEIGHT),
             on_finished: RefCell::new(None),
+            session_names: RefCell::new(None),
         })
     }
 
@@ -93,6 +103,32 @@ impl QueueView {
         *self.on_finished.borrow_mut() = Some(Box::new(cb));
     }
 
+    /// Resolver turning a session id into the name shown on its rows (the
+    /// app installs one that matches the tab titles). `None` means the
+    /// session is unknown — normally already closed — and the row keeps the
+    /// last name it had.
+    pub fn set_session_names(&self, resolve: impl Fn(SessionId) -> Option<String> + 'static) {
+        *self.session_names.borrow_mut() = Some(Box::new(resolve));
+    }
+
+    /// Text for a row's session label: "Local" for jobs that never leave
+    /// this machine, the session's name otherwise, and "a → b" for copies
+    /// between two servers. `None` when any session can't be named (no
+    /// resolver, or it has already closed) so the caller can keep the
+    /// previous text.
+    fn session_text(&self, ids: &[SessionId]) -> Option<String> {
+        if ids.is_empty() {
+            return Some("Local".to_string());
+        }
+        let resolve = self.session_names.borrow();
+        let resolve = resolve.as_ref()?;
+        let names = ids
+            .iter()
+            .map(|id| resolve(*id))
+            .collect::<Option<Vec<_>>>()?;
+        Some(names.join(" → "))
+    }
+
     pub fn update(self: &Rc<Self>, snapshot: TransferSnapshot) {
         let mut rows = self.rows.borrow_mut();
         let row = rows.entry(snapshot.id).or_insert_with(|| {
@@ -105,6 +141,14 @@ impl QueueView {
         });
 
         row.title.set_text(&snapshot.title);
+        // Re-resolved on every snapshot so a flipped tab-naming preference
+        // shows up live; once the session is gone the last name sticks.
+        if let Some(text) = self.session_text(&snapshot.sessions) {
+            if row.session.text().as_str() != text {
+                row.session.set_text(&text);
+                row.session.set_tooltip_text(Some(&text));
+            }
+        }
         // Direction badge: stays on the row for its whole life, including
         // the dismissable history entry, so finished jobs still read as
         // uploads or downloads at a glance.
@@ -221,8 +265,26 @@ impl QueueView {
 fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     let title = gtk::Label::new(None);
     title.set_xalign(0.0);
+    title.set_hexpand(true);
     title.add_css_class("heading");
     title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+
+    // Which session the job belongs to, so rows from several tabs can be
+    // told apart: plain dim caption text like the panes' connection chip.
+    // Capped so a long host name trims itself (full text in the tooltip)
+    // rather than squeezing the title. "Remote" only shows if the session
+    // can't be named at all, which `update` normally replaces at once.
+    let session = gtk::Label::new(Some("Remote"));
+    session.set_xalign(1.0);
+    session.set_valign(gtk::Align::Center);
+    session.add_css_class("caption");
+    session.add_css_class("dim-label");
+    session.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    session.set_max_width_chars(32);
+
+    let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    title_row.append(&title);
+    title_row.append(&session);
 
     let detail = gtk::Label::new(None);
     detail.set_xalign(0.0);
@@ -236,7 +298,7 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
 
     let text_box = gtk::Box::new(gtk::Orientation::Vertical, 2);
     text_box.set_hexpand(true);
-    text_box.append(&title);
+    text_box.append(&title_row);
     text_box.append(&progress);
     text_box.append(&detail);
 
@@ -292,6 +354,7 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     Row {
         root,
         title,
+        session,
         detail,
         progress,
         direction,

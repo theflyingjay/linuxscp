@@ -182,6 +182,12 @@ impl App {
                 .clone()
                 .set_on_finished(move || this.reload_all_panes());
         }
+        {
+            // Queue rows name their session the same way the tabs do.
+            let weak = Rc::downgrade(&this);
+            this.queue
+                .set_session_names(move |id| weak.upgrade()?.session_label(id));
+        }
         // Open the queue at its remembered height: the paned position is
         // the height of the panes above it.
         {
@@ -430,6 +436,21 @@ impl App {
         }
     }
 
+    /// Display name for a session, as its tab shows it: the saved site's
+    /// name when the "site name on tabs" preference is on (and the session
+    /// came from a saved site), otherwise the host. Shared with the queue
+    /// rows' session labels. `None` once the session is closed.
+    fn session_label(&self, id: SessionId) -> Option<String> {
+        let use_name = self.settings.borrow().tab_shows_name;
+        let name = self
+            .session_specs
+            .borrow()
+            .get(&id)
+            .map(|spec| spec.display_name.clone())
+            .filter(|name| use_name && !name.is_empty());
+        name.or_else(|| sessions::get(id).map(|handle| handle.host))
+    }
+
     /// Set a tab's title/icon from its right pane's connection (or the
     /// workspace default when local).
     fn refresh_tab_title(&self, ws: &Rc<Workspace>) {
@@ -443,17 +464,7 @@ impl App {
             .find_map(|pane| pane.session_id());
         match remote {
             Some(id) => {
-                let handle = sessions::get(id);
-                let use_name = self.settings.borrow().tab_shows_name;
-                let name = self
-                    .session_specs
-                    .borrow()
-                    .get(&id)
-                    .map(|spec| spec.display_name.clone())
-                    .filter(|name| use_name && !name.is_empty());
-                let text = name
-                    .or_else(|| handle.as_ref().map(|h| h.host.clone()))
-                    .unwrap_or_else(|| "Remote".into());
+                let text = self.session_label(id).unwrap_or_else(|| "Remote".into());
                 page.set_title(&text);
                 page.set_tooltip(&text);
                 page.set_icon(Some(&themed_icon("network-server-symbolic")));

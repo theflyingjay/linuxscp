@@ -23,8 +23,8 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt
 use tokio::sync::watch;
 
 use crate::types::{
-    Backend, ConflictDecision, ConflictRequest, Event, FsEntry, TransferAction, TransferDirection,
-    TransferId, TransferKind, TransferRequest, TransferSnapshot, TransferState,
+    Backend, ConflictDecision, ConflictRequest, Event, FsEntry, SessionId, TransferAction,
+    TransferDirection, TransferId, TransferKind, TransferRequest, TransferSnapshot, TransferState,
 };
 use crate::{fsops, sessions};
 
@@ -73,6 +73,19 @@ fn register(id: TransferId) -> watch::Receiver<Ctrl> {
     });
     controls().lock().unwrap().insert(id, ctrl_tx);
     ctrl_rx
+}
+
+/// The distinct remote sessions among `backends`, in first-seen order, for
+/// [`TransferSnapshot::sessions`]. Local backends contribute nothing, so a
+/// job that never leaves this machine yields an empty list.
+fn session_ids(backends: &[Backend]) -> Vec<SessionId> {
+    let mut ids = Vec::new();
+    for id in backends.iter().filter_map(Backend::session_id) {
+        if !ids.contains(&id) {
+            ids.push(id);
+        }
+    }
+    ids
 }
 
 /// Queue a transfer; progress arrives as [`Event::TransferUpdate`]s.
@@ -126,6 +139,7 @@ pub fn start_delete(
     start_op(
         TransferKind::Delete,
         title,
+        session_ids(&[backend]),
         events,
         move |progress| async move {
             for entry in &entries {
@@ -152,6 +166,7 @@ pub fn start_attrs(
     start_op(
         TransferKind::Attributes,
         title,
+        session_ids(&[backend]),
         events,
         move |progress| async move {
             let (uid, gid) = fsops::resolve_ids(backend, request.owner, request.group).await?;
@@ -177,9 +192,12 @@ pub fn start_attrs(
 /// Shared runner for mutation jobs (delete / attributes): spawns the work
 /// with an [`fsops::OpProgress`], relays cancel from the queue controls, and
 /// emits snapshots while the counters climb so the UI can watch completion.
+/// `sessions` is the remote side the mutation runs on (see
+/// [`TransferSnapshot::sessions`]); empty for local jobs.
 fn start_op<F, Fut>(
     kind: TransferKind,
     title: String,
+    sessions: Vec<SessionId>,
     events: async_channel::Sender<Event>,
     work: F,
 ) -> TransferId
@@ -201,6 +219,7 @@ where
                 // Mutations change things in place; nothing moves between
                 // the local and remote sides.
                 direction: None,
+                sessions: sessions.clone(),
                 state,
                 current_file: String::new(),
                 done_bytes: 0,
@@ -418,6 +437,7 @@ impl Job {
                 TransferKind::Copy
             },
             direction,
+            sessions: session_ids(&[request.src_backend, request.dst_backend]),
             state: TransferState::Queued,
             current_file: String::new(),
             done_bytes: 0,
@@ -1068,5 +1088,27 @@ async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result
             }
             Ok(Stream::Remote(file))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn session_ids_skips_local_and_dedupes() {
+        assert!(session_ids(&[Backend::Local, Backend::Local]).is_empty());
+        // Both sides on the same server: one session, not two.
+        assert_eq!(
+            session_ids(&[Backend::Remote(7), Backend::Remote(7)]),
+            vec![7]
+        );
+        // An upload: the local side contributes nothing.
+        assert_eq!(session_ids(&[Backend::Local, Backend::Remote(3)]), vec![3]);
+        // Server-to-server: both, in source → destination order.
+        assert_eq!(
+            session_ids(&[Backend::Remote(9), Backend::Remote(2)]),
+            vec![9, 2]
+        );
     }
 }

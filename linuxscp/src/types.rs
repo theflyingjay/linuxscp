@@ -75,6 +75,14 @@ impl Backend {
     pub fn is_remote(&self) -> bool {
         matches!(self, Backend::Remote(_))
     }
+
+    /// The session behind a remote backend; `None` for the local side.
+    pub fn session_id(&self) -> Option<SessionId> {
+        match self {
+            Backend::Remote(id) => Some(*id),
+            Backend::Local => None,
+        }
+    }
 }
 
 /// How to become root (or another user) after connecting.
@@ -258,6 +266,10 @@ pub struct TransferSnapshot {
     /// Upload/download when the job crosses the local/remote boundary;
     /// `None` for local↔local, remote↔remote and mutation jobs.
     pub direction: Option<TransferDirection>,
+    /// Distinct remote sessions the job touches (source and/or destination
+    /// of a copy, or the side a mutation runs on), so the queue can say
+    /// which session each row belongs to. Empty for jobs that stay local.
+    pub sessions: Vec<SessionId>,
     pub state: TransferState,
     pub current_file: String,
     pub done_bytes: u64,
