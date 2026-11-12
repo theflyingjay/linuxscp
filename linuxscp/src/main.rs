@@ -59,8 +59,8 @@ fn main() -> glib::ExitCode {
             });
         }
 
-        // Keep the App alive for the lifetime of the window.
-        std::mem::forget(app);
+        // The App is owned by `app::CURRENT_APP`, so it lives as long as the
+        // process and can be replaced when the window is rebuilt.
     });
     application.run()
 }
