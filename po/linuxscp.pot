@@ -35,6 +35,10 @@ msgid "< 1 s"
 msgstr ""
 
 #: app.rs
+msgid "A commander-style SFTP client for GNOME. Works directly with your ~/.ssh/config and supports sudo/su elevation and resumable transfers."
+msgstr ""
+
+#: app.rs
 msgid "About LinuxSCP"
 msgstr ""
 
@@ -48,6 +52,10 @@ msgstr ""
 
 #: app.rs
 msgid "Already in this folder: {}"
+msgstr ""
+
+#: app.rs
+msgid "Applies immediately; open sessions are closed"
 msgstr ""
 
 #: site_editor.rs
@@ -422,10 +430,6 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: app.rs
-msgid "Language saved — restart LinuxSCP to apply it"
-msgstr ""
-
 #: properties.rs
 msgid "Link target"
 msgstr ""
@@ -752,10 +756,6 @@ msgstr ""
 
 #: app.rs
 msgid "Rename…"
-msgstr ""
-
-#: app.rs
-msgid "Restart LinuxSCP to apply a new language"
 msgstr ""
 
 #: prompts.rs, queue.rs

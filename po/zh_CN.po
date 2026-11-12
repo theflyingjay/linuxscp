@@ -769,10 +769,6 @@ msgid "folder"
 msgid_plural "folders"
 msgstr[0] "个文件夹"
 
-msgid "item"
-msgid_plural "items"
-msgstr[0] "个项目"
-
 # Keyboard-shortcuts dialog descriptions (looked up at run time).
 msgid "Switch active pane"
 msgstr "切换活动窗格"
@@ -821,7 +817,6 @@ msgstr "选择路径中建议的文件夹（回车打开）"
 
 msgid "Open terminal here"
 msgstr "在此打开终端"
-
 
 # ---- Core transport / filesystem error messages ----
 msgid "Change {}"
@@ -1004,17 +999,21 @@ msgstr "{} 是 PuTTY 私钥（.ppk），OpenSSH 无法读取。请在站点管�
 msgid "“{}” keys cannot be converted"
 msgstr "“{}” 密钥无法转换"
 
-
 # ---- Language picker ----
 msgid "Language"
 msgstr "语言"
 
-msgid "Restart LinuxSCP to apply a new language"
-msgstr "重启 LinuxSCP 以应用新语言"
-
 msgid "System default"
 msgstr "跟随系统"
 
-msgid "Language saved — restart LinuxSCP to apply it"
-msgstr "语言已保存 — 重启 LinuxSCP 以生效"
+# ---- Language picker / About ----
+msgid "Applies immediately; open sessions are closed"
+msgstr "立即生效；打开的会话将被关闭"
 
+msgid "A commander-style SFTP client for GNOME. Works directly with your ~/.ssh/config and supports sudo/su elevation and resumable transfers."
+msgstr "适用于 GNOME 的 Commander 风格 SFTP 客户端。直接使用你的 ~/.ssh/config，支持 sudo/su 提权与可续传的传输。"
+
+# Plural noun passed to count() at run time.
+msgid "item"
+msgid_plural "items"
+msgstr[0] "个项目"

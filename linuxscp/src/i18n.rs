@@ -49,6 +49,28 @@ fn apply_saved_language() {
     }
 }
 
+/// Switch languages at run time.
+///
+/// gettext picks the catalog up on the next `gettext` call once the locale
+/// is re-applied (`setlocale` bumps glibc's catalog counter). Callers must
+/// rebuild any already-built widgets: GTK strings are set once, so the
+/// window is recreated to pick up the new language.
+pub fn set_language(language: Option<&str>) {
+    // SAFETY: GTK runs this from the main thread and the app has no other
+    // thread reading the locale at this point; the environment write races
+    // only with the workers, which never touch the locale.
+    unsafe {
+        match language {
+            Some(language) => std::env::set_var("LANGUAGE", language),
+            None => std::env::remove_var("LANGUAGE"),
+        }
+        gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
+    }
+    let _ = gettextrs::bindtextdomain(DOMAIN, LOCALEDIR);
+    let _ = gettextrs::bind_textdomain_codeset(DOMAIN, "UTF-8");
+    let _ = gettextrs::textdomain(DOMAIN);
+}
+
 /// Translate a message id (the English source string).
 pub fn gettext(msgid: &str) -> String {
     gettextrs::gettext(msgid)

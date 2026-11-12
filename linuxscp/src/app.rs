@@ -630,7 +630,7 @@ impl App {
         // persists the choice and asks for a restart.
         let language_group = adw::PreferencesGroup::builder()
             .title(tr!("Language"))
-            .description(tr!("Restart LinuxSCP to apply a new language"))
+            .description(tr!("Applies immediately; open sessions are closed"))
             .build();
         let system_default = tr!("System default");
         let language_model =
@@ -653,8 +653,9 @@ impl App {
                     2 => Some("zh_CN".to_string()),
                     _ => None,
                 };
-                this.with_settings_saved(|s| s.language = language);
-                this.toast(&tr!("Language saved — restart LinuxSCP to apply it"));
+                this.with_settings_saved(|s| s.language = language.clone());
+                linuxscp::i18n::set_language(language.as_deref());
+                this.rebuild_for_language();
             });
         }
         language_group.add(&language_row);
@@ -799,13 +800,17 @@ impl App {
             .copyright("© 2026 Jacob Petrosky and contributors")
             .version(env!("CARGO_PKG_VERSION"))
             .license_type(gtk::License::Gpl30)
-            .comments(
+            .comments(tr!(
                 "A commander-style SFTP client for GNOME. Works directly with \
                  your ~/.ssh/config and supports sudo/su elevation and resumable \
-                 transfers.",
-            )
+                 transfers."
+            ))
             .website("https://github.com/theflyingjay/linuxscp")
             .build();
+        about.add_credit_section(
+            Some("简体中文翻译"),
+            &["SkyBlue0404 https://github.com/SkyBlue0404"],
+        );
         about.present(Some(&self.window));
     }
 
@@ -1427,6 +1432,23 @@ impl App {
         let mut settings = self.settings.borrow_mut();
         f(&mut settings);
         settings.save();
+    }
+
+    /// Recreate the main window so a newly selected language takes effect.
+    ///
+    /// GTK copies strings into widgets when they are built, so there is no
+    /// retranslation pass to run; rebuilding the window is the same work the
+    /// first launch does. Connections belong to the old window, so open
+    /// sessions are closed.
+    fn rebuild_for_language(self: &Rc<Self>) {
+        let Some(application) = self.window.application().and_downcast::<adw::Application>() else {
+            return;
+        };
+        let app = App::build(&application);
+        app.window.present();
+        // Same lifetime model as `main`: the window is the app's only owner.
+        std::mem::forget(app);
+        self.window.close();
     }
 
     /// Create or update a site under `parent_id` (empty = root), persisting
