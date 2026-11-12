@@ -29,7 +29,7 @@ pub fn show(
         Ok(info) => info,
         Err(message) => {
             let alert = adw::AlertDialog::builder()
-                .heading(&tr!("Cannot Import Key"))
+                .heading(tr!("Cannot Import Key"))
                 .body(message)
                 .build();
             alert.add_response("ok", &tr!("OK"));
@@ -57,7 +57,7 @@ pub fn show(
     header.pack_end(&import_btn);
 
     // --- What the file holds --------------------------------------------
-    let key_group = adw::PreferencesGroup::builder().title(&tr!("Key")).build();
+    let key_group = adw::PreferencesGroup::builder().title(tr!("Key")).build();
     let add_fact = |title: &str, value: &str| {
         let row = adw::ActionRow::builder()
             .title(title)
@@ -88,7 +88,7 @@ pub fn show(
     // --- Conversion options ---------------------------------------------
     let ssh_dir = key_import::ssh_dir().unwrap_or_else(|| PathBuf::from("~/.ssh"));
     let convert_group = adw::PreferencesGroup::builder()
-        .title(&tr!("Convert"))
+        .title(tr!("Convert"))
         .description(tr!(
             "OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. \
              A copy in OpenSSH format is written to {} and selected for this site; \
@@ -97,18 +97,18 @@ pub fn show(
         ))
         .build();
     let passphrase_row = adw::PasswordEntryRow::builder()
-        .title(&tr!("Passphrase"))
+        .title(tr!("Passphrase"))
         .visible(info.encrypted)
         .build();
     convert_group.add(&passphrase_row);
     let name_row = adw::EntryRow::builder()
-        .title(&tr!("Save as"))
+        .title(tr!("Save as"))
         .text(key_import::suggest_name(&source))
         .build();
     convert_group.add(&name_row);
     let protect_row = adw::SwitchRow::builder()
-        .title(&tr!("Protect the converted key with the same passphrase"))
-        .subtitle(&tr!(
+        .title(tr!("Protect the converted key with the same passphrase"))
+        .subtitle(tr!(
             "You can let LinuxSCP remember the passphrase for this site"
         ))
         .active(true)
@@ -153,7 +153,7 @@ pub fn show(
     toolbar.set_content(Some(&scroller));
 
     let dialog = adw::Dialog::builder()
-        .title(&tr!("Import PuTTY Key"))
+        .title(tr!("Import PuTTY Key"))
         .content_width(520)
         .child(&toolbar)
         .build();
@@ -272,7 +272,7 @@ fn read_info(source: &std::path::Path) -> Result<ppk::PpkInfo, String> {
     let mut bytes = Vec::new();
     file.take(MAX_FILE_LEN as u64 + 1)
         .read_to_end(&mut bytes)
-        .map_err(|err| format!("Could not read {}: {err}", source.display()))?;
+        .map_err(|err| tr!("Could not read {}: {}", source.display(), err))?;
     if bytes.len() > MAX_FILE_LEN {
         return Err("The file is too large to be a key file.".into());
     }

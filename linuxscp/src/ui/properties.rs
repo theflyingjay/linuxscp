@@ -116,7 +116,7 @@ pub fn show(
     // Contents/Size rows so it costs no extra height.
     if let (Some(contents_value), Some(size_value)) = (&contents_value, &size_value) {
         let calc_btn = gtk::Button::builder()
-            .label(&tr!("Calculate"))
+            .label(tr!("Calculate"))
             .valign(gtk::Align::Center)
             .build();
         let contents_grid_row = if entries.len() == 1 { 2 } else { 1 };
@@ -192,7 +192,7 @@ pub fn show(
     recursive_check.set_visible(has_dir);
 
     let perm_group = adw::PreferencesGroup::builder()
-        .title(&tr!("Permissions"))
+        .title(tr!("Permissions"))
         .build();
     let perm_box = gtk::Box::new(gtk::Orientation::Vertical, 8);
     perm_box.append(&perms.grid);
@@ -300,7 +300,7 @@ impl Permissions {
         }
 
         let octal_label = gtk::Label::builder()
-            .label(&tr!("Octal"))
+            .label(tr!("Octal"))
             .halign(gtk::Align::Start)
             .build();
         grid.attach(&octal_label, 0, 3, 1, 1);

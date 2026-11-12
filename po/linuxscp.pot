@@ -1,0 +1,1018 @@
+# LinuxSCP translation template.
+msgid ""
+msgstr ""
+"Project-Id-Version: linuxscp 0.4.1\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: queue.rs
+msgid "  •  {} left"
+msgstr ""
+
+#: queue.rs
+msgid "  •  {}/s"
+msgstr ""
+
+#: queue.rs
+msgid " • {}/s"
+msgstr ""
+
+#: key_import.rs
+msgid ", encrypted"
+msgstr ""
+
+#: key_import.rs
+msgid ", not encrypted"
+msgstr ""
+
+#: tree_node.rs
+msgid "1 site"
+msgstr ""
+
+#: queue.rs
+msgid "< 1 s"
+msgstr ""
+
+#: app.rs
+msgid "About LinuxSCP"
+msgstr ""
+
+#: properties.rs
+msgid "Add X to directories"
+msgstr ""
+
+#: site_editor.rs
+msgid "All files"
+msgstr ""
+
+#: app.rs
+msgid "Already in this folder: {}"
+msgstr ""
+
+#: site_editor.rs
+msgid "Authentication"
+msgstr ""
+
+#: prompts.rs
+msgid "Authentication Required"
+msgstr ""
+
+#: properties.rs
+msgid "Calculate"
+msgstr ""
+
+#: properties.rs
+msgid "Calculating…"
+msgstr ""
+
+#: config_editor.rs, edit.rs, key_import.rs, prompts.rs, properties.rs, queue.rs
+msgid "Cancel"
+msgstr ""
+
+#: prompts.rs
+msgid "Cancel Transfer"
+msgstr ""
+
+#: queue.rs
+msgid "Cancelled — {} changed"
+msgstr ""
+
+#: queue.rs
+msgid "Cancelled — {} of {} • {}/{} files"
+msgstr ""
+
+#: queue.rs
+msgid "Cancelled — {} removed"
+msgstr ""
+
+#: queue.rs
+msgid "Cancelled — {} • {}"
+msgstr ""
+
+#: key_import.rs
+msgid "Cannot Import Key"
+msgstr ""
+
+#: app.rs
+msgid "Cannot copy a folder into itself: {}"
+msgstr ""
+
+#: queue.rs
+msgid "Changed {}"
+msgstr ""
+
+#: queue.rs
+msgid "Clear Finished"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Close"
+msgstr ""
+
+#: queue.rs
+msgid "Collecting items… {} changed"
+msgstr ""
+
+#: splash.rs
+msgid "Commander-style SFTP client for GNOME"
+msgstr ""
+
+#: key_import.rs
+msgid "Comment"
+msgstr ""
+
+#: prompts.rs
+msgid "Confirm"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Connect"
+msgstr ""
+
+#: types.rs
+msgid "Connect as yourself"
+msgstr ""
+
+#: app.rs
+msgid "Connect to a server first"
+msgstr ""
+
+#: pane.rs
+msgid "Connect to server…"
+msgstr ""
+
+#: app.rs
+msgid "Connected to {}"
+msgstr ""
+
+#: app.rs
+msgid "Connecting to {}…"
+msgstr ""
+
+#: site_editor.rs
+msgid "Connection"
+msgstr ""
+
+#: app.rs
+msgid "Connection Failed"
+msgstr ""
+
+#: app.rs
+msgid "Connection lost: {}"
+msgstr ""
+
+#: properties.rs
+msgid "Contents"
+msgstr ""
+
+#: key_import.rs
+msgid "Convert"
+msgstr ""
+
+#: site_editor.rs
+msgid "Convert…"
+msgstr ""
+
+#: app.rs
+msgid "Copy"
+msgstr ""
+
+#: app.rs
+msgid "Copy To…"
+msgstr ""
+
+#: app.rs
+msgid "Copy to Directory"
+msgstr ""
+
+#: config_editor.rs
+msgid "Could Not Save"
+msgstr ""
+
+#: edit.rs
+msgid "Could not create a temp folder: {}"
+msgstr ""
+
+#: app.rs
+msgid "Could not create destination: {}"
+msgstr ""
+
+#: app.rs
+msgid "Could not open terminal: {}"
+msgstr ""
+
+#: edit.rs
+msgid "Could not open the editor: {}"
+msgstr ""
+
+#: edit.rs
+msgid "Could not read the saved file: {}"
+msgstr ""
+
+#: app.rs, key_import.rs
+msgid "Could not read {}: {}"
+msgstr ""
+
+#: app.rs
+msgid "Could not save password to keyring: {}"
+msgstr ""
+
+#: edit.rs
+msgid "Could not watch the temp copy: {}"
+msgstr ""
+
+#: app.rs, connect_dialog.rs
+msgid "Create"
+msgstr ""
+
+#: app.rs
+msgid "Create failed: {}"
+msgstr ""
+
+#: app.rs
+msgid "Cut"
+msgstr ""
+
+#: app.rs, connect_dialog.rs
+msgid "Delete"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Delete Folder"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Delete Site"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Delete this folder and every site inside it?"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Delete this saved site and its stored password?"
+msgstr ""
+
+#: app.rs
+msgid "Desktop notifications"
+msgstr ""
+
+#: app.rs
+msgid "Destination is the current directory"
+msgstr ""
+
+#: pane.rs
+msgid "Disconnect"
+msgstr ""
+
+#: queue.rs
+msgid "Done — {} in {}"
+msgstr ""
+
+#: queue.rs
+msgid "Download"
+msgstr ""
+
+#: ppk.rs
+msgid "Ed448 keys are not supported by OpenSSH"
+msgstr ""
+
+#: config_editor.rs
+msgid "Edit SSH Config"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Edit ~/.ssh/config"
+msgstr ""
+
+#: queue.rs
+msgid "Failed"
+msgstr ""
+
+#: queue.rs
+msgid "Failed — {}"
+msgstr ""
+
+#: properties.rs
+msgid "File"
+msgstr ""
+
+#: prompts.rs
+msgid "File Exists"
+msgstr ""
+
+#: key_import.rs
+msgid "Fingerprint"
+msgstr ""
+
+#: queue.rs
+msgid "Finished {}, took {}"
+msgstr ""
+
+#: properties.rs
+msgid "Folder"
+msgstr ""
+
+#: key_import.rs
+msgid "Format"
+msgstr ""
+
+#: properties.rs
+msgid "Group"
+msgstr ""
+
+#: pane.rs
+msgid "Home directory"
+msgstr ""
+
+#: site_editor.rs
+msgid "Host"
+msgstr ""
+
+#: config_editor.rs
+msgid "Host blocks defined here appear in the host list and are used by the system ssh — aliases, jump hosts, keys and all."
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Hosts from ~/.ssh/config"
+msgstr ""
+
+#: app.rs
+msgid "How LinuxSCP tells you a transfer has finished"
+msgstr ""
+
+#: app.rs
+msgid "How connected tabs are labeled"
+msgstr ""
+
+#: key_import.rs
+msgid "Import"
+msgstr ""
+
+#: key_import.rs
+msgid "Import PuTTY Key"
+msgstr ""
+
+#: key_import.rs
+msgid "Key"
+msgstr ""
+
+#: site_editor.rs
+msgid "Key file"
+msgstr ""
+
+#: types.rs
+msgid "Key file (OpenSSH or PuTTY .ppk)"
+msgstr ""
+
+#: app.rs
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+#: properties.rs
+msgid "Link target"
+msgstr ""
+
+#: app.rs, pane.rs, properties.rs, queue.rs
+msgid "Local"
+msgstr ""
+
+#: properties.rs
+msgid "Location"
+msgstr ""
+
+#: site_editor.rs
+msgid "Login as"
+msgstr ""
+
+#: site_editor.rs
+msgid "Method"
+msgstr ""
+
+#: pane.rs, properties.rs
+msgid "Modified"
+msgstr ""
+
+#: app.rs
+msgid "My Server"
+msgstr ""
+
+#: pane.rs, site_editor.rs
+msgid "Name"
+msgstr ""
+
+#: app.rs
+msgid "New Directory"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "New Folder"
+msgstr ""
+
+#: app.rs
+msgid "New Folder…"
+msgstr ""
+
+#: app.rs, tab_strip.rs
+msgid "New Session"
+msgstr ""
+
+#: app.rs
+msgid "New Symlink"
+msgstr ""
+
+#: app.rs
+msgid "New Symlink…"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "New folder"
+msgstr ""
+
+#: pane.rs
+msgid "New folder (F7)"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "New site"
+msgstr ""
+
+#: tab_strip.rs
+msgid "Next session"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "No Host entries yet.\n\nUse the edit button above to add some to ~/.ssh/config."
+msgstr ""
+
+#: connect_dialog.rs
+msgid "No Site Selected"
+msgstr ""
+
+#: edit.rs
+msgid "No default text editor is configured"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "No hosts match the search."
+msgstr ""
+
+#: site_editor.rs
+msgid "None selected"
+msgstr ""
+
+#: properties.rs
+msgid "Not calculated"
+msgstr ""
+
+#: app.rs
+msgid "Nothing selected"
+msgstr ""
+
+#: app.rs
+msgid "Nothing to paste"
+msgstr ""
+
+#: app.rs
+msgid "Notifications"
+msgstr ""
+
+#: config_editor.rs, key_import.rs, properties.rs
+msgid "OK"
+msgstr ""
+
+#: properties.rs
+msgid "Octal"
+msgstr ""
+
+#: edit.rs
+msgid "Open Anyway"
+msgstr ""
+
+#: edit.rs
+msgid "Open Large File?"
+msgstr ""
+
+#: app.rs
+msgid "Open Terminal Here"
+msgstr ""
+
+#: app.rs
+msgid "Open terminal here (Ctrl+T)"
+msgstr ""
+
+#: key_import.rs
+msgid "OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. A copy in OpenSSH format is written to {} and selected for this site; the .ppk file is not changed."
+msgstr ""
+
+#: properties.rs
+msgid "Others"
+msgstr ""
+
+#: prompts.rs
+msgid "Overwrite"
+msgstr ""
+
+#: prompts.rs
+msgid "Overwrite All"
+msgstr ""
+
+#: pane.rs, properties.rs
+msgid "Owner"
+msgstr ""
+
+#: pane.rs
+msgid "Parent directory (Backspace)"
+msgstr ""
+
+#: key_import.rs
+msgid "Passphrase"
+msgstr ""
+
+#: site_editor.rs
+msgid "Passphrase (leave blank to keep saved)"
+msgstr ""
+
+#: site_editor.rs
+msgid "Passphrase (optional)"
+msgstr ""
+
+#: site_editor.rs, types.rs
+msgid "Password"
+msgstr ""
+
+#: site_editor.rs
+msgid "Password (leave blank to keep saved)"
+msgstr ""
+
+#: app.rs
+msgid "Paste"
+msgstr ""
+
+#: queue.rs
+msgid "Pause"
+msgstr ""
+
+#: queue.rs
+msgid "Paused"
+msgstr ""
+
+#: app.rs
+msgid "Permanently delete {} items?"
+msgstr ""
+
+#: app.rs
+msgid "Permanently delete “{}”?"
+msgstr ""
+
+#: pane.rs, properties.rs
+msgid "Permissions"
+msgstr ""
+
+#: app.rs
+msgid "Play sound on completion"
+msgstr ""
+
+#: app.rs
+msgid "Plays a success chime when a transfer finishes"
+msgstr ""
+
+#: site_editor.rs
+msgid "Port (blank = 22)"
+msgstr ""
+
+#: app.rs
+msgid "Preferences"
+msgstr ""
+
+#: tab_strip.rs
+msgid "Previous session"
+msgstr ""
+
+#: app.rs
+msgid "Properties"
+msgstr ""
+
+#: key_import.rs
+msgid "Protect the converted key with the same passphrase"
+msgstr ""
+
+#: key_import.rs
+msgid "PuTTY PPK version {}{}"
+msgstr ""
+
+#: ppk.rs
+msgid "PuTTY key file format version {} is not supported"
+msgstr ""
+
+#: site_editor.rs
+msgid "PuTTY private keys (*.ppk)"
+msgstr ""
+
+#: queue.rs
+msgid "Queued"
+msgstr ""
+
+#: app.rs
+msgid "Reconnect"
+msgstr ""
+
+#: app.rs
+msgid "Refresh"
+msgstr ""
+
+#: pane.rs
+msgid "Refresh (Ctrl+R)"
+msgstr ""
+
+#: app.rs, properties.rs, queue.rs
+msgid "Remote"
+msgstr ""
+
+#: site_editor.rs
+msgid "Remote directory (optional)"
+msgstr ""
+
+#: queue.rs
+msgid "Remove"
+msgstr ""
+
+#: queue.rs
+msgid "Removed {}"
+msgstr ""
+
+#: app.rs
+msgid "Rename"
+msgstr ""
+
+#: app.rs
+msgid "Rename failed: {}"
+msgstr ""
+
+#: app.rs
+msgid "Rename…"
+msgstr ""
+
+#: prompts.rs, queue.rs
+msgid "Resume"
+msgstr ""
+
+#: app.rs
+msgid "Retry"
+msgstr ""
+
+#: types.rs
+msgid "Root via su -"
+msgstr ""
+
+#: types.rs
+msgid "Root via sudo"
+msgstr ""
+
+#: types.rs
+msgid "SSH agent / default keys"
+msgstr ""
+
+#: config_editor.rs, connect_dialog.rs
+msgid "Save"
+msgstr ""
+
+#: key_import.rs
+msgid "Save as"
+msgstr ""
+
+#: app.rs
+msgid "Save as Site…"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Saved connections"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Saved sites"
+msgstr ""
+
+#: queue.rs
+msgid "Scanning… {} files found"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Search hosts, sites, and folders"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Select a saved site, or create a new one to edit it here."
+msgstr ""
+
+#: site_editor.rs
+msgid "Select private key"
+msgstr ""
+
+#: site_editor.rs
+msgid "Session"
+msgstr ""
+
+#: app.rs
+msgid "Session is closed"
+msgstr ""
+
+#: properties.rs
+msgid "Set GID"
+msgstr ""
+
+#: properties.rs
+msgid "Set UID"
+msgstr ""
+
+#: properties.rs
+msgid "Set owner, group and permissions recursively"
+msgstr ""
+
+#: app.rs
+msgid "Show a GNOME notification when a transfer finishes"
+msgstr ""
+
+#: app.rs
+msgid "Show hidden files (Ctrl+H)"
+msgstr ""
+
+#: app.rs
+msgid "Show site name on tabs"
+msgstr ""
+
+#: app.rs
+msgid "Show the saved site's name on the tab instead of its host"
+msgstr ""
+
+#: connect_dialog.rs
+msgid "Site Manager"
+msgstr ""
+
+#: app.rs
+msgid "Site saved"
+msgstr ""
+
+#: pane.rs, properties.rs
+msgid "Size"
+msgstr ""
+
+#: prompts.rs
+msgid "Skip"
+msgstr ""
+
+#: prompts.rs
+msgid "Skip All"
+msgstr ""
+
+#: app.rs
+msgid "Source and destination are the same"
+msgstr ""
+
+#: app.rs
+msgid "Source and destination are the same directory"
+msgstr ""
+
+#: properties.rs
+msgid "Sticky bit"
+msgstr ""
+
+#: properties.rs
+msgid "Stored on"
+msgstr ""
+
+#: properties.rs
+msgid "Symbolic link"
+msgstr ""
+
+#: properties.rs
+msgid "Symbolic link to folder"
+msgstr ""
+
+#: app.rs
+msgid "Symlink failed: {}"
+msgstr ""
+
+#: app.rs
+msgid "Tabs"
+msgstr ""
+
+#: edit.rs
+msgid "That file is still being saved; try again when the upload finishes."
+msgstr ""
+
+#: app.rs
+msgid "The connection the files were copied from is closed"
+msgstr ""
+
+#: notify.rs
+msgid "Transfer complete"
+msgstr ""
+
+#: notify.rs
+msgid "Transfer failed"
+msgstr ""
+
+#: queue.rs
+msgid "Transfers and file operations appear here"
+msgstr ""
+
+#: key_import.rs, properties.rs
+msgid "Type"
+msgstr ""
+
+#: properties.rs
+msgid "Unavailable"
+msgstr ""
+
+#: queue.rs
+msgid "Upload"
+msgstr ""
+
+#: site_editor.rs
+msgid "Username"
+msgstr ""
+
+#: splash.rs
+msgid "Version {}"
+msgstr ""
+
+#: queue.rs
+msgid "Waiting for answer…"
+msgstr ""
+
+#: key_import.rs
+msgid "You can let LinuxSCP remember the passphrase for this site"
+msgstr ""
+
+#: key_import.rs
+msgid "a key named “{}” already exists in {}"
+msgstr ""
+
+#: ppk.rs
+msgid "certificate keys cannot be imported; convert the plain key instead"
+msgstr ""
+
+#: app.rs
+msgid "copy — paste somewhere"
+msgstr ""
+
+#: key_import.rs
+msgid "could not determine your home directory"
+msgstr ""
+
+#: key_import.rs
+msgid "could not encode the OpenSSH key: {}"
+msgstr ""
+
+#: key_import.rs
+msgid "could not read {}: {}"
+msgstr ""
+
+#: key_import.rs
+msgid "could not write {}: {}"
+msgstr ""
+
+#: app.rs
+msgid "move — paste somewhere"
+msgstr ""
+
+#: ppk.rs
+msgid "not a PuTTY private key file"
+msgstr ""
+
+#: key_import.rs
+msgid "the converted key did not read back correctly"
+msgstr ""
+
+#: key_import.rs
+msgid "the file is too large to be a key file"
+msgstr ""
+
+#: ppk.rs
+msgid "the key data is invalid: {}"
+msgstr ""
+
+#: ppk.rs
+msgid "the key file cannot be processed: {}"
+msgstr ""
+
+#: ppk.rs
+msgid "the key file is damaged: {}"
+msgstr ""
+
+#: key_import.rs
+msgid "the key file name is not valid"
+msgstr ""
+
+#: ppk.rs
+msgid "the key is encrypted; its passphrase is required"
+msgstr ""
+
+#: ppk.rs
+msgid "the private key in the file does not match its public key"
+msgstr ""
+
+#: ppk.rs
+msgid "this is a DSA key; OpenSSH dropped DSA support, so it cannot be used from Linux — generate a new key instead"
+msgstr ""
+
+#: ppk.rs
+msgid "unknown encryption type “{}”"
+msgstr ""
+
+#: ppk.rs
+msgid "wrong passphrase (or the key file is damaged)"
+msgstr ""
+
+#: properties.rs
+msgid "{} ({} bytes)"
+msgstr ""
+
+#: queue.rs
+msgid "{} / {} • {}/{} files"
+msgstr ""
+
+#: properties.rs
+msgid "{} Items"
+msgstr ""
+
+#: properties.rs
+msgid "{} bytes"
+msgstr ""
+
+#: properties.rs
+msgid "{} files"
+msgstr ""
+
+#: app.rs, pane.rs
+msgid "{} items"
+msgstr ""
+
+#: pane.rs
+msgid "{} of {} selected, {}"
+msgstr ""
+
+#: app.rs
+msgid "{} ready to {}"
+msgstr ""
+
+#: queue.rs
+msgid "{} removed…"
+msgstr ""
+
+#: queue.rs
+msgid "{} s"
+msgstr ""
+
+#: tree_node.rs
+msgid "{} sites"
+msgstr ""
+
+#: properties.rs
+msgid "{} {}, {} {}"
+msgstr ""
+
+#: queue.rs
+msgid "{} • {}/{}+ files • counting…"
+msgstr ""
+
+#: queue.rs
+msgid "{}d {}h"
+msgstr ""
+
+#: queue.rs
+msgid "{}h {}m"
+msgstr ""
+
+#: queue.rs
+msgid "{}m {}s"
+msgstr ""
+
+#: queue.rs
+msgid "{}s"
+msgstr ""
+
+#: prompts.rs
+msgid "“{}” already exists in the destination.\n\nSource: {}\nDestination: {}"
+msgstr ""
+
+#: edit.rs
+msgid "“{}” is {}. Large files can be slow to open and edit."
+msgstr ""
+
+#: ppk.rs
+msgid "“{}” keys cannot be converted"
+msgstr ""
+
+#: properties.rs
+msgid "file"
+msgid_plural "files"
+msgstr[0] ""
+
+#: properties.rs
+msgid "folder"
+msgid_plural "folders"
+msgstr[0] ""
+

@@ -1,0 +1,774 @@
+# Simplified Chinese translation for LinuxSCP.
+# This file is distributed under the same license as the linuxscp package.
+msgid ""
+msgstr ""
+"Project-Id-Version: linuxscp 0.4.1\n"
+"Report-Msgid-Bugs-To: https://github.com/theflyingjay/linuxscp/issues\n"
+"POT-Creation-Date: 2026-11-12 11:20+0800\n"
+"PO-Revision-Date: 2026-11-12 11:20+0800\n"
+"Last-Translator: LinuxSCP contributors\n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "  •  {} left"
+msgstr "  •  剩余 {}"
+
+msgid "  •  {}/s"
+msgstr "  •  {}/秒"
+
+msgid " • {}/s"
+msgstr " • {}/秒"
+
+msgid ", encrypted"
+msgstr "，已加密"
+
+msgid ", not encrypted"
+msgstr "，未加密"
+
+msgid "1 site"
+msgstr "1 个站点"
+
+msgid "< 1 s"
+msgstr "< 1 秒"
+
+msgid "About LinuxSCP"
+msgstr "关于 LinuxSCP"
+
+msgid "Add X to directories"
+msgstr "为目录添加 X 权限"
+
+msgid "All files"
+msgstr "所有文件"
+
+msgid "Already in this folder: {}"
+msgstr "已在此文件夹中：{}"
+
+msgid "Authentication"
+msgstr "认证"
+
+msgid "Authentication Required"
+msgstr "需要认证"
+
+msgid "Calculate"
+msgstr "计算"
+
+msgid "Calculating…"
+msgstr "正在计算…"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Cancel Transfer"
+msgstr "取消传输"
+
+msgid "Cancelled — {} changed"
+msgstr "已取消 — {} 项已更改"
+
+msgid "Cancelled — {} of {} • {}/{} files"
+msgstr "已取消 — {} / {} • {}/{} 个文件"
+
+msgid "Cancelled — {} removed"
+msgstr "已取消 — 已移除 {} 项"
+
+msgid "Cancelled — {} • {}"
+msgstr "已取消 — {} • {}"
+
+msgid "Cannot Import Key"
+msgstr "无法导入密钥"
+
+msgid "Cannot copy a folder into itself: {}"
+msgstr "无法将文件夹复制到其自身：{}"
+
+msgid "Changed {}"
+msgstr "已更改 {}"
+
+msgid "Clear Finished"
+msgstr "清除已完成"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Collecting items… {} changed"
+msgstr "正在收集项目… {} 项已更改"
+
+msgid "Commander-style SFTP client for GNOME"
+msgstr "适用于 GNOME 的 Commander 风格 SFTP 客户端"
+
+msgid "Comment"
+msgstr "注释"
+
+msgid "Confirm"
+msgstr "确认"
+
+msgid "Connect"
+msgstr "连接"
+
+msgid "Connect as yourself"
+msgstr "以本人身份连接"
+
+msgid "Connect to a server first"
+msgstr "请先连接到服务器"
+
+msgid "Connect to server…"
+msgstr "连接到服务器…"
+
+msgid "Connected to {}"
+msgstr "已连接到 {}"
+
+msgid "Connecting to {}…"
+msgstr "正在连接 {}…"
+
+msgid "Connection"
+msgstr "连接"
+
+msgid "Connection Failed"
+msgstr "连接失败"
+
+msgid "Connection lost: {}"
+msgstr "连接已断开：{}"
+
+msgid "Contents"
+msgstr "内容"
+
+msgid "Convert"
+msgstr "转换"
+
+msgid "Convert…"
+msgstr "转换…"
+
+msgid "Copy"
+msgstr "复制"
+
+msgid "Copy To…"
+msgstr "复制到…"
+
+msgid "Copy to Directory"
+msgstr "复制到目录"
+
+msgid "Could Not Save"
+msgstr "无法保存"
+
+msgid "Could not create a temp folder: {}"
+msgstr "无法创建临时文件夹：{}"
+
+msgid "Could not create destination: {}"
+msgstr "无法创建目标：{}"
+
+msgid "Could not open terminal: {}"
+msgstr "无法打开终端：{}"
+
+msgid "Could not open the editor: {}"
+msgstr "无法打开编辑器：{}"
+
+msgid "Could not read the saved file: {}"
+msgstr "无法读取已保存的文件：{}"
+
+msgid "Could not read {}: {}"
+msgstr "无法读取 {}：{}"
+
+msgid "Could not save password to keyring: {}"
+msgstr "无法将密码保存到密钥环：{}"
+
+msgid "Could not watch the temp copy: {}"
+msgstr "无法监视临时副本：{}"
+
+msgid "Create"
+msgstr "创建"
+
+msgid "Create failed: {}"
+msgstr "创建失败：{}"
+
+msgid "Cut"
+msgstr "剪切"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Delete Folder"
+msgstr "删除文件夹"
+
+msgid "Delete Site"
+msgstr "删除站点"
+
+msgid "Delete this folder and every site inside it?"
+msgstr "删除此文件夹及其中的所有站点？"
+
+msgid "Delete this saved site and its stored password?"
+msgstr "删除此已保存的站点及其存储的密码？"
+
+msgid "Desktop notifications"
+msgstr "桌面通知"
+
+msgid "Destination is the current directory"
+msgstr "目标就是当前目录"
+
+msgid "Disconnect"
+msgstr "断开连接"
+
+msgid "Done — {} in {}"
+msgstr "完成 — {} 用时 {}"
+
+msgid "Download"
+msgstr "下载"
+
+msgid "Ed448 keys are not supported by OpenSSH"
+msgstr "OpenSSH 不支持 Ed448 密钥"
+
+msgid "Edit SSH Config"
+msgstr "编辑 SSH 配置"
+
+msgid "Edit ~/.ssh/config"
+msgstr "编辑 ~/.ssh/config"
+
+msgid "Failed"
+msgstr "失败"
+
+msgid "Failed — {}"
+msgstr "失败 — {}"
+
+msgid "File"
+msgstr "文件"
+
+msgid "File Exists"
+msgstr "文件已存在"
+
+msgid "Fingerprint"
+msgstr "指纹"
+
+msgid "Finished {}, took {}"
+msgstr "完成于 {}，耗时 {}"
+
+msgid "Folder"
+msgstr "文件夹"
+
+msgid "Format"
+msgstr "格式"
+
+msgid "Group"
+msgstr "所属组"
+
+msgid "Home directory"
+msgstr "主目录"
+
+msgid "Host"
+msgstr "主机"
+
+msgid "Host blocks defined here appear in the host list and are used by the system ssh — aliases, jump hosts, keys and all."
+msgstr "此处定义的主机块会出现在主机列表中，并由系统 ssh 使用 — 包括别名、跳板主机和密钥等。"
+
+msgid "Hosts from ~/.ssh/config"
+msgstr "来自 ~/.ssh/config 的主机"
+
+msgid "How LinuxSCP tells you a transfer has finished"
+msgstr "LinuxSCP 如何提示传输已完成"
+
+msgid "How connected tabs are labeled"
+msgstr "已连接的标签页如何命名"
+
+msgid "Import"
+msgstr "导入"
+
+msgid "Import PuTTY Key"
+msgstr "导入 PuTTY 密钥"
+
+msgid "Key"
+msgstr "密钥"
+
+msgid "Key file"
+msgstr "密钥文件"
+
+msgid "Key file (OpenSSH or PuTTY .ppk)"
+msgstr "密钥文件（OpenSSH 或 PuTTY .ppk）"
+
+msgid "Keyboard Shortcuts"
+msgstr "键盘快捷键"
+
+msgid "Link target"
+msgstr "链接目标"
+
+msgid "Local"
+msgstr "本地"
+
+msgid "Location"
+msgstr "位置"
+
+msgid "Login as"
+msgstr "登录身份"
+
+msgid "Method"
+msgstr "方式"
+
+msgid "Modified"
+msgstr "修改时间"
+
+msgid "My Server"
+msgstr "我的服务器"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "New Directory"
+msgstr "新建目录"
+
+msgid "New Folder"
+msgstr "新建文件夹"
+
+msgid "New Folder…"
+msgstr "新建文件夹…"
+
+msgid "New Session"
+msgstr "新建会话"
+
+msgid "New Symlink"
+msgstr "新建符号链接"
+
+msgid "New Symlink…"
+msgstr "新建符号链接…"
+
+msgid "New folder"
+msgstr "新建文件夹"
+
+msgid "New folder (F7)"
+msgstr "新建文件夹 (F7)"
+
+msgid "New site"
+msgstr "新站点"
+
+msgid "Next session"
+msgstr "下一个会话"
+
+msgid "No Host entries yet.\n\nUse the edit button above to add some to ~/.ssh/config."
+msgstr "还没有主机条目。\n\n使用上方的编辑按钮向 ~/.ssh/config 添加一些。"
+
+msgid "No Site Selected"
+msgstr "未选择站点"
+
+msgid "No default text editor is configured"
+msgstr "未配置默认文本编辑器"
+
+msgid "No hosts match the search."
+msgstr "没有匹配搜索的主机。"
+
+msgid "None selected"
+msgstr "未选择"
+
+msgid "Not calculated"
+msgstr "未计算"
+
+msgid "Nothing selected"
+msgstr "未选择任何内容"
+
+msgid "Nothing to paste"
+msgstr "没有可粘贴的内容"
+
+msgid "Notifications"
+msgstr "通知"
+
+msgid "OK"
+msgstr "确定"
+
+msgid "Octal"
+msgstr "八进制"
+
+msgid "Open Anyway"
+msgstr "仍然打开"
+
+msgid "Open Large File?"
+msgstr "打开大文件？"
+
+msgid "Open Terminal Here"
+msgstr "在此打开终端"
+
+msgid "Open terminal here (Ctrl+T)"
+msgstr "在此打开终端 (Ctrl+T)"
+
+msgid "OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. A copy in OpenSSH format is written to {} and selected for this site; the .ppk file is not changed."
+msgstr "LinuxSCP 所使用的 OpenSSH 无法读取 PuTTY 的 .ppk 格式。将以 OpenSSH 格式把副本写入 {} 并为此站点选中；.ppk 文件不会被更改。"
+
+msgid "Others"
+msgstr "其他"
+
+msgid "Overwrite"
+msgstr "覆盖"
+
+msgid "Overwrite All"
+msgstr "全部覆盖"
+
+msgid "Owner"
+msgstr "所有者"
+
+msgid "Parent directory (Backspace)"
+msgstr "上级目录（退格键）"
+
+msgid "Passphrase"
+msgstr "密钥口令"
+
+msgid "Passphrase (leave blank to keep saved)"
+msgstr "密钥口令（留空以保留已保存的口令）"
+
+msgid "Passphrase (optional)"
+msgstr "密钥口令（可选）"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "Password (leave blank to keep saved)"
+msgstr "密码（留空以保留已保存的密码）"
+
+msgid "Paste"
+msgstr "粘贴"
+
+msgid "Pause"
+msgstr "暂停"
+
+msgid "Paused"
+msgstr "已暂停"
+
+msgid "Permanently delete {} items?"
+msgstr "永久删除 {} 个项目？"
+
+msgid "Permanently delete “{}”?"
+msgstr "永久删除“{}”？"
+
+msgid "Permissions"
+msgstr "权限"
+
+msgid "Play sound on completion"
+msgstr "完成时播放声音"
+
+msgid "Plays a success chime when a transfer finishes"
+msgstr "传输完成时播放成功提示音"
+
+msgid "Port (blank = 22)"
+msgstr "端口（留空 = 22）"
+
+msgid "Preferences"
+msgstr "首选项"
+
+msgid "Previous session"
+msgstr "上一个会话"
+
+msgid "Properties"
+msgstr "属性"
+
+msgid "Protect the converted key with the same passphrase"
+msgstr "使用相同口令保护转换后的密钥"
+
+msgid "PuTTY PPK version {}{}"
+msgstr "PuTTY PPK 版本 {}{}"
+
+msgid "PuTTY key file format version {} is not supported"
+msgstr "不支持 PuTTY 密钥文件格式版本 {}"
+
+msgid "PuTTY private keys (*.ppk)"
+msgstr "PuTTY 私钥 (*.ppk)"
+
+msgid "Queued"
+msgstr "已排队"
+
+msgid "Reconnect"
+msgstr "重新连接"
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Refresh (Ctrl+R)"
+msgstr "刷新 (Ctrl+R)"
+
+msgid "Remote"
+msgstr "远程"
+
+msgid "Remote directory (optional)"
+msgstr "远程目录（可选）"
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "Removed {}"
+msgstr "已移除 {}"
+
+msgid "Rename"
+msgstr "重命名"
+
+msgid "Rename failed: {}"
+msgstr "重命名失败：{}"
+
+msgid "Rename…"
+msgstr "重命名…"
+
+msgid "Resume"
+msgstr "继续"
+
+msgid "Retry"
+msgstr "重试"
+
+msgid "Root via su -"
+msgstr "通过 su - 以 root 身份"
+
+msgid "Root via sudo"
+msgstr "通过 sudo 以 root 身份"
+
+msgid "SSH agent / default keys"
+msgstr "SSH 代理 / 默认密钥"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Save as"
+msgstr "另存为"
+
+msgid "Save as Site…"
+msgstr "另存为站点…"
+
+msgid "Saved connections"
+msgstr "已保存的连接"
+
+msgid "Saved sites"
+msgstr "已保存的站点"
+
+msgid "Scanning… {} files found"
+msgstr "正在扫描… 已找到 {} 个文件"
+
+msgid "Search hosts, sites, and folders"
+msgstr "搜索主机、站点和文件夹"
+
+msgid "Select a saved site, or create a new one to edit it here."
+msgstr "选择一个已保存的站点，或新建一个在此编辑。"
+
+msgid "Select private key"
+msgstr "选择私钥"
+
+msgid "Session"
+msgstr "会话"
+
+msgid "Session is closed"
+msgstr "会话已关闭"
+
+msgid "Set GID"
+msgstr "设置 GID"
+
+msgid "Set UID"
+msgstr "设置 UID"
+
+msgid "Set owner, group and permissions recursively"
+msgstr "递归设置所有者、所属组和权限"
+
+msgid "Show a GNOME notification when a transfer finishes"
+msgstr "传输完成时显示 GNOME 通知"
+
+msgid "Show hidden files (Ctrl+H)"
+msgstr "显示隐藏文件 (Ctrl+H)"
+
+msgid "Show site name on tabs"
+msgstr "在标签页上显示站点名称"
+
+msgid "Show the saved site's name on the tab instead of its host"
+msgstr "在标签页上显示已保存站点的名称，而不是其主机"
+
+msgid "Site Manager"
+msgstr "站点管理器"
+
+msgid "Site saved"
+msgstr "站点已保存"
+
+msgid "Size"
+msgstr "大小"
+
+msgid "Skip"
+msgstr "跳过"
+
+msgid "Skip All"
+msgstr "全部跳过"
+
+msgid "Source and destination are the same"
+msgstr "源和目标相同"
+
+msgid "Source and destination are the same directory"
+msgstr "源和目标为同一目录"
+
+msgid "Sticky bit"
+msgstr "粘滞位"
+
+msgid "Stored on"
+msgstr "存储于"
+
+msgid "Symbolic link"
+msgstr "符号链接"
+
+msgid "Symbolic link to folder"
+msgstr "指向文件夹的符号链接"
+
+msgid "Symlink failed: {}"
+msgstr "创建符号链接失败：{}"
+
+msgid "Tabs"
+msgstr "标签页"
+
+msgid "That file is still being saved; try again when the upload finishes."
+msgstr "该文件仍在保存中；请在上传完成后重试。"
+
+msgid "The connection the files were copied from is closed"
+msgstr "复制文件时所使用的连接已关闭"
+
+msgid "Transfer complete"
+msgstr "传输完成"
+
+msgid "Transfer failed"
+msgstr "传输失败"
+
+msgid "Transfers and file operations appear here"
+msgstr "传输和文件操作会显示在这里"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "Upload"
+msgstr "上传"
+
+msgid "Username"
+msgstr "用户名"
+
+msgid "Version {}"
+msgstr "版本 {}"
+
+msgid "Waiting for answer…"
+msgstr "等待应答…"
+
+msgid "You can let LinuxSCP remember the passphrase for this site"
+msgstr "你可以让 LinuxSCP 为此站点记住该口令"
+
+msgid "a key named “{}” already exists in {}"
+msgstr "名为“{}”的密钥已存在于 {} 中"
+
+msgid "certificate keys cannot be imported; convert the plain key instead"
+msgstr "证书密钥无法导入；请改为转换普通密钥"
+
+msgid "copy — paste somewhere"
+msgstr "复制 — 粘贴到某处"
+
+msgid "could not determine your home directory"
+msgstr "无法确定你的主目录"
+
+msgid "could not encode the OpenSSH key: {}"
+msgstr "无法编码 OpenSSH 密钥：{}"
+
+msgid "could not read {}: {}"
+msgstr "无法读取 {}：{}"
+
+msgid "could not write {}: {}"
+msgstr "无法写入 {}：{}"
+
+msgid "move — paste somewhere"
+msgstr "移动 — 粘贴到某处"
+
+msgid "not a PuTTY private key file"
+msgstr "不是 PuTTY 私钥文件"
+
+msgid "the converted key did not read back correctly"
+msgstr "转换后的密钥无法正确读回"
+
+msgid "the file is too large to be a key file"
+msgstr "该文件太大，不可能是密钥文件"
+
+msgid "the key data is invalid: {}"
+msgstr "密钥数据无效：{}"
+
+msgid "the key file cannot be processed: {}"
+msgstr "无法处理密钥文件：{}"
+
+msgid "the key file is damaged: {}"
+msgstr "密钥文件已损坏：{}"
+
+msgid "the key file name is not valid"
+msgstr "密钥文件名无效"
+
+msgid "the key is encrypted; its passphrase is required"
+msgstr "该密钥已加密；需要其口令"
+
+msgid "the private key in the file does not match its public key"
+msgstr "文件中的私钥与其公钥不匹配"
+
+msgid "this is a DSA key; OpenSSH dropped DSA support, so it cannot be used from Linux — generate a new key instead"
+msgstr "这是 DSA 密钥；OpenSSH 已移除对 DSA 的支持，因此无法在 Linux 上使用 — 请改为生成新密钥"
+
+msgid "unknown encryption type “{}”"
+msgstr "未知的加密类型“{}”"
+
+msgid "wrong passphrase (or the key file is damaged)"
+msgstr "口令错误（或密钥文件已损坏）"
+
+msgid "{} ({} bytes)"
+msgstr "{}（{} 字节）"
+
+msgid "{} / {} • {}/{} files"
+msgstr "{} / {} • {}/{} 个文件"
+
+msgid "{} Items"
+msgstr "{} 个项目"
+
+msgid "{} bytes"
+msgstr "{} 字节"
+
+msgid "{} files"
+msgstr "{} 个文件"
+
+msgid "{} items"
+msgstr "{} 个项目"
+
+msgid "{} of {} selected, {}"
+msgstr "已选择 {} / {}，{}"
+
+msgid "{} ready to {}"
+msgstr "{} 已准备好{}"
+
+msgid "{} removed…"
+msgstr "已移除 {}…"
+
+msgid "{} s"
+msgstr "{} 秒"
+
+msgid "{} sites"
+msgstr "{} 个站点"
+
+msgid "{} {}, {} {}"
+msgstr "{} {}，{} {}"
+
+msgid "{} • {}/{}+ files • counting…"
+msgstr "{} • {}/{}+ 个文件 • 正在计数…"
+
+msgid "{}d {}h"
+msgstr "{}天 {}小时"
+
+msgid "{}h {}m"
+msgstr "{}时 {}分"
+
+msgid "{}m {}s"
+msgstr "{}分 {}秒"
+
+msgid "{}s"
+msgstr "{}秒"
+
+msgid "“{}” already exists in the destination.\n\nSource: {}\nDestination: {}"
+msgstr "目标中已存在“{}”。\n\n源：{}\n目标：{}"
+
+msgid "“{}” is {}. Large files can be slow to open and edit."
+msgstr "“{}” 大小为 {}。大文件打开和编辑可能很慢。"
+
+msgid "file"
+msgid_plural "files"
+msgstr[0] "个文件"
+
+msgid "folder"
+msgid_plural "folders"
+msgstr[0] "个文件夹"
+
+msgid "item"
+msgid_plural "items"
+msgstr[0] "个项目"

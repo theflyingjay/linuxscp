@@ -67,13 +67,13 @@ impl SiteForm {
 
         // --- Connection group ---
         let conn_group = adw::PreferencesGroup::builder()
-            .title(&tr!("Connection"))
+            .title(tr!("Connection"))
             .build();
-        let name_row = adw::EntryRow::builder().title(&tr!("Name")).build();
-        let host_row = adw::EntryRow::builder().title(&tr!("Host")).build();
-        let user_row = adw::EntryRow::builder().title(&tr!("Username")).build();
+        let name_row = adw::EntryRow::builder().title(tr!("Name")).build();
+        let host_row = adw::EntryRow::builder().title(tr!("Host")).build();
+        let user_row = adw::EntryRow::builder().title(tr!("Username")).build();
         let port_row = adw::EntryRow::builder()
-            .title(&tr!("Port (blank = 22)"))
+            .title(tr!("Port (blank = 22)"))
             .build();
         conn_group.add(&name_row);
         conn_group.add(&host_row);
@@ -83,24 +83,24 @@ impl SiteForm {
 
         // --- Authentication group ---
         let auth_group = adw::PreferencesGroup::builder()
-            .title(&tr!("Authentication"))
+            .title(tr!("Authentication"))
             .build();
         let auth_labels: Vec<String> = AuthMethod::ALL.iter().map(AuthMethod::label).collect();
         let auth_model =
             gtk::StringList::new(&auth_labels.iter().map(String::as_str).collect::<Vec<_>>());
         let auth_row = adw::ComboRow::builder()
-            .title(&tr!("Method"))
+            .title(tr!("Method"))
             .model(&auth_model)
             .build();
         auth_group.add(&auth_row);
 
         // Key file chooser (visible for Key auth).
         let key_row = adw::ActionRow::builder()
-            .title(&tr!("Key file"))
-            .subtitle(&tr!("None selected"))
+            .title(tr!("Key file"))
+            .subtitle(tr!("None selected"))
             .build();
         let convert_button = gtk::Button::builder()
-            .label(&tr!("Convert…"))
+            .label(tr!("Convert…"))
             .valign(gtk::Align::Center)
             .visible(false)
             .tooltip_text(
@@ -119,14 +119,14 @@ impl SiteForm {
 
         // Secret entry (password, or key passphrase).
         let secret_row = adw::PasswordEntryRow::builder()
-            .title(&tr!("Password"))
+            .title(tr!("Password"))
             .build();
         auth_group.add(&secret_row);
         root.append(&auth_group);
 
         // --- Session group ---
         let session_group = adw::PreferencesGroup::builder()
-            .title(&tr!("Session"))
+            .title(tr!("Session"))
             .build();
         let elevation_labels: Vec<String> = Elevation::ALL.iter().map(Elevation::label).collect();
         let elevation_model = gtk::StringList::new(
@@ -136,11 +136,11 @@ impl SiteForm {
                 .collect::<Vec<_>>(),
         );
         let elevation_row = adw::ComboRow::builder()
-            .title(&tr!("Login as"))
+            .title(tr!("Login as"))
             .model(&elevation_model)
             .build();
         let dir_row = adw::EntryRow::builder()
-            .title(&tr!("Remote directory (optional)"))
+            .title(tr!("Remote directory (optional)"))
             .build();
         session_group.add(&elevation_row);
         session_group.add(&dir_row);
@@ -195,7 +195,7 @@ impl SiteForm {
                     return;
                 }
                 let dialog = gtk::FileDialog::builder()
-                    .title(&tr!("Select private key"))
+                    .title(tr!("Select private key"))
                     .build();
                 if let Some(dir) = dirs::home_dir() {
                     let ssh_dir = dir.join(".ssh");

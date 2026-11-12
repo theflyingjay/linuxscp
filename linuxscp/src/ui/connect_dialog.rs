@@ -57,7 +57,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
     // Wide, WinSCP-style: the two list columns are fixed, so every extra
     // pixel goes to the details form on the right.
     let dialog = adw::Dialog::builder()
-        .title(&tr!("Site Manager"))
+        .title(tr!("Site Manager"))
         .content_width(1240)
         .content_height(690)
         .child(&toolbar)
@@ -84,7 +84,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
 
     // --- Top strip: one search box filtering hosts, folders, and sites ---
     let search = gtk::SearchEntry::builder()
-        .placeholder_text(&tr!("Search hosts, sites, and folders"))
+        .placeholder_text(tr!("Search hosts, sites, and folders"))
         .hexpand(true)
         .build();
     search.set_margin_top(10);
@@ -295,8 +295,8 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
 
     let placeholder = adw::StatusPage::builder()
         .icon_name("network-server-symbolic")
-        .title(&tr!("No Site Selected"))
-        .description(&tr!(
+        .title(tr!("No Site Selected"))
+        .description(tr!(
             "Select a saved site, or create a new one to edit it here."
         ))
         .build();

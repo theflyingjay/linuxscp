@@ -60,7 +60,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
     toolbar.set_content(Some(&content_box));
 
     let dialog = adw::Dialog::builder()
-        .title(&tr!("Edit SSH Config"))
+        .title(tr!("Edit SSH Config"))
         .content_width(720)
         .content_height(560)
         .child(&toolbar)
@@ -84,7 +84,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
                 }
                 Err(err) => {
                     let alert = adw::AlertDialog::builder()
-                        .heading(&tr!("Could Not Save"))
+                        .heading(tr!("Could Not Save"))
                         .body(format!("{err}"))
                         .build();
                     alert.add_response("ok", &tr!("OK"));

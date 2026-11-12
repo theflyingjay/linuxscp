@@ -627,8 +627,8 @@ impl App {
 
     fn show_preferences(self: &Rc<Self>) {
         let group = adw::PreferencesGroup::builder()
-            .title(&tr!("Notifications"))
-            .description(&tr!("How LinuxSCP tells you a transfer has finished"))
+            .title(tr!("Notifications"))
+            .description(tr!("How LinuxSCP tells you a transfer has finished"))
             .build();
 
         let (sound_on, desktop_on) = {
@@ -637,13 +637,13 @@ impl App {
         };
 
         let sound_row = adw::SwitchRow::builder()
-            .title(&tr!("Play sound on completion"))
-            .subtitle(&tr!("Plays a success chime when a transfer finishes"))
+            .title(tr!("Play sound on completion"))
+            .subtitle(tr!("Plays a success chime when a transfer finishes"))
             .active(sound_on)
             .build();
         let desktop_row = adw::SwitchRow::builder()
-            .title(&tr!("Desktop notifications"))
-            .subtitle(&tr!("Show a GNOME notification when a transfer finishes"))
+            .title(tr!("Desktop notifications"))
+            .subtitle(tr!("Show a GNOME notification when a transfer finishes"))
             .active(desktop_on)
             .build();
 
@@ -672,12 +672,12 @@ impl App {
         group.add(&desktop_row);
 
         let tabs_group = adw::PreferencesGroup::builder()
-            .title(&tr!("Tabs"))
-            .description(&tr!("How connected tabs are labeled"))
+            .title(tr!("Tabs"))
+            .description(tr!("How connected tabs are labeled"))
             .build();
         let tab_name_row = adw::SwitchRow::builder()
-            .title(&tr!("Show site name on tabs"))
-            .subtitle(&tr!(
+            .title(tr!("Show site name on tabs"))
+            .subtitle(tr!(
                 "Show the saved site's name on the tab instead of its host"
             ))
             .active(self.settings.borrow().tab_shows_name)
@@ -732,7 +732,7 @@ impl App {
         list.add_css_class("boxed-list");
         let group = adw::PreferencesGroup::new();
         for (keys, desc) in shortcuts {
-            let row = adw::ActionRow::builder().title(&tr!(*desc)).build();
+            let row = adw::ActionRow::builder().title(tr!(*desc)).build();
             let kbd = gtk::Label::new(Some(keys));
             kbd.add_css_class("dim-label");
             kbd.add_css_class("monospace");

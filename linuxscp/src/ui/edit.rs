@@ -393,7 +393,7 @@ fn confirm_large(
     on_confirm: impl Fn(FsEntry) + 'static,
 ) {
     let dialog = adw::AlertDialog::builder()
-        .heading(&tr!("Open Large File?"))
+        .heading(tr!("Open Large File?"))
         .body(tr!(
             "\u{201c}{}\u{201d} is {}. Large files can be slow to open and edit.",
             entry.name,
