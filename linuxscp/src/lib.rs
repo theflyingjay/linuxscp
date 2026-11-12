@@ -2,6 +2,7 @@
 //! The GTK UI lives in the binary; everything here is UI-free and testable.
 
 pub mod fsops;
+pub mod i18n;
 pub mod runtime;
 pub mod secrets;
 pub mod sessions;

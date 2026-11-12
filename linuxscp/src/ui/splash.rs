@@ -1,6 +1,7 @@
 //! Borderless splash window shown briefly while the app starts, WinSCP-style.
 
 use adw::prelude::*;
+use linuxscp::tr;
 
 const DEFAULT_DURATION_MS: u64 = 1200;
 
@@ -28,11 +29,14 @@ pub fn show(app: &adw::Application) -> gtk::Window {
     title.set_margin_top(12);
     content.append(&title);
 
-    let subtitle = gtk::Label::new(Some("Commander-style SFTP client for GNOME"));
+    let subtitle = gtk::Label::new(Some(&tr!("Commander-style SFTP client for GNOME")));
     subtitle.add_css_class("dim-label");
     content.append(&subtitle);
 
-    let version = gtk::Label::new(Some(concat!("Version ", env!("CARGO_PKG_VERSION"))));
+    let version = gtk::Label::new(Some(&tr!(
+        "Version {}",
+        env!("CARGO_PKG_VERSION")
+    )));
     version.add_css_class("caption");
     version.add_css_class("dim-label");
     content.append(&version);
