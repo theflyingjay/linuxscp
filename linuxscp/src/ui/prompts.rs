@@ -109,7 +109,7 @@ fn show_yes_no(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
 }
 
 pub fn show_conflict(parent: &impl IsA<gtk::Widget>, request: ConflictRequest) {
-    let body = format!(
+    let body = tr!(
         "\u{201c}{}\u{201d} already exists in the destination.\n\nSource: {}\nDestination: {}",
         request.file_name,
         super::entry_object::format_size(request.src_size),
@@ -121,14 +121,14 @@ pub fn show_conflict(parent: &impl IsA<gtk::Widget>, request: ConflictRequest) {
         .close_response("cancel")
         .default_response("overwrite")
         .build();
-    dialog.add_response("overwrite", "Overwrite");
-    dialog.add_response("overwrite_all", "Overwrite All");
+    dialog.add_response("overwrite", &tr!("Overwrite"));
+    dialog.add_response("overwrite_all", &tr!("Overwrite All"));
     if request.dst_size < request.src_size {
-        dialog.add_response("resume", "Resume");
+        dialog.add_response("resume", &tr!("Resume"));
     }
-    dialog.add_response("skip", "Skip");
-    dialog.add_response("skip_all", "Skip All");
-    dialog.add_response("cancel", "Cancel Transfer");
+    dialog.add_response("skip", &tr!("Skip"));
+    dialog.add_response("skip_all", &tr!("Skip All"));
+    dialog.add_response("cancel", &tr!("Cancel Transfer"));
     dialog.set_response_appearance("overwrite", adw::ResponseAppearance::Destructive);
     dialog.set_response_appearance("overwrite_all", adw::ResponseAppearance::Destructive);
     dialog.set_response_appearance("cancel", adw::ResponseAppearance::Default);
@@ -164,7 +164,7 @@ pub fn ask_text(
         .close_response("cancel")
         .default_response("ok")
         .build();
-    dialog.add_response("cancel", "Cancel");
+    dialog.add_response("cancel", &tr!("Cancel"));
     dialog.add_response("ok", accept_label);
     dialog.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
 
@@ -202,7 +202,7 @@ pub fn confirm(
         .close_response("cancel")
         .default_response("cancel")
         .build();
-    dialog.add_response("cancel", "Cancel");
+    dialog.add_response("cancel", &tr!("Cancel"));
     dialog.add_response("do", action_label);
     dialog.set_response_appearance("do", adw::ResponseAppearance::Destructive);
     dialog.connect_response(None, move |dialog, response| {

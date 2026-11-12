@@ -644,14 +644,14 @@ impl Pane {
         let total = self.selection.n_items().saturating_sub(skip);
         let selected_entries = self.selected_entries();
         let selected = selected_entries.len();
-        let mut text = format!("{total} items");
+        let mut text = tr!("{} items", total);
         if selected > 0 {
             let bytes: u64 = selected_entries
                 .iter()
                 .filter(|e| !e.is_dir)
                 .map(|e| e.size)
                 .sum();
-            text = format!("{selected} of {total} selected, {}", format_size(bytes));
+            text = tr!("{} of {} selected, {}", selected, total, format_size(bytes));
         }
         self.status.set_text(&text);
     }
@@ -722,7 +722,7 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot, row_drag: &RowDra
         }
         icon.set_from_gicon(&icon_for(&entry));
     });
-    let name_col = gtk::ColumnViewColumn::new(Some("Name"), Some(name_factory));
+    let name_col = gtk::ColumnViewColumn::new(Some(&tr!("Name")), Some(name_factory));
     name_col.set_expand(true);
     name_col.set_resizable(true);
     name_col.set_sorter(Some(&entry_sorter(|a, b| {
@@ -730,7 +730,7 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot, row_drag: &RowDra
     })));
     view.append_column(&name_col);
 
-    let size_col = text_column(view, row_menu, row_drag, "Size", false, |e| {
+    let size_col = text_column(view, row_menu, row_drag, &tr!("Size"), false, |e| {
         if e.is_dir {
             String::new()
         } else {
@@ -740,13 +740,13 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot, row_drag: &RowDra
     size_col.set_sorter(Some(&entry_sorter(|a, b| a.size.cmp(&b.size))));
     view.append_column(&size_col);
 
-    let mtime_col = text_column(view, row_menu, row_drag, "Modified", false, |e| {
+    let mtime_col = text_column(view, row_menu, row_drag, &tr!("Modified"), false, |e| {
         format_mtime(e.mtime)
     });
     mtime_col.set_sorter(Some(&entry_sorter(|a, b| a.mtime.cmp(&b.mtime))));
     view.append_column(&mtime_col);
 
-    let perm_col = text_column(view, row_menu, row_drag, "Permissions", true, |e| {
+    let perm_col = text_column(view, row_menu, row_drag, &tr!("Permissions"), true, |e| {
         if is_parent_row(e) {
             String::new()
         } else {
@@ -756,7 +756,7 @@ fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot, row_drag: &RowDra
     perm_col.set_sorter(Some(&entry_sorter(|a, b| a.mode.cmp(&b.mode))));
     view.append_column(&perm_col);
 
-    let owner_col = text_column(view, row_menu, row_drag, "Owner", true, |e| {
+    let owner_col = text_column(view, row_menu, row_drag, &tr!("Owner"), true, |e| {
         match (&e.owner, &e.group) {
             (Some(o), Some(g)) => format!("{o}:{g}"),
             (Some(o), None) => o.clone(),

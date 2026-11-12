@@ -54,8 +54,8 @@ impl TabStrip {
 
         let new_session = new_session_button();
 
-        let prev = flip_button("go-previous-symbolic", "Previous session");
-        let next = flip_button("go-next-symbolic", "Next session");
+        let prev = flip_button("go-previous-symbolic", &tr!("Previous session"));
+        let next = flip_button("go-next-symbolic", &tr!("Next session"));
         let arrows = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         arrows.add_css_class("linked");
         arrows.set_margin_start(4);

@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::gio;
+use linuxscp::tr;
 use linuxscp::types::{TransferKind, TransferState};
 
 /// What feedback to give when a transfer reaches a given state, factoring in
@@ -17,7 +18,7 @@ pub struct CompletionPlan {
     pub play_sound: bool,
     pub show_desktop: bool,
     pub success: bool,
-    pub title: &'static str,
+    pub title: String,
 }
 
 pub fn completion_plan(
@@ -43,9 +44,9 @@ pub fn completion_plan(
         show_desktop: desktop_on,
         success,
         title: if success {
-            "Transfer complete"
+            tr!("Transfer complete")
         } else {
-            "Transfer failed"
+            tr!("Transfer failed")
         },
     })
 }
@@ -137,7 +138,7 @@ pub fn run_plan(notifier: &Notifier, plan: &CompletionPlan, detail: &str) {
         notifier.play_success();
     }
     if plan.show_desktop {
-        notifier.notify(plan.title, detail, plan.success);
+        notifier.notify(&plan.title, detail, plan.success);
     }
 }
 

@@ -151,7 +151,9 @@ impl EditManager {
             }
             if session.uploading.get() || session.dirty.get() || session.debounce.borrow().is_some()
             {
-                self.toast("That file is still being saved; try again when the upload finishes.");
+                self.toast(&tr!(
+                    "That file is still being saved; try again when the upload finishes."
+                ));
                 self.launch_editor(&session.local_path);
                 return;
             }
@@ -174,7 +176,7 @@ impl EditManager {
         let remote_dir = fsops::parent(&entry.path);
         let local_dir = session_dir(id, &remote_dir);
         if let Err(err) = std::fs::create_dir_all(&local_dir) {
-            self.toast(&format!("Could not create a temp folder: {err}"));
+            self.toast(&tr!("Could not create a temp folder: {}", err));
             return;
         }
         let local_path = local_dir.join(&entry.name);
@@ -258,7 +260,7 @@ impl EditManager {
         {
             Ok(monitor) => monitor,
             Err(err) => {
-                self.toast(&format!("Could not watch the temp copy: {err}"));
+                self.toast(&tr!("Could not watch the temp copy: {}", err));
                 return;
             }
         };
@@ -352,7 +354,10 @@ impl EditManager {
                 }
                 Ok(Err(err)) => {
                     session.uploading.set(false);
-                    this.toast(&format!("Could not read the saved file: {err:#}"));
+                    this.toast(&tr!(
+                        "Could not read the saved file: {}",
+                        format!("{err:#}")
+                    ));
                 }
                 Err(err) => {
                     session.uploading.set(false);
@@ -366,13 +371,13 @@ impl EditManager {
         // Always the text editor — WinSCP opens everything (even images)
         // in the editor on double-click.
         let Some(app) = gio::AppInfo::default_for_type("text/plain", false) else {
-            self.toast("No default text editor is configured");
+            self.toast(&tr!("No default text editor is configured"));
             return;
         };
         let context = gtk::prelude::WidgetExt::display(&self.window).app_launch_context();
         let file = gio::File::for_path(path);
         if let Err(err) = app.launch(&[file], Some(&context)) {
-            self.toast(&format!("Could not open the editor: {err}"));
+            self.toast(&tr!("Could not open the editor: {}", err));
         }
     }
 
@@ -389,7 +394,7 @@ fn confirm_large(
 ) {
     let dialog = adw::AlertDialog::builder()
         .heading(&tr!("Open Large File?"))
-        .body(format!(
+        .body(tr!(
             "\u{201c}{}\u{201d} is {}. Large files can be slow to open and edit.",
             entry.name,
             format_size(entry.size),
@@ -397,8 +402,8 @@ fn confirm_large(
         .close_response("cancel")
         .default_response("cancel")
         .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("open", "Open Anyway");
+    dialog.add_response("cancel", &tr!("Cancel"));
+    dialog.add_response("open", &tr!("Open Anyway"));
     dialog.set_response_appearance("open", adw::ResponseAppearance::Suggested);
     let entry = entry.clone();
     dialog.connect_response(None, move |dialog, response| {

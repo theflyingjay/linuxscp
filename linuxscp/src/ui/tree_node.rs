@@ -4,6 +4,7 @@
 
 use gtk::glib;
 use gtk::subclass::prelude::*;
+use linuxscp::tr;
 
 mod imp {
     use std::cell::{Cell, RefCell};
@@ -43,9 +44,10 @@ glib::wrapper! {
 impl TreeNode {
     pub fn folder(id: &str, name: &str, prefix: &str, site_count: usize) -> Self {
         let obj = Self::base(id, name, prefix);
-        obj.imp().subtitle.replace(match site_count {
-            1 => "1 site".to_string(),
-            n => format!("{n} sites"),
+        obj.imp().subtitle.replace(if site_count == 1 {
+            tr!("1 site")
+        } else {
+            tr!("{} sites", site_count)
         });
         obj.imp().is_folder.set(true);
         obj

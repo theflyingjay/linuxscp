@@ -15,7 +15,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
     let header = adw::HeaderBar::new();
     header.set_show_end_title_buttons(false);
     header.set_show_start_title_buttons(false);
-    let title = adw::WindowTitle::new("Edit SSH Config", &path.to_string_lossy());
+    let title = adw::WindowTitle::new(&tr!("Edit SSH Config"), &path.to_string_lossy());
     header.set_title_widget(Some(&title));
     let cancel_btn = gtk::Button::with_label(&tr!("Cancel"));
     let save_btn = gtk::Button::with_label(&tr!("Save"));
@@ -38,10 +38,10 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
         .child(&view)
         .build();
 
-    let hint = gtk::Label::new(Some(
+    let hint = gtk::Label::new(Some(&tr!(
         "Host blocks defined here appear in the host list and are used by \
          the system ssh — aliases, jump hosts, keys and all.",
-    ));
+    )));
     hint.add_css_class("caption");
     hint.add_css_class("dim-label");
     hint.set_wrap(true);
@@ -87,7 +87,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
                         .heading(&tr!("Could Not Save"))
                         .body(format!("{err}"))
                         .build();
-                    alert.add_response("ok", "OK");
+                    alert.add_response("ok", &tr!("OK"));
                     alert.present(Some(&parent));
                 }
             }

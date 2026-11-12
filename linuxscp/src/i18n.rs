@@ -67,8 +67,14 @@ pub fn format_translated(template: &str, args: &[&dyn Display]) -> String {
                 }
                 Some('}') => {
                     chars.next();
-                    if let Some(arg) = args.get(next) {
-                        let _ = write!(out, "{arg}");
+                    match args.get(next) {
+                        Some(arg) => {
+                            let _ = write!(out, "{arg}");
+                        }
+                        // More placeholders than arguments: keep the
+                        // placeholder visible instead of silently dropping
+                        // text.
+                        None => out.push_str("{}"),
                     }
                     next += 1;
                 }

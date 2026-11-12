@@ -84,7 +84,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
 
     // --- Top strip: one search box filtering hosts, folders, and sites ---
     let search = gtk::SearchEntry::builder()
-        .placeholder_text("Search hosts, sites, and folders")
+        .placeholder_text(&tr!("Search hosts, sites, and folders"))
         .hexpand(true)
         .build();
     search.set_margin_top(10);
@@ -534,7 +534,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
             }
             *draft_parent.borrow_mut() = current_parent.borrow().clone();
             form.load(None);
-            let node = TreeNode::site("", "New site", "", "");
+            let node = TreeNode::site("", &tr!("New site"), "", "");
             syncing.set(true);
             tree_store.insert(0, &node);
             selection.set_selected(0);

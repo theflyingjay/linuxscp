@@ -32,7 +32,7 @@ pub fn show(
                 .heading(&tr!("Cannot Import Key"))
                 .body(message)
                 .build();
-            alert.add_response("ok", "OK");
+            alert.add_response("ok", &tr!("OK"));
             alert.present(Some(parent));
             return;
         }
@@ -46,7 +46,10 @@ pub fn show(
     let header = adw::HeaderBar::new();
     header.set_show_end_title_buttons(false);
     header.set_show_start_title_buttons(false);
-    header.set_title_widget(Some(&adw::WindowTitle::new("Import PuTTY Key", &file_name)));
+    header.set_title_widget(Some(&adw::WindowTitle::new(
+        &tr!("Import PuTTY Key"),
+        &file_name,
+    )));
     let cancel_btn = gtk::Button::with_label(&tr!("Cancel"));
     let import_btn = gtk::Button::with_label(&tr!("Import"));
     import_btn.add_css_class("suggested-action");
@@ -64,20 +67,20 @@ pub fn show(
         row.add_css_class("property");
         key_group.add(&row);
     };
-    add_fact("Type", &info.key_type());
-    add_fact("Fingerprint", &info.fingerprint());
+    add_fact(&tr!("Type"), &info.key_type());
+    add_fact(&tr!("Fingerprint"), &info.fingerprint());
     if !info.comment.is_empty() {
-        add_fact("Comment", &info.comment);
+        add_fact(&tr!("Comment"), &info.comment);
     }
     add_fact(
-        "Format",
-        &format!(
+        &tr!("Format"),
+        &tr!(
             "PuTTY PPK version {}{}",
             info.version,
             if info.encrypted {
-                ", encrypted"
+                tr!(", encrypted")
             } else {
-                ", not encrypted"
+                tr!(", not encrypted")
             }
         ),
     );
@@ -86,7 +89,7 @@ pub fn show(
     let ssh_dir = key_import::ssh_dir().unwrap_or_else(|| PathBuf::from("~/.ssh"));
     let convert_group = adw::PreferencesGroup::builder()
         .title(&tr!("Convert"))
-        .description(format!(
+        .description(tr!(
             "OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. \
              A copy in OpenSSH format is written to {} and selected for this site; \
              the .ppk file is not changed.",
@@ -105,7 +108,9 @@ pub fn show(
     convert_group.add(&name_row);
     let protect_row = adw::SwitchRow::builder()
         .title(&tr!("Protect the converted key with the same passphrase"))
-        .subtitle("You can let LinuxSCP remember the passphrase for this site")
+        .subtitle(&tr!(
+            "You can let LinuxSCP remember the passphrase for this site"
+        ))
         .active(true)
         .visible(info.encrypted)
         .build();
@@ -263,7 +268,7 @@ pub fn show(
 fn read_info(source: &std::path::Path) -> Result<ppk::PpkInfo, String> {
     use std::io::Read;
     let file = std::fs::File::open(source)
-        .map_err(|err| format!("Could not read {}: {err}", source.display()))?;
+        .map_err(|err| tr!("Could not read {}: {}", source.display(), err))?;
     let mut bytes = Vec::new();
     file.take(MAX_FILE_LEN as u64 + 1)
         .read_to_end(&mut bytes)
