@@ -258,8 +258,11 @@ impl SiteForm {
     /// Record the chosen key file and flag it if it is a PuTTY key.
     fn set_key_path(&self, path: Option<String>) {
         let path = path.filter(|p| !p.is_empty());
-        self.key_row
-            .set_subtitle(path.as_deref().unwrap_or("None selected"));
+        let subtitle = path
+            .as_deref()
+            .map(str::to_string)
+            .unwrap_or_else(|| tr!("None selected"));
+        self.key_row.set_subtitle(&subtitle);
         self.convert_button
             .set_visible(path.as_deref().is_some_and(looks_like_ppk));
         *self.key_path.borrow_mut() = path;
@@ -332,7 +335,7 @@ impl SiteForm {
         if !host.is_empty() {
             return host;
         }
-        "New site".into()
+        tr!("New site")
     }
 
     /// Live "user@host:port" preview from the current field values.

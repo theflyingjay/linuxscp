@@ -98,6 +98,14 @@ msgstr ""
 msgid "Cannot copy a folder into itself: {}"
 msgstr ""
 
+#: transfers.rs
+msgid "Change {}"
+msgstr ""
+
+#: transfers.rs
+msgid "Change {} items"
+msgstr ""
+
 #: queue.rs
 msgid "Changed {}"
 msgstr ""
@@ -198,6 +206,14 @@ msgstr ""
 msgid "Copy to other pane"
 msgstr ""
 
+#: transfers.rs
+msgid "Copy {}"
+msgstr ""
+
+#: transfers.rs
+msgid "Copy {} items"
+msgstr ""
+
 #: config_editor.rs
 msgid "Could Not Save"
 msgstr ""
@@ -264,6 +280,14 @@ msgstr ""
 
 #: connect_dialog.rs
 msgid "Delete this saved site and its stored password?"
+msgstr ""
+
+#: transfers.rs
+msgid "Delete {}"
+msgstr ""
+
+#: transfers.rs
+msgid "Delete {} items"
 msgstr ""
 
 #: app.rs
@@ -422,6 +446,14 @@ msgstr ""
 msgid "Move to other pane"
 msgstr ""
 
+#: transfers.rs
+msgid "Move {}"
+msgstr ""
+
+#: transfers.rs
+msgid "Move {} items"
+msgstr ""
+
 #: app.rs
 msgid "My Server"
 msgstr ""
@@ -466,7 +498,7 @@ msgstr ""
 msgid "New folder (F7)"
 msgstr ""
 
-#: connect_dialog.rs
+#: connect_dialog.rs, site_editor.rs
 msgid "New site"
 msgstr ""
 
@@ -528,6 +560,10 @@ msgstr ""
 
 #: app.rs
 msgid "Open Terminal Here"
+msgstr ""
+
+#: tab_strip.rs
+msgid "Open a new session tab"
 msgstr ""
 
 #: app.rs
@@ -866,6 +902,10 @@ msgstr ""
 msgid "The connection the files were copied from is closed"
 msgstr ""
 
+#: key_import.rs
+msgid "The file is too large to be a key file."
+msgstr ""
+
 #: app.rs
 msgid "Toggle hidden files"
 msgstr ""
@@ -884,6 +924,14 @@ msgstr ""
 
 #: key_import.rs, properties.rs
 msgid "Type"
+msgstr ""
+
+#: connect.rs
+msgid "UI closed"
+msgstr ""
+
+#: askpass.rs
+msgid "UI event channel closed"
 msgstr ""
 
 #: properties.rs
@@ -914,12 +962,56 @@ msgstr ""
 msgid "a key named “{}” already exists in {}"
 msgstr ""
 
+#: askpass.rs
+msgid "askpass prompt too large"
+msgstr ""
+
+#: connect.rs
+msgid "authentication failed (too many attempts)"
+msgstr ""
+
+#: askpass.rs
+msgid "binding askpass socket"
+msgstr ""
+
+#: fsops.rs, transfers.rs
+msgid "cancelled"
+msgstr ""
+
 #: ppk.rs
 msgid "certificate keys cannot be imported; convert the plain key instead"
 msgstr ""
 
+#: fsops.rs
+msgid "changing owner of {}"
+msgstr ""
+
+#: fsops.rs
+msgid "changing permissions of {}"
+msgstr ""
+
+#: connect.rs
+msgid "connection cancelled"
+msgstr ""
+
+#: connect.rs
+msgid "connection closed during elevation"
+msgstr ""
+
+#: transfers.rs
+msgid "copy stopped"
+msgstr ""
+
+#: transfers.rs
+msgid "copy worker crashed"
+msgstr ""
+
 #: app.rs
 msgid "copy — paste somewhere"
+msgstr ""
+
+#: transfers.rs
+msgid "copying {}"
 msgstr ""
 
 #: key_import.rs
@@ -938,12 +1030,128 @@ msgstr ""
 msgid "could not write {}: {}"
 msgstr ""
 
+#: askpass.rs
+msgid "creating askpass socket dir"
+msgstr ""
+
+#: transfers.rs
+msgid "creating directory {}"
+msgstr ""
+
+#: transfers.rs
+msgid "creating remote {}"
+msgstr ""
+
+#: fsops.rs, transfers.rs
+msgid "creating {}"
+msgstr ""
+
+#: fsops.rs
+msgid "deleting {}"
+msgstr ""
+
+#: connect.rs
+msgid "establishing SFTP session"
+msgstr ""
+
+#: transfers.rs
+msgid "finalizing file"
+msgstr ""
+
+#: fsops.rs
+msgid "id maps unavailable"
+msgstr ""
+
+#: fsops.rs, transfers.rs
+msgid "listing {}"
+msgstr ""
+
+#: askpass.rs
+msgid "locating linuxscp-askpass helper"
+msgstr ""
+
 #: app.rs
 msgid "move — paste somewhere"
 msgstr ""
 
+#: connect.rs
+msgid "no response from the SFTP server on {} after {} seconds"
+msgstr ""
+
 #: ppk.rs
 msgid "not a PuTTY private key file"
+msgstr ""
+
+#: fsops.rs
+msgid "not found"
+msgstr ""
+
+#: transfers.rs
+msgid "opening remote {}"
+msgstr ""
+
+#: transfers.rs
+msgid "opening {}"
+msgstr ""
+
+#: transfers.rs
+msgid "read failed"
+msgstr ""
+
+#: connect.rs
+msgid "reading ssh output"
+msgstr ""
+
+#: fsops.rs
+msgid "reading {}"
+msgstr ""
+
+#: fsops.rs
+msgid "removing directory {}"
+msgstr ""
+
+#: transfers.rs
+msgid "removing source {}"
+msgstr ""
+
+#: transfers.rs
+msgid "renaming completed file into place"
+msgstr ""
+
+#: connect.rs
+msgid "resolving remote home directory"
+msgstr ""
+
+#: connect.rs
+msgid "root password on {}"
+msgstr ""
+
+#: fsops.rs
+msgid "server did not report current owner ids for {}"
+msgstr ""
+
+#: fsops.rs, transfers.rs
+msgid "session is closed"
+msgstr ""
+
+#: connect.rs
+msgid "spawning ssh (is OpenSSH installed?)"
+msgstr ""
+
+#: connect.rs
+msgid "ssh exited ({})"
+msgstr ""
+
+#: connect.rs
+msgid "ssh exited before the SFTP session started ({})"
+msgstr ""
+
+#: connect.rs
+msgid "ssh exited during elevation ({})"
+msgstr ""
+
+#: connect.rs
+msgid "sudo password on {}"
 msgstr ""
 
 #: key_import.rs
@@ -982,8 +1190,32 @@ msgstr ""
 msgid "this is a DSA key; OpenSSH dropped DSA support, so it cannot be used from Linux — generate a new key instead"
 msgstr ""
 
+#: connect.rs
+msgid "timed out waiting for elevation on {}"
+msgstr ""
+
+#: connect.rs
+msgid "unexpected output from remote bootstrap"
+msgstr ""
+
 #: ppk.rs
 msgid "unknown encryption type “{}”"
+msgstr ""
+
+#: fsops.rs
+msgid "unknown group “{}”"
+msgstr ""
+
+#: fsops.rs
+msgid "unknown user “{}”"
+msgstr ""
+
+#: connect.rs
+msgid "wait failed: {}"
+msgstr ""
+
+#: transfers.rs
+msgid "write failed"
 msgstr ""
 
 #: ppk.rs
@@ -1008,6 +1240,10 @@ msgstr ""
 
 #: properties.rs
 msgid "{} files"
+msgstr ""
+
+#: connect.rs
+msgid "{} is a PuTTY private key (.ppk), which OpenSSH cannot read. Open the site in the Site Manager and choose Convert… next to the key file to turn it into an OpenSSH key."
 msgstr ""
 
 #: app.rs, pane.rs

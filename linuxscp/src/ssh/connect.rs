@@ -18,6 +18,7 @@ use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio_util::sync::CancellationToken;
 
 use super::askpass::AskpassServer;
+use crate::tr;
 use crate::types::{
     AuthMethod, ConnectSpec, Elevation, Event, PromptKind, PromptRequest, SessionId,
 };
@@ -33,11 +34,12 @@ fn reject_ppk_identity(spec: &ConnectSpec) -> anyhow::Result<()> {
         return Ok(());
     };
     if super::ppk::is_ppk_file(std::path::Path::new(path)) {
-        anyhow::bail!(
-            "{path} is a PuTTY private key (.ppk), which OpenSSH cannot read. \
+        anyhow::bail!(tr!(
+            "{} is a PuTTY private key (.ppk), which OpenSSH cannot read. \
              Open the site in the Site Manager and choose Convert… next to the key \
-             file to turn it into an OpenSSH key."
-        );
+             file to turn it into an OpenSSH key.",
+            path
+        ));
     }
     Ok(())
 }
@@ -107,7 +109,7 @@ pub async fn connect(
 
     let mut child = cmd
         .spawn()
-        .context("spawning ssh (is OpenSSH installed?)")?;
+        .context(tr!("spawning ssh (is OpenSSH installed?)"))?;
     let stdin = child.stdin.take().expect("piped stdin");
     let mut stdout = child.stdout.take().expect("piped stdout");
     let mut stderr = StderrTail::spawn(child.stderr.take().expect("piped stderr"));
@@ -171,19 +173,21 @@ pub async fn connect(
             // LoginGraceTime, unreachable host. Its stderr says which.
             let detail = stderr.settled().await;
             if aborted.is_cancelled() {
-                anyhow::bail!("connection cancelled");
+                anyhow::bail!(tr!("connection cancelled"));
             }
             if detail.is_empty() {
                 anyhow::bail!(
-                    "ssh exited before the SFTP session started ({})",
-                    describe_exit(status)
+                    tr!(
+                        "ssh exited before the SFTP session started ({})",
+                        describe_exit(status)
+                    )
                 );
             }
             anyhow::bail!(detail);
         }
         _ = aborted.cancelled() => {
             let _ = child.kill().await;
-            anyhow::bail!("connection cancelled");
+            anyhow::bail!(tr!("connection cancelled"));
         }
     };
     sftp.set_timeout(REQUEST_TIMEOUT_SECS);
@@ -196,7 +200,7 @@ pub async fn connect(
         None => sftp
             .canonicalize(".")
             .await
-            .context("resolving remote home directory")?,
+            .context(tr!("resolving remote home directory"))?,
     };
 
     // Watch the child: report unexpected death, kill on cancel.
@@ -211,7 +215,7 @@ pub async fn connect(
                     if !cancel.is_cancelled() {
                         let detail = stderr.settled().await;
                         let reason = if detail.is_empty() {
-                            format!("ssh exited ({})", describe_exit(status))
+                            tr!("ssh exited ({})", describe_exit(status))
                         } else {
                             detail
                         };
@@ -326,17 +330,19 @@ pub(crate) fn shell_quote(s: &str) -> String {
 /// Turn a failed handshake into something a user can act on.
 fn handshake_error(err: russh_sftp::client::error::Error, host: &str) -> anyhow::Error {
     match err {
-        russh_sftp::client::error::Error::Timeout => anyhow::anyhow!(
-            "no response from the SFTP server on {host} after {HANDSHAKE_TIMEOUT_SECS} seconds"
-        ),
-        err => anyhow::Error::new(err).context("establishing SFTP session"),
+        russh_sftp::client::error::Error::Timeout => anyhow::anyhow!(tr!(
+            "no response from the SFTP server on {} after {} seconds",
+            host,
+            HANDSHAKE_TIMEOUT_SECS
+        )),
+        err => anyhow::Error::new(err).context(tr!("establishing SFTP session")),
     }
 }
 
 fn describe_exit(status: std::io::Result<ExitStatus>) -> String {
     match status {
         Ok(status) => status.to_string(),
-        Err(err) => format!("wait failed: {err}"),
+        Err(err) => tr!("wait failed: {}", err),
     }
 }
 
@@ -425,11 +431,11 @@ async fn drive_elevation(
         if wants_password {
             asked += 1;
             if asked > 3 {
-                anyhow::bail!("authentication failed (too many attempts)");
+                anyhow::bail!(tr!("authentication failed (too many attempts)"));
             }
             let title = match spec.elevation {
-                Elevation::Sudo => format!("sudo password on {}", spec.host),
-                _ => format!("root password on {}", spec.host),
+                Elevation::Sudo => tr!("sudo password on {}", spec.host),
+                _ => tr!("root password on {}", spec.host),
             };
             let (tx, rx) = tokio::sync::oneshot::channel();
             events
@@ -440,9 +446,9 @@ async fn drive_elevation(
                 }))
                 .await
                 .ok()
-                .context("UI closed")?;
+                .context(tr!("UI closed"))?;
             let Some(password) = rx.await.unwrap_or(None) else {
-                anyhow::bail!("connection cancelled");
+                anyhow::bail!(tr!("connection cancelled"));
             };
             stdin.write_all(password.as_bytes()).await?;
             stdin.write_all(b"\n").await?;
@@ -452,26 +458,26 @@ async fn drive_elevation(
 
         let mut chunk = [0u8; 4096];
         let n = tokio::select! {
-            n = stdout.read(&mut chunk) => n.context("reading ssh output")?,
+            n = stdout.read(&mut chunk) => n.context(tr!("reading ssh output"))?,
             _ = tokio::time::sleep_until(deadline) => {
-                anyhow::bail!("timed out waiting for elevation on {}", spec.host)
+                anyhow::bail!(tr!("timed out waiting for elevation on {}", spec.host))
             }
             status = child.wait() => {
                 if aborted.is_cancelled() {
-                    anyhow::bail!("connection cancelled");
+                    anyhow::bail!(tr!("connection cancelled"));
                 }
-                anyhow::bail!("ssh exited during elevation ({})", describe_exit(status));
+                anyhow::bail!(tr!("ssh exited during elevation ({})", describe_exit(status)));
             }
             _ = aborted.cancelled() => {
-                anyhow::bail!("connection cancelled");
+                anyhow::bail!(tr!("connection cancelled"));
             }
         };
         if n == 0 {
-            anyhow::bail!("connection closed during elevation");
+            anyhow::bail!(tr!("connection closed during elevation"));
         }
         buf.extend_from_slice(&chunk[..n]);
         if buf.len() > 64 * 1024 {
-            anyhow::bail!("unexpected output from remote bootstrap");
+            anyhow::bail!(tr!("unexpected output from remote bootstrap"));
         }
     }
 }

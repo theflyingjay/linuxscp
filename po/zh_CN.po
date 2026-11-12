@@ -822,3 +822,185 @@ msgstr "选择路径中建议的文件夹（回车打开）"
 msgid "Open terminal here"
 msgstr "在此打开终端"
 
+
+# ---- Core transport / filesystem error messages ----
+msgid "Change {}"
+msgstr "更改 {}"
+
+msgid "Change {} items"
+msgstr "更改 {} 个项目"
+
+msgid "Copy {}"
+msgstr "复制 {}"
+
+msgid "Copy {} items"
+msgstr "复制 {} 个项目"
+
+msgid "Delete {}"
+msgstr "删除 {}"
+
+msgid "Delete {} items"
+msgstr "删除 {} 个项目"
+
+msgid "Move {}"
+msgstr "移动 {}"
+
+msgid "Move {} items"
+msgstr "移动 {} 个项目"
+
+msgid "Open a new session tab"
+msgstr "打开新的会话标签页"
+
+msgid "The file is too large to be a key file."
+msgstr "该文件太大，不可能是密钥文件。"
+
+msgid "UI closed"
+msgstr "界面已关闭"
+
+msgid "UI event channel closed"
+msgstr "界面事件通道已关闭"
+
+msgid "askpass prompt too large"
+msgstr "askpass 提示过大"
+
+msgid "authentication failed (too many attempts)"
+msgstr "认证失败（尝试次数过多）"
+
+msgid "binding askpass socket"
+msgstr "绑定 askpass 套接字"
+
+msgid "cancelled"
+msgstr "已取消"
+
+msgid "changing owner of {}"
+msgstr "更改 {} 的所有者"
+
+msgid "changing permissions of {}"
+msgstr "更改 {} 的权限"
+
+msgid "connection cancelled"
+msgstr "连接已取消"
+
+msgid "connection closed during elevation"
+msgstr "提权过程中连接已关闭"
+
+msgid "copy stopped"
+msgstr "复制已停止"
+
+msgid "copy worker crashed"
+msgstr "复制工作线程崩溃"
+
+msgid "copying {}"
+msgstr "正在复制 {}"
+
+msgid "creating askpass socket dir"
+msgstr "创建 askpass 套接字目录"
+
+msgid "creating directory {}"
+msgstr "创建目录 {}"
+
+msgid "creating remote {}"
+msgstr "创建远程 {}"
+
+msgid "creating {}"
+msgstr "创建 {}"
+
+msgid "deleting {}"
+msgstr "正在删除 {}"
+
+msgid "establishing SFTP session"
+msgstr "建立 SFTP 会话"
+
+msgid "finalizing file"
+msgstr "完成文件写入"
+
+msgid "id maps unavailable"
+msgstr "ID 映射不可用"
+
+msgid "listing {}"
+msgstr "列出 {}"
+
+msgid "locating linuxscp-askpass helper"
+msgstr "定位 linuxscp-askpass 辅助程序"
+
+msgid "no response from the SFTP server on {} after {} seconds"
+msgstr "{} 上的 SFTP 服务器在 {} 秒内无响应"
+
+msgid "not found"
+msgstr "未找到"
+
+msgid "opening remote {}"
+msgstr "打开远程 {}"
+
+msgid "opening {}"
+msgstr "打开 {}"
+
+msgid "read failed"
+msgstr "读取失败"
+
+msgid "reading ssh output"
+msgstr "读取 ssh 输出"
+
+msgid "reading {}"
+msgstr "正在读取 {}"
+
+msgid "removing directory {}"
+msgstr "正在删除目录 {}"
+
+msgid "removing source {}"
+msgstr "正在移除源文件 {}"
+
+msgid "renaming completed file into place"
+msgstr "将完成的文件重命名到位"
+
+msgid "resolving remote home directory"
+msgstr "解析远程主目录"
+
+msgid "root password on {}"
+msgstr "{} 的 root 密码"
+
+msgid "server did not report current owner ids for {}"
+msgstr "服务器未报告 {} 的当前所有者 ID"
+
+msgid "session is closed"
+msgstr "会话已关闭"
+
+msgid "spawning ssh (is OpenSSH installed?)"
+msgstr "启动 ssh（是否已安装 OpenSSH？）"
+
+msgid "ssh exited ({})"
+msgstr "ssh 已退出（{}）"
+
+msgid "ssh exited before the SFTP session started ({})"
+msgstr "ssh 在 SFTP 会话启动前退出（{}）"
+
+msgid "ssh exited during elevation ({})"
+msgstr "ssh 在提权过程中退出（{}）"
+
+msgid "sudo password on {}"
+msgstr "{} 的 sudo 密码"
+
+msgid "timed out waiting for elevation on {}"
+msgstr "等待 {} 提权超时"
+
+msgid "unexpected output from remote bootstrap"
+msgstr "远程引导程序输出异常"
+
+msgid "unknown group “{}”"
+msgstr "未知的所属组“{}”"
+
+msgid "unknown user “{}”"
+msgstr "未知用户“{}”"
+
+msgid "wait failed: {}"
+msgstr "等待失败：{}"
+
+msgid "write failed"
+msgstr "写入失败"
+
+msgid "{} is a PuTTY private key (.ppk), which OpenSSH cannot read. Open the site in the Site Manager and choose Convert… next to the key file to turn it into an OpenSSH key."
+msgstr "{} 是 PuTTY 私钥（.ppk），OpenSSH 无法读取。请在站点管理器中打开该站点，点击密钥文件旁的“转换…”将其转换为 OpenSSH 密钥。"
+
+msgid "“{}” keys cannot be converted"
+msgstr "“{}” 密钥无法转换"
+

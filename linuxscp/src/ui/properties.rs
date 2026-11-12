@@ -99,8 +99,8 @@ pub fn show(
         heading = tr!("{} Items", entries.len());
         add_info(&tr!("Location"), &fsops::parent(&entries[0].path));
         if has_dir {
-            contents_value = Some(add_info("Contents", "Not calculated"));
-            size_value = Some(add_info("Size", "Not calculated"));
+            contents_value = Some(add_info(&tr!("Contents"), &tr!("Not calculated")));
+            size_value = Some(add_info(&tr!("Size"), &tr!("Not calculated")));
         } else {
             // All plain files: the listing already knows the answer.
             add_info(&tr!("Contents"), &tr!("{} files", entries.len()));
@@ -109,7 +109,7 @@ pub fn show(
                 &exact_size(entries.iter().map(|e| e.size).sum::<u64>()),
             );
         }
-        add_info("Stored on", &where_label);
+        add_info(&tr!("Stored on"), &where_label);
     }
 
     // "Calculate" fills the directory totals on demand; it rides beside the

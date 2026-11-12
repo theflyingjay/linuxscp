@@ -201,7 +201,7 @@ fn new_session_button() -> gtk::Button {
     content.append(&gtk::Label::new(Some(&tr!("New Session"))));
     let button = gtk::Button::builder()
         .child(&content)
-        .tooltip_text("Open a new session tab")
+        .tooltip_text(tr!("Open a new session tab"))
         .build();
     button.add_css_class("flat");
     button.add_css_class("new-session-tab");

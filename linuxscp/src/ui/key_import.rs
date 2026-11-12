@@ -274,7 +274,7 @@ fn read_info(source: &std::path::Path) -> Result<ppk::PpkInfo, String> {
         .read_to_end(&mut bytes)
         .map_err(|err| tr!("Could not read {}: {}", source.display(), err))?;
     if bytes.len() > MAX_FILE_LEN {
-        return Err("The file is too large to be a key file.".into());
+        return Err(tr!("The file is too large to be a key file."));
     }
     ppk::inspect(&bytes).map_err(|err| sentence(err.to_string()))
 }
