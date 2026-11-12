@@ -626,6 +626,39 @@ impl App {
     }
 
     fn show_preferences(self: &Rc<Self>) {
+        // Interface language: gettext can only switch at startup, so the row
+        // persists the choice and asks for a restart.
+        let language_group = adw::PreferencesGroup::builder()
+            .title(tr!("Language"))
+            .description(tr!("Restart LinuxSCP to apply a new language"))
+            .build();
+        let system_default = tr!("System default");
+        let language_model =
+            gtk::StringList::new(&[system_default.as_str(), "English", "简体中文"]);
+        let selected_language = match self.settings.borrow().language.as_deref() {
+            Some("en") => 1,
+            Some("zh_CN") => 2,
+            _ => 0,
+        };
+        let language_row = adw::ComboRow::builder()
+            .title(tr!("Language"))
+            .model(&language_model)
+            .selected(selected_language)
+            .build();
+        {
+            let this = self.clone();
+            language_row.connect_selected_notify(move |row| {
+                let language = match row.selected() {
+                    1 => Some("en".to_string()),
+                    2 => Some("zh_CN".to_string()),
+                    _ => None,
+                };
+                this.with_settings_saved(|s| s.language = language);
+                this.toast(&tr!("Language saved — restart LinuxSCP to apply it"));
+            });
+        }
+        language_group.add(&language_row);
+
         let group = adw::PreferencesGroup::builder()
             .title(tr!("Notifications"))
             .description(tr!("How LinuxSCP tells you a transfer has finished"))
@@ -695,6 +728,7 @@ impl App {
         tabs_group.add(&tab_name_row);
 
         let page = adw::PreferencesPage::new();
+        page.add(&language_group);
         page.add(&group);
         page.add(&tabs_group);
         let dialog = adw::PreferencesDialog::new();

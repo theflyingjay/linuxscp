@@ -418,6 +418,14 @@ msgstr ""
 msgid "Keyboard Shortcuts"
 msgstr ""
 
+#: app.rs
+msgid "Language"
+msgstr ""
+
+#: app.rs
+msgid "Language saved — restart LinuxSCP to apply it"
+msgstr ""
+
 #: properties.rs
 msgid "Link target"
 msgstr ""
@@ -746,6 +754,10 @@ msgstr ""
 msgid "Rename…"
 msgstr ""
 
+#: app.rs
+msgid "Restart LinuxSCP to apply a new language"
+msgstr ""
+
 #: prompts.rs, queue.rs
 msgid "Resume"
 msgstr ""
@@ -888,6 +900,10 @@ msgstr ""
 
 #: app.rs
 msgid "Symlink failed: {}"
+msgstr ""
+
+#: app.rs
+msgid "System default"
 msgstr ""
 
 #: app.rs

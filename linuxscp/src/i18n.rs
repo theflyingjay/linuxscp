@@ -22,7 +22,12 @@ const LOCALEDIR: &str = "/usr/share/locale";
 /// Call once, as early as possible in `main`. `gettext` resolves catalogs
 /// for the current C locale, which stays "C" (no translations) until
 /// `setlocale` runs; GTK makes the same call in `gtk_init`.
+///
+/// An explicit language chosen in Preferences (stored in the settings file)
+/// overrides the environment through `LANGUAGE`, which gettext consults
+/// before `LC_MESSAGES`.
 pub fn init() {
+    apply_saved_language();
     // SAFETY: called once, before any threads are spawned, so no other
     // thread can observe the locale changing under it.
     unsafe {
@@ -31,6 +36,17 @@ pub fn init() {
     let _ = gettextrs::bindtextdomain(DOMAIN, LOCALEDIR);
     let _ = gettextrs::bind_textdomain_codeset(DOMAIN, "UTF-8");
     let _ = gettextrs::textdomain(DOMAIN);
+}
+
+/// Honour the language picked in Preferences, if any.
+fn apply_saved_language() {
+    let Some(language) = crate::settings::Settings::load().language else {
+        return;
+    };
+    // SAFETY: called before any threads are spawned (see `init`).
+    unsafe {
+        std::env::set_var("LANGUAGE", language);
+    }
 }
 
 /// Translate a message id (the English source string).

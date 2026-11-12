@@ -1004,3 +1004,17 @@ msgstr "{} 是 PuTTY 私钥（.ppk），OpenSSH 无法读取。请在站点管�
 msgid "“{}” keys cannot be converted"
 msgstr "“{}” 密钥无法转换"
 
+
+# ---- Language picker ----
+msgid "Language"
+msgstr "语言"
+
+msgid "Restart LinuxSCP to apply a new language"
+msgstr "重启 LinuxSCP 以应用新语言"
+
+msgid "System default"
+msgstr "跟随系统"
+
+msgid "Language saved — restart LinuxSCP to apply it"
+msgstr "语言已保存 — 重启 LinuxSCP 以生效"
+
