@@ -122,6 +122,10 @@ msgstr ""
 msgid "Comment"
 msgstr ""
 
+#: app.rs
+msgid "Complete the folder being typed in the path"
+msgstr ""
+
 #: prompts.rs
 msgid "Confirm"
 msgstr ""
@@ -179,11 +183,19 @@ msgid "Copy"
 msgstr ""
 
 #: app.rs
+msgid "Copy / cut selection"
+msgstr ""
+
+#: app.rs
 msgid "Copy To…"
 msgstr ""
 
 #: app.rs
 msgid "Copy to Directory"
+msgstr ""
+
+#: app.rs
+msgid "Copy to other pane"
 msgstr ""
 
 #: config_editor.rs
@@ -282,6 +294,14 @@ msgstr ""
 msgid "Edit SSH Config"
 msgstr ""
 
+#: app.rs
+msgid "Edit file in text editor"
+msgstr ""
+
+#: app.rs
+msgid "Edit path"
+msgstr ""
+
 #: connect_dialog.rs
 msgid "Edit ~/.ssh/config"
 msgstr ""
@@ -300,6 +320,10 @@ msgstr ""
 
 #: prompts.rs
 msgid "File Exists"
+msgstr ""
+
+#: app.rs
+msgid "File context menu"
 msgstr ""
 
 #: key_import.rs
@@ -395,6 +419,10 @@ msgid "Modified"
 msgstr ""
 
 #: app.rs
+msgid "Move to other pane"
+msgstr ""
+
+#: app.rs
 msgid "My Server"
 msgstr ""
 
@@ -424,6 +452,10 @@ msgstr ""
 
 #: app.rs
 msgid "New Symlink…"
+msgstr ""
+
+#: app.rs
+msgid "New directory"
 msgstr ""
 
 #: connect_dialog.rs
@@ -499,6 +531,14 @@ msgid "Open Terminal Here"
 msgstr ""
 
 #: app.rs
+msgid "Open directory"
+msgstr ""
+
+#: app.rs
+msgid "Open terminal here"
+msgstr ""
+
+#: app.rs
 msgid "Open terminal here (Ctrl+T)"
 msgstr ""
 
@@ -520,6 +560,10 @@ msgstr ""
 
 #: pane.rs, properties.rs
 msgid "Owner"
+msgstr ""
+
+#: app.rs
+msgid "Parent directory"
 msgstr ""
 
 #: pane.rs
@@ -550,6 +594,10 @@ msgstr ""
 msgid "Paste"
 msgstr ""
 
+#: app.rs
+msgid "Paste into active pane"
+msgstr ""
+
 #: queue.rs
 msgid "Pause"
 msgstr ""
@@ -568,6 +616,10 @@ msgstr ""
 
 #: pane.rs, properties.rs
 msgid "Permissions"
+msgstr ""
+
+#: app.rs
+msgid "Pick a suggested folder in the path (Enter opens it)"
 msgstr ""
 
 #: app.rs
@@ -592,6 +644,10 @@ msgstr ""
 
 #: app.rs
 msgid "Properties"
+msgstr ""
+
+#: app.rs
+msgid "Properties (owner, group, permissions)"
 msgstr ""
 
 #: key_import.rs
@@ -782,6 +838,10 @@ msgstr ""
 msgid "Stored on"
 msgstr ""
 
+#: app.rs
+msgid "Switch active pane"
+msgstr ""
+
 #: properties.rs
 msgid "Symbolic link"
 msgstr ""
@@ -804,6 +864,10 @@ msgstr ""
 
 #: app.rs
 msgid "The connection the files were copied from is closed"
+msgstr ""
+
+#: app.rs
+msgid "Toggle hidden files"
 msgstr ""
 
 #: notify.rs

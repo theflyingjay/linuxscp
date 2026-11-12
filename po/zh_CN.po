@@ -772,3 +772,53 @@ msgstr[0] "个文件夹"
 msgid "item"
 msgid_plural "items"
 msgstr[0] "个项目"
+
+# Keyboard-shortcuts dialog descriptions (looked up at run time).
+msgid "Switch active pane"
+msgstr "切换活动窗格"
+
+msgid "Open directory"
+msgstr "打开目录"
+
+msgid "Edit file in text editor"
+msgstr "在文本编辑器中编辑文件"
+
+msgid "Parent directory"
+msgstr "上级目录"
+
+msgid "Copy to other pane"
+msgstr "复制到另一窗格"
+
+msgid "Move to other pane"
+msgstr "移动到另一窗格"
+
+msgid "New directory"
+msgstr "新建目录"
+
+msgid "Properties (owner, group, permissions)"
+msgstr "属性（所有者、所属组、权限）"
+
+msgid "Copy / cut selection"
+msgstr "复制/剪切所选内容"
+
+msgid "Paste into active pane"
+msgstr "粘贴到活动窗格"
+
+msgid "File context menu"
+msgstr "文件上下文菜单"
+
+msgid "Toggle hidden files"
+msgstr "显示/隐藏隐藏文件"
+
+msgid "Edit path"
+msgstr "编辑路径"
+
+msgid "Complete the folder being typed in the path"
+msgstr "补全路径中正在输入的文件夹"
+
+msgid "Pick a suggested folder in the path (Enter opens it)"
+msgstr "选择路径中建议的文件夹（回车打开）"
+
+msgid "Open terminal here"
+msgstr "在此打开终端"
+

@@ -704,35 +704,37 @@ impl App {
     }
 
     fn show_shortcuts(&self) {
-        let shortcuts: &[(&str, &str)] = &[
-            ("Tab", "Switch active pane"),
-            ("Enter", "Open directory"),
-            ("Double-click / Enter", "Edit file in text editor"),
-            ("Backspace", "Parent directory"),
-            ("F5", "Copy to other pane"),
-            ("F6", "Move to other pane"),
-            ("F7", "New directory"),
-            ("F2", "Rename"),
-            ("F8 / Delete", "Delete"),
-            ("F9", "Properties (owner, group, permissions)"),
-            ("Ctrl+C / Ctrl+X", "Copy / cut selection"),
-            ("Ctrl+V", "Paste into active pane"),
-            ("Right click", "File context menu"),
-            ("Ctrl+H", "Toggle hidden files"),
-            ("Ctrl+R", "Refresh"),
-            ("Ctrl+L", "Edit path"),
-            ("Tab", "Complete the folder being typed in the path"),
+        // Descriptions are translated eagerly so the message ids stay
+        // literals that extraction tools can see.
+        let shortcuts: Vec<(&str, String)> = vec![
+            ("Tab", tr!("Switch active pane")),
+            ("Enter", tr!("Open directory")),
+            ("Double-click / Enter", tr!("Edit file in text editor")),
+            ("Backspace", tr!("Parent directory")),
+            ("F5", tr!("Copy to other pane")),
+            ("F6", tr!("Move to other pane")),
+            ("F7", tr!("New directory")),
+            ("F2", tr!("Rename")),
+            ("F8 / Delete", tr!("Delete")),
+            ("F9", tr!("Properties (owner, group, permissions)")),
+            ("Ctrl+C / Ctrl+X", tr!("Copy / cut selection")),
+            ("Ctrl+V", tr!("Paste into active pane")),
+            ("Right click", tr!("File context menu")),
+            ("Ctrl+H", tr!("Toggle hidden files")),
+            ("Ctrl+R", tr!("Refresh")),
+            ("Ctrl+L", tr!("Edit path")),
+            ("Tab", tr!("Complete the folder being typed in the path")),
             (
                 "Up / Down",
-                "Pick a suggested folder in the path (Enter opens it)",
+                tr!("Pick a suggested folder in the path (Enter opens it)"),
             ),
-            ("Ctrl+T", "Open terminal here"),
+            ("Ctrl+T", tr!("Open terminal here")),
         ];
         let list = gtk::Box::new(gtk::Orientation::Vertical, 0);
         list.add_css_class("boxed-list");
         let group = adw::PreferencesGroup::new();
-        for (keys, desc) in shortcuts {
-            let row = adw::ActionRow::builder().title(tr!(*desc)).build();
+        for (keys, desc) in &shortcuts {
+            let row = adw::ActionRow::builder().title(desc).build();
             let kbd = gtk::Label::new(Some(keys));
             kbd.add_css_class("dim-label");
             kbd.add_css_class("monospace");
