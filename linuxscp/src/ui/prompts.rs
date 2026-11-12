@@ -8,6 +8,7 @@ use std::task::Poll;
 use adw::prelude::*;
 use gtk::glib;
 
+use linuxscp::tr;
 use linuxscp::types::{ConflictDecision, ConflictRequest, PromptKind, PromptRequest, Reply};
 
 pub fn show_prompt(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
@@ -48,7 +49,7 @@ fn dismiss_when_abandoned<T: 'static>(
 
 fn show_secret(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
     let dialog = adw::AlertDialog::builder()
-        .heading("Authentication Required")
+        .heading(&tr!("Authentication Required"))
         .body(&request.prompt)
         .close_response("cancel")
         .default_response("ok")
@@ -84,7 +85,7 @@ fn show_secret(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
 
 fn show_yes_no(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
     let dialog = adw::AlertDialog::builder()
-        .heading("Confirm")
+        .heading(&tr!("Confirm"))
         .body(&request.prompt)
         .body_use_markup(false)
         .close_response("no")
@@ -115,7 +116,7 @@ pub fn show_conflict(parent: &impl IsA<gtk::Widget>, request: ConflictRequest) {
         super::entry_object::format_size(request.dst_size),
     );
     let dialog = adw::AlertDialog::builder()
-        .heading("File Exists")
+        .heading(&tr!("File Exists"))
         .body(&body)
         .close_response("cancel")
         .default_response("overwrite")

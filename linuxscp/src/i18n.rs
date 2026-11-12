@@ -38,6 +38,15 @@ pub fn gettext(msgid: &str) -> String {
     gettextrs::gettext(msgid)
 }
 
+/// Translate a plural form for `n`.
+///
+/// Languages with more than two plural forms (Chinese has one) are handled
+/// by gettext's `ngettext`; the English `singular`/`plural` pair are the
+/// message ids extracted into the catalog.
+pub fn ngettext(singular: &str, plural: &str, n: u32) -> String {
+    gettextrs::ngettext(singular, plural, n)
+}
+
 /// Expand a translated template with positional `{}` placeholders.
 ///
 /// `format!` needs a literal format string, but translations are only known

@@ -33,10 +33,7 @@ pub fn show(app: &adw::Application) -> gtk::Window {
     subtitle.add_css_class("dim-label");
     content.append(&subtitle);
 
-    let version = gtk::Label::new(Some(&tr!(
-        "Version {}",
-        env!("CARGO_PKG_VERSION")
-    )));
+    let version = gtk::Label::new(Some(&tr!("Version {}", env!("CARGO_PKG_VERSION"))));
     version.add_css_class("caption");
     version.add_css_class("dim-label");
     content.append(&version);

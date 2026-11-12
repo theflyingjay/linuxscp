@@ -17,6 +17,7 @@ use super::site_editor::{SecretUpdate, SiteForm};
 use super::tree_node::TreeNode;
 use linuxscp::settings::{Folder, Site};
 use linuxscp::ssh::config::{KnownHost, known_hosts};
+use linuxscp::tr;
 use linuxscp::types::ConnectSpec;
 
 /// Callbacks the dialog uses to talk back to the app. All site mutations go
@@ -47,16 +48,16 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
     let toolbar = adw::ToolbarView::new();
     let header = adw::HeaderBar::new();
     header.set_show_end_title_buttons(false);
-    let title = adw::WindowTitle::new("Site Manager", "Saved connections");
+    let title = adw::WindowTitle::new(&tr!("Site Manager"), &tr!("Saved connections"));
     header.set_title_widget(Some(&title));
-    let close_button = gtk::Button::with_label("Close");
+    let close_button = gtk::Button::with_label(&tr!("Close"));
     header.pack_start(&close_button);
     toolbar.add_top_bar(&header);
 
     // Wide, WinSCP-style: the two list columns are fixed, so every extra
     // pixel goes to the details form on the right.
     let dialog = adw::Dialog::builder()
-        .title("Site Manager")
+        .title(&tr!("Site Manager"))
         .content_width(1240)
         .content_height(690)
         .child(&toolbar)
@@ -95,12 +96,12 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
 
     // --- Middle column: saved sites tree with actions ---------------------
     let actions = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-    let add_site_btn = icon_button("list-add-symbolic", "New site");
+    let add_site_btn = icon_button("list-add-symbolic", &tr!("New site"));
     add_site_btn.add_css_class("suggested-action");
-    let add_folder_btn = icon_button("folder-new-symbolic", "New folder");
-    let delete_btn = icon_button("user-trash-symbolic", "Delete");
+    let add_folder_btn = icon_button("folder-new-symbolic", &tr!("New folder"));
+    let delete_btn = icon_button("user-trash-symbolic", &tr!("Delete"));
     delete_btn.set_sensitive(false);
-    let sites_heading = gtk::Label::new(Some("Saved sites"));
+    let sites_heading = gtk::Label::new(Some(&tr!("Saved sites")));
     sites_heading.add_css_class("heading");
     sites_heading.set_xalign(0.0);
     sites_heading.set_hexpand(true);
@@ -276,8 +277,8 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
         .child(&form.root)
         .build();
 
-    let save_btn = gtk::Button::with_label("Save");
-    let connect_btn = gtk::Button::with_label("Connect");
+    let save_btn = gtk::Button::with_label(&tr!("Save"));
+    let connect_btn = gtk::Button::with_label(&tr!("Connect"));
     connect_btn.add_css_class("suggested-action");
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     buttons.set_halign(gtk::Align::End);
@@ -294,8 +295,10 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
 
     let placeholder = adw::StatusPage::builder()
         .icon_name("network-server-symbolic")
-        .title("No Site Selected")
-        .description("Select a saved site, or create a new one to edit it here.")
+        .title(&tr!("No Site Selected"))
+        .description(&tr!(
+            "Select a saved site, or create a new one to edit it here."
+        ))
         .build();
     placeholder.add_css_class("compact");
 
@@ -604,14 +607,20 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
             let selected_site = selected_site.clone();
             let selected_folder = selected_folder.clone();
             let parent_id = current_parent.borrow().clone();
-            super::prompts::ask_text(&parent, "New Folder", "", "Create", move |name| {
-                (handlers.add_folder)(parent_id.clone(), name);
-                let keep = selected_site
-                    .borrow()
-                    .clone()
-                    .or_else(|| selected_folder.borrow().clone());
-                rebuild(keep);
-            });
+            super::prompts::ask_text(
+                &parent,
+                &tr!("New Folder"),
+                "",
+                &tr!("Create"),
+                move |name| {
+                    (handlers.add_folder)(parent_id.clone(), name);
+                    let keep = selected_site
+                        .borrow()
+                        .clone()
+                        .or_else(|| selected_folder.borrow().clone());
+                    rebuild(keep);
+                },
+            );
         });
     }
 
@@ -638,9 +647,9 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
                 let rebuild = rebuild.clone();
                 super::prompts::confirm(
                     &parent,
-                    "Delete Site",
-                    "Delete this saved site and its stored password?",
-                    "Delete",
+                    &tr!("Delete Site"),
+                    &tr!("Delete this saved site and its stored password?"),
+                    &tr!("Delete"),
                     move || {
                         (handlers.delete_site)(id.clone());
                         rebuild(None);
@@ -651,9 +660,9 @@ pub fn show(parent: &impl IsA<gtk::Widget>, handlers: SiteManagerHandlers) {
                 let rebuild = rebuild.clone();
                 super::prompts::confirm(
                     &parent,
-                    "Delete Folder",
-                    "Delete this folder and every site inside it?",
-                    "Delete",
+                    &tr!("Delete Folder"),
+                    &tr!("Delete this folder and every site inside it?"),
+                    &tr!("Delete"),
                     move || {
                         (handlers.delete_folder)(id.clone());
                         rebuild(None);
@@ -776,11 +785,12 @@ impl HostsColumn {
         let any = hosts.iter().any(|h| h.matches(query));
         self.scroller.set_visible(any);
         self.empty.set_visible(!any);
-        self.empty.set_text(if hosts.is_empty() {
-            "No Host entries yet.\n\nUse the edit button above to add some to ~/.ssh/config."
+        let empty_text = if hosts.is_empty() {
+            tr!("No Host entries yet.\n\nUse the edit button above to add some to ~/.ssh/config.")
         } else {
-            "No hosts match the search."
-        });
+            tr!("No hosts match the search.")
+        };
+        self.empty.set_text(&empty_text);
     }
 }
 
@@ -789,12 +799,12 @@ fn build_hosts_column(
     handlers: &Rc<SiteManagerHandlers>,
     query: &Rc<RefCell<String>>,
 ) -> HostsColumn {
-    let heading = gtk::Label::new(Some("Hosts from ~/.ssh/config"));
+    let heading = gtk::Label::new(Some(&tr!("Hosts from ~/.ssh/config")));
     heading.set_xalign(0.0);
     heading.set_hexpand(true);
     heading.add_css_class("heading");
     let edit_btn = gtk::Button::from_icon_name("document-edit-symbolic");
-    edit_btn.set_tooltip_text(Some("Edit ~/.ssh/config"));
+    edit_btn.set_tooltip_text(Some(&tr!("Edit ~/.ssh/config")));
     let heading_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     heading_row.append(&heading);
     heading_row.append(&edit_btn);

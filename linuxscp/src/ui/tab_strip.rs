@@ -13,6 +13,7 @@
 use std::rc::Rc;
 
 use adw::prelude::*;
+use linuxscp::tr;
 
 /// Width of one session tab; the bar is sized to this per tab and the tabs
 /// expand to fill it exactly.
@@ -197,7 +198,7 @@ fn flip_button(icon: &str, tooltip: &str) -> gtk::Button {
 fn new_session_button() -> gtk::Button {
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     content.append(&gtk::Image::from_icon_name("list-add-symbolic"));
-    content.append(&gtk::Label::new(Some("New Session")));
+    content.append(&gtk::Label::new(Some(&tr!("New Session"))));
     let button = gtk::Button::builder()
         .child(&content)
         .tooltip_text("Open a new session tab")

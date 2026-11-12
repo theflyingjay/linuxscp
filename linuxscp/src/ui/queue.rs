@@ -14,6 +14,7 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 
 use super::entry_object::format_size;
+use linuxscp::tr;
 use linuxscp::transfers;
 use linuxscp::types::{
     SessionId, TransferAction, TransferDirection, TransferId, TransferKind, TransferSnapshot,
@@ -77,7 +78,7 @@ impl QueueView {
 
         // Rows are prepended, so this stays last and is simply hidden while
         // there are any. It expands so it sits centred in the empty panel.
-        let empty = gtk::Label::new(Some("Transfers and file operations appear here"));
+        let empty = gtk::Label::new(Some(&tr!("Transfers and file operations appear here")));
         empty.add_css_class("dim-label");
         empty.set_vexpand(true);
         empty.set_valign(gtk::Align::Center);
@@ -95,8 +96,8 @@ impl QueueView {
         root.append(&scroller);
 
         let menu = gio::Menu::new();
-        menu.append(Some("Remove"), Some("queue.remove"));
-        menu.append(Some("Clear Finished"), Some("queue.clear-finished"));
+        menu.append(Some(&tr!("Remove")), Some("queue.remove"));
+        menu.append(Some(&tr!("Clear Finished")), Some("queue.clear-finished"));
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
         popover.set_parent(&root);
         popover.set_has_arrow(false);
@@ -194,7 +195,7 @@ impl QueueView {
     /// previous text.
     fn session_text(&self, ids: &[SessionId]) -> Option<String> {
         if ids.is_empty() {
-            return Some("Local".to_string());
+            return Some(tr!("Local"));
         }
         let resolve = self.session_names.borrow();
         let resolve = resolve.as_ref()?;
@@ -232,13 +233,13 @@ impl QueueView {
             Some(TransferDirection::Upload) => {
                 row.direction.set_icon_name(Some("go-up-symbolic"));
                 row.direction.add_css_class("upload");
-                row.direction.set_tooltip_text(Some("Upload"));
+                row.direction.set_tooltip_text(Some(&tr!("Upload")));
                 row.direction.set_visible(true);
             }
             Some(TransferDirection::Download) => {
                 row.direction.set_icon_name(Some("go-down-symbolic"));
                 row.direction.add_css_class("download");
-                row.direction.set_tooltip_text(Some("Download"));
+                row.direction.set_tooltip_text(Some(&tr!("Download")));
                 row.direction.set_visible(true);
             }
             None => row.direction.set_visible(false),
@@ -267,15 +268,15 @@ impl QueueView {
         }
 
         let detail = match snapshot.state {
-            TransferState::Queued => "Queued".to_string(),
-            TransferState::Scanning => format!("Scanning… {} files found", snapshot.files_total),
+            TransferState::Queued => tr!("Queued"),
+            TransferState::Scanning => tr!("Scanning… {} files found", snapshot.files_total),
             TransferState::Running => running_detail(&snapshot),
-            TransferState::Paused => "Paused".to_string(),
-            TransferState::WaitingConflict => "Waiting for answer…".to_string(),
+            TransferState::Paused => tr!("Paused"),
+            TransferState::WaitingConflict => tr!("Waiting for answer…"),
             TransferState::Done => done_detail(&snapshot),
             TransferState::Failed => match &snapshot.error {
-                Some(err) => format!("Failed — {err}"),
-                None => "Failed".to_string(),
+                Some(err) => tr!("Failed — {}", err),
+                None => tr!("Failed"),
             },
             TransferState::Cancelled => cancelled_detail(&snapshot),
         };
@@ -287,11 +288,11 @@ impl QueueView {
         match snapshot.state {
             TransferState::Paused => {
                 row.pause_btn.set_icon_name("media-playback-start-symbolic");
-                row.pause_btn.set_tooltip_text(Some("Resume"));
+                row.pause_btn.set_tooltip_text(Some(&tr!("Resume")));
             }
             _ => {
                 row.pause_btn.set_icon_name("media-playback-pause-symbolic");
-                row.pause_btn.set_tooltip_text(Some("Pause"));
+                row.pause_btn.set_tooltip_text(Some(&tr!("Pause")));
             }
         }
         // Mutations support cancel but not pause.
@@ -301,7 +302,7 @@ impl QueueView {
         if snapshot.state.is_terminal() {
             row.pause_btn.set_visible(false);
             row.cancel_btn.set_icon_name("window-close-symbolic");
-            row.cancel_btn.set_tooltip_text(Some("Remove"));
+            row.cancel_btn.set_tooltip_text(Some(&tr!("Remove")));
             // The outcome line is the row's lasting record: colour it by
             // how the job ended (no longer dimmed, so the colour reads) and
             // keep the full text reachable when it is too long to fit.
@@ -331,7 +332,7 @@ impl QueueView {
             });
             if let Some(stamp) = finished_at.and_then(|now| now.format("%Y-%m-%d %H:%M:%S").ok()) {
                 row.timing
-                    .set_tooltip_text(Some(&format!("Finished {stamp}, took {took}")));
+                    .set_tooltip_text(Some(&tr!("Finished {}, took {}", stamp, took)));
             }
             // Terminal states are emitted exactly once, so this fires once
             // per job however it ended: partial results from a cancelled or
@@ -417,7 +418,7 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     // Capped so a long host name trims itself (full text in the tooltip)
     // rather than squeezing the title. "Remote" only shows if the session
     // can't be named at all, which `update` normally replaces at once.
-    let session = gtk::Label::new(Some("Remote"));
+    let session = gtk::Label::new(Some(&tr!("Remote")));
     session.set_xalign(1.0);
     session.set_valign(gtk::Align::Center);
     session.add_css_class("caption");
@@ -471,7 +472,7 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
     let cancel_btn = gtk::Button::from_icon_name("process-stop-symbolic");
     cancel_btn.add_css_class("flat");
     cancel_btn.set_valign(gtk::Align::Center);
-    cancel_btn.set_tooltip_text(Some("Cancel"));
+    cancel_btn.set_tooltip_text(Some(&tr!("Cancel")));
 
     {
         let queue = queue.clone();
@@ -529,27 +530,27 @@ fn build_row(queue: &Rc<QueueView>, id: TransferId) -> Row {
 fn running_detail(snap: &TransferSnapshot) -> String {
     match snap.kind {
         TransferKind::Delete => {
-            return format!("{} removed…", snap.files_done);
+            return tr!("{} removed…", snap.files_done);
         }
         TransferKind::Attributes => {
             return if snap.scanning {
-                format!("Collecting items… {} changed", snap.files_done)
+                tr!("Collecting items… {} changed", snap.files_done)
             } else {
-                format!("{} / {} changed", snap.files_done, snap.files_total)
+                format!("{} / {}", snap.files_done, snap.files_total)
             };
         }
         TransferKind::Copy | TransferKind::Move => {}
     }
     let mut text = if snap.scanning {
         // "+" signals the totals are still climbing.
-        format!(
+        tr!(
             "{} • {}/{}+ files • counting…",
             format_size(snap.done_bytes),
             snap.files_done,
             snap.files_total,
         )
     } else {
-        format!(
+        tr!(
             "{} / {} • {}/{} files",
             format_size(snap.done_bytes),
             format_size(snap.total_bytes),
@@ -559,13 +560,13 @@ fn running_detail(snap: &TransferSnapshot) -> String {
     };
 
     if snap.speed_bps > 1.0 {
-        text.push_str(&format!("  •  {}/s", format_size(snap.speed_bps as u64)));
+        text.push_str(&tr!("  •  {}/s", format_size(snap.speed_bps as u64)));
         // Only estimate time once the total is final; otherwise the remaining
         // byte count is unknown and any ETA would be wrong.
         if !snap.scanning {
             let remaining = snap.total_bytes.saturating_sub(snap.done_bytes);
             let eta = remaining as f64 / snap.speed_bps;
-            text.push_str(&format!("  •  {} left", format_eta(eta)));
+            text.push_str(&tr!("  •  {} left", format_eta(eta)));
         }
     }
 
@@ -579,18 +580,18 @@ fn running_detail(snap: &TransferSnapshot) -> String {
 /// their average throughput, since the live speed is gone from the row.
 fn done_detail(snap: &TransferSnapshot) -> String {
     match snap.kind {
-        TransferKind::Delete => format!("Removed {}", count(snap.files_done, "item")),
-        TransferKind::Attributes => format!("Changed {}", count(snap.files_done, "item")),
+        TransferKind::Delete => tr!("Removed {}", count(snap.files_done, "item", "items")),
+        TransferKind::Attributes => tr!("Changed {}", count(snap.files_done, "item", "items")),
         TransferKind::Copy | TransferKind::Move => {
-            let mut text = format!(
+            let mut text = tr!(
                 "Done — {} in {}",
                 format_size(snap.total_bytes),
-                count(snap.files_total, "file")
+                count(snap.files_total, "file", "files")
             );
             let secs = snap.elapsed.as_secs_f64();
             if snap.total_bytes > 0 && secs > 0.0 {
                 let average = (snap.total_bytes as f64 / secs) as u64;
-                text.push_str(&format!(" • {}/s", format_size(average)));
+                text.push_str(&tr!(" • {}/s", format_size(average)));
             }
             text
         }
@@ -601,19 +602,19 @@ fn done_detail(snap: &TransferSnapshot) -> String {
 /// since a partial copy or deletion has still changed things.
 fn cancelled_detail(snap: &TransferSnapshot) -> String {
     match snap.kind {
-        TransferKind::Delete => format!("Cancelled — {} removed", snap.files_done),
-        TransferKind::Attributes => format!("Cancelled — {} changed", snap.files_done),
+        TransferKind::Delete => tr!("Cancelled — {} removed", snap.files_done),
+        TransferKind::Attributes => tr!("Cancelled — {} changed", snap.files_done),
         TransferKind::Copy | TransferKind::Move => {
             if snap.scanning {
                 // The totals were still being counted, so only what got
                 // done is certain.
-                format!(
+                tr!(
                     "Cancelled — {} • {}",
                     format_size(snap.done_bytes),
-                    count(snap.files_done, "file")
+                    count(snap.files_done, "file", "files")
                 )
             } else {
-                format!(
+                tr!(
                     "Cancelled — {} of {} • {}/{} files",
                     format_size(snap.done_bytes),
                     format_size(snap.total_bytes),
@@ -626,12 +627,8 @@ fn cancelled_detail(snap: &TransferSnapshot) -> String {
 }
 
 /// "1 file" / "3 files".
-fn count(n: u32, noun: &str) -> String {
-    if n == 1 {
-        format!("1 {noun}")
-    } else {
-        format!("{n} {noun}s")
-    }
+fn count(n: u32, singular: &str, plural: &str) -> String {
+    format!("{} {}", n, linuxscp::i18n::ngettext(singular, plural, n))
 }
 
 /// How long a job has been running or took: "< 1 s", "12 s", "1m 05s",
@@ -639,26 +636,26 @@ fn count(n: u32, noun: &str) -> String {
 fn format_duration(duration: Duration) -> String {
     let s = duration.as_secs();
     if s < 1 {
-        "< 1 s".to_string()
+        tr!("< 1 s")
     } else if s < 60 {
-        format!("{s} s")
+        tr!("{} s", s)
     } else if s < 3600 {
-        format!("{}m {:02}s", s / 60, s % 60)
+        tr!("{}m {}s", s / 60, format!("{:02}", s % 60))
     } else {
-        format!("{}h {:02}m", s / 3600, (s % 3600) / 60)
+        tr!("{}h {}m", s / 3600, format!("{:02}", (s % 3600) / 60))
     }
 }
 
 fn format_eta(seconds: f64) -> String {
     let s = seconds as u64;
     if s >= 48 * 3600 {
-        format!("{}d {}h", s / 86_400, (s % 86_400) / 3600)
+        tr!("{}d {}h", s / 86_400, (s % 86_400) / 3600)
     } else if s >= 3600 {
-        format!("{}h {}m", s / 3600, (s % 3600) / 60)
+        tr!("{}h {}m", s / 3600, (s % 3600) / 60)
     } else if s >= 60 {
-        format!("{}m {}s", s / 60, s % 60)
+        tr!("{}m {}s", s / 60, s % 60)
     } else {
-        format!("{s}s")
+        tr!("{}s", s)
     }
 }
 
@@ -676,8 +673,8 @@ mod tests {
 
     #[test]
     fn counts_pluralise() {
-        assert_eq!(count(1, "file"), "1 file");
-        assert_eq!(count(0, "item"), "0 items");
-        assert_eq!(count(3, "file"), "3 files");
+        assert_eq!(count(1, "file", "files"), "1 file");
+        assert_eq!(count(0, "item", "items"), "0 items");
+        assert_eq!(count(3, "file", "files"), "3 files");
     }
 }

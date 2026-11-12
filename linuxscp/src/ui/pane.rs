@@ -9,6 +9,7 @@ use gtk::{gio, glib};
 use super::entry_object::{EntryObject, format_mtime, format_size};
 use super::path_completion::PathCompletion;
 use linuxscp::runtime::runtime;
+use linuxscp::tr;
 use linuxscp::types::{Backend, FsEntry};
 use linuxscp::{fsops, sessions};
 
@@ -123,13 +124,13 @@ impl Pane {
 
         // Header: navigation buttons + path + connection controls.
         let up_button = gtk::Button::from_icon_name("go-up-symbolic");
-        up_button.set_tooltip_text(Some("Parent directory (Backspace)"));
+        up_button.set_tooltip_text(Some(&tr!("Parent directory (Backspace)")));
         let home_button = gtk::Button::from_icon_name("go-home-symbolic");
-        home_button.set_tooltip_text(Some("Home directory"));
+        home_button.set_tooltip_text(Some(&tr!("Home directory")));
         let refresh_button = gtk::Button::from_icon_name("view-refresh-symbolic");
-        refresh_button.set_tooltip_text(Some("Refresh (Ctrl+R)"));
+        refresh_button.set_tooltip_text(Some(&tr!("Refresh (Ctrl+R)")));
         let new_folder_button = gtk::Button::from_icon_name("folder-new-symbolic");
-        new_folder_button.set_tooltip_text(Some("New folder (F7)"));
+        new_folder_button.set_tooltip_text(Some(&tr!("New folder (F7)")));
         let nav_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         nav_box.add_css_class("linked");
         nav_box.append(&up_button);
@@ -140,12 +141,12 @@ impl Pane {
         let path_entry = gtk::Entry::builder().hexpand(true).build();
 
         let connect_button = gtk::Button::from_icon_name("network-server-symbolic");
-        connect_button.set_tooltip_text(Some("Connect to server…"));
+        connect_button.set_tooltip_text(Some(&tr!("Connect to server…")));
         let disconnect_button = gtk::Button::from_icon_name("window-close-symbolic");
-        disconnect_button.set_tooltip_text(Some("Disconnect"));
+        disconnect_button.set_tooltip_text(Some(&tr!("Disconnect")));
         disconnect_button.set_visible(false);
 
-        let conn_chip = gtk::Label::new(Some("Local"));
+        let conn_chip = gtk::Label::new(Some(&tr!("Local")));
         conn_chip.add_css_class("caption");
         conn_chip.add_css_class("dim-label");
         conn_chip.set_margin_start(6);

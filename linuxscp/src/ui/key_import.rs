@@ -15,6 +15,7 @@ use zeroize::Zeroizing;
 use linuxscp::runtime::runtime;
 use linuxscp::ssh::key_import::{self, ImportError, ImportRequest, Imported};
 use linuxscp::ssh::ppk::{self, MAX_FILE_LEN, PpkError};
+use linuxscp::tr;
 
 /// Show the sheet for `source`. `on_imported` receives the written key and,
 /// when the converted key was encrypted with it, the passphrase, so the
@@ -28,7 +29,7 @@ pub fn show(
         Ok(info) => info,
         Err(message) => {
             let alert = adw::AlertDialog::builder()
-                .heading("Cannot Import Key")
+                .heading(&tr!("Cannot Import Key"))
                 .body(message)
                 .build();
             alert.add_response("ok", "OK");
@@ -46,14 +47,14 @@ pub fn show(
     header.set_show_end_title_buttons(false);
     header.set_show_start_title_buttons(false);
     header.set_title_widget(Some(&adw::WindowTitle::new("Import PuTTY Key", &file_name)));
-    let cancel_btn = gtk::Button::with_label("Cancel");
-    let import_btn = gtk::Button::with_label("Import");
+    let cancel_btn = gtk::Button::with_label(&tr!("Cancel"));
+    let import_btn = gtk::Button::with_label(&tr!("Import"));
     import_btn.add_css_class("suggested-action");
     header.pack_start(&cancel_btn);
     header.pack_end(&import_btn);
 
     // --- What the file holds --------------------------------------------
-    let key_group = adw::PreferencesGroup::builder().title("Key").build();
+    let key_group = adw::PreferencesGroup::builder().title(&tr!("Key")).build();
     let add_fact = |title: &str, value: &str| {
         let row = adw::ActionRow::builder()
             .title(title)
@@ -84,7 +85,7 @@ pub fn show(
     // --- Conversion options ---------------------------------------------
     let ssh_dir = key_import::ssh_dir().unwrap_or_else(|| PathBuf::from("~/.ssh"));
     let convert_group = adw::PreferencesGroup::builder()
-        .title("Convert")
+        .title(&tr!("Convert"))
         .description(format!(
             "OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. \
              A copy in OpenSSH format is written to {} and selected for this site; \
@@ -93,17 +94,17 @@ pub fn show(
         ))
         .build();
     let passphrase_row = adw::PasswordEntryRow::builder()
-        .title("Passphrase")
+        .title(&tr!("Passphrase"))
         .visible(info.encrypted)
         .build();
     convert_group.add(&passphrase_row);
     let name_row = adw::EntryRow::builder()
-        .title("Save as")
+        .title(&tr!("Save as"))
         .text(key_import::suggest_name(&source))
         .build();
     convert_group.add(&name_row);
     let protect_row = adw::SwitchRow::builder()
-        .title("Protect the converted key with the same passphrase")
+        .title(&tr!("Protect the converted key with the same passphrase"))
         .subtitle("You can let LinuxSCP remember the passphrase for this site")
         .active(true)
         .visible(info.encrypted)
@@ -147,7 +148,7 @@ pub fn show(
     toolbar.set_content(Some(&scroller));
 
     let dialog = adw::Dialog::builder()
-        .title("Import PuTTY Key")
+        .title(&tr!("Import PuTTY Key"))
         .content_width(520)
         .child(&toolbar)
         .build();

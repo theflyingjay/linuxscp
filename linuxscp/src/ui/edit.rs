@@ -18,6 +18,7 @@ use gtk::{gio, glib};
 
 use super::entry_object::format_size;
 use linuxscp::runtime::runtime;
+use linuxscp::tr;
 use linuxscp::types::{
     Backend, Event, FsEntry, SessionId, TransferId, TransferRequest, TransferSnapshot,
     TransferState,
@@ -387,7 +388,7 @@ fn confirm_large(
     on_confirm: impl Fn(FsEntry) + 'static,
 ) {
     let dialog = adw::AlertDialog::builder()
-        .heading("Open Large File?")
+        .heading(&tr!("Open Large File?"))
         .body(format!(
             "\u{201c}{}\u{201d} is {}. Large files can be slow to open and edit.",
             entry.name,

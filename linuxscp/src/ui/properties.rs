@@ -10,6 +10,7 @@ use gtk::{gio, glib};
 
 use super::entry_object::{format_mtime, format_size};
 use linuxscp::runtime::runtime;
+use linuxscp::tr;
 use linuxscp::transfers::AttrRequest;
 use linuxscp::types::{Backend, FsEntry};
 use linuxscp::{fsops, sessions};
@@ -65,10 +66,10 @@ pub fn show(
     };
 
     let where_label = match backend {
-        Backend::Local => "Local".to_string(),
+        Backend::Local => tr!("Local"),
         Backend::Remote(id) => sessions::get(id)
             .map(|h| h.host.clone())
-            .unwrap_or_else(|| "Remote".into()),
+            .unwrap_or_else(|| tr!("Remote")),
     };
 
     let heading;
@@ -81,30 +82,30 @@ pub fn show(
     if entries.len() == 1 {
         let entry = &entries[0];
         heading = entry.name.clone();
-        add_info("Location", &fsops::parent(&entry.path));
-        add_info("Type", &type_description(entry));
+        add_info(&tr!("Location"), &fsops::parent(&entry.path));
+        add_info(&tr!("Type"), &type_description(entry));
         if entry.is_dir {
-            contents_value = Some(add_info("Contents", "Not calculated"));
-            size_value = Some(add_info("Size", "Not calculated"));
+            contents_value = Some(add_info(&tr!("Contents"), &tr!("Not calculated")));
+            size_value = Some(add_info(&tr!("Size"), &tr!("Not calculated")));
         } else {
-            add_info("Size", &exact_size(entry.size));
+            add_info(&tr!("Size"), &exact_size(entry.size));
         }
-        add_info("Modified", &format_mtime(entry.mtime));
+        add_info(&tr!("Modified"), &format_mtime(entry.mtime));
         if let Some(target) = &entry.link_target {
-            add_info("Link target", target);
+            add_info(&tr!("Link target"), target);
         }
-        add_info("Stored on", &where_label);
+        add_info(&tr!("Stored on"), &where_label);
     } else {
-        heading = format!("{} Items", entries.len());
-        add_info("Location", &fsops::parent(&entries[0].path));
+        heading = tr!("{} Items", entries.len());
+        add_info(&tr!("Location"), &fsops::parent(&entries[0].path));
         if has_dir {
             contents_value = Some(add_info("Contents", "Not calculated"));
             size_value = Some(add_info("Size", "Not calculated"));
         } else {
             // All plain files: the listing already knows the answer.
-            add_info("Contents", &format!("{} files", entries.len()));
+            add_info(&tr!("Contents"), &tr!("{} files", entries.len()));
             add_info(
-                "Size",
+                &tr!("Size"),
                 &exact_size(entries.iter().map(|e| e.size).sum::<u64>()),
             );
         }
@@ -115,7 +116,7 @@ pub fn show(
     // Contents/Size rows so it costs no extra height.
     if let (Some(contents_value), Some(size_value)) = (&contents_value, &size_value) {
         let calc_btn = gtk::Button::builder()
-            .label("Calculate")
+            .label(&tr!("Calculate"))
             .valign(gtk::Align::Center)
             .build();
         let contents_grid_row = if entries.len() == 1 { 2 } else { 1 };
@@ -125,8 +126,8 @@ pub fn show(
         let entries_for_scan = entries.clone();
         calc_btn.connect_clicked(move |btn| {
             btn.set_sensitive(false);
-            contents_value.set_label("Calculating…");
-            size_value.set_label("Calculating…");
+            contents_value.set_label(&tr!("Calculating…"));
+            size_value.set_label(&tr!("Calculating…"));
             let entries = entries_for_scan.clone();
             let handle = runtime().spawn(async move { fsops::disk_usage(backend, &entries).await });
             let contents_value = contents_value.clone();
@@ -136,18 +137,18 @@ pub fn show(
                 let usage = match handle.await {
                     Ok(Ok(usage)) => usage,
                     _ => {
-                        contents_value.set_label("Unavailable");
-                        size_value.set_label("Unavailable");
+                        contents_value.set_label(&tr!("Unavailable"));
+                        size_value.set_label(&tr!("Unavailable"));
                         btn.set_sensitive(true);
                         return;
                     }
                 };
-                contents_value.set_label(&format!(
+                contents_value.set_label(&tr!(
                     "{} {}, {} {}",
                     usage.files,
-                    if usage.files == 1 { "file" } else { "files" },
+                    linuxscp::i18n::ngettext("file", "files", usage.files as u32),
                     usage.dirs,
-                    if usage.dirs == 1 { "folder" } else { "folders" },
+                    linuxscp::i18n::ngettext("folder", "folders", usage.dirs as u32),
                 ));
                 size_value.set_label(&exact_size(usage.bytes));
                 btn.set_visible(false);
@@ -178,20 +179,20 @@ pub fn show(
         ident.attach(&entry, 1, grid_row, 1, 1);
         entry
     };
-    let owner_row = ident_entry("Owner", &initial_owner, 0);
-    let group_row = ident_entry("Group", &initial_group, 1);
+    let owner_row = ident_entry(&tr!("Owner"), &initial_owner, 0);
+    let group_row = ident_entry(&tr!("Group"), &initial_group, 1);
 
     // --- Permissions grid ---------------------------------------------------
     let perms = Permissions::new(initial_mode(&entries));
 
-    let add_x_check = gtk::CheckButton::with_label("Add X to directories");
+    let add_x_check = gtk::CheckButton::with_label(&tr!("Add X to directories"));
     add_x_check.set_visible(has_dir);
     let recursive_check =
-        gtk::CheckButton::with_label("Set owner, group and permissions recursively");
+        gtk::CheckButton::with_label(&tr!("Set owner, group and permissions recursively"));
     recursive_check.set_visible(has_dir);
 
     let perm_group = adw::PreferencesGroup::builder()
-        .title("Permissions")
+        .title(&tr!("Permissions"))
         .build();
     let perm_box = gtk::Box::new(gtk::Orientation::Vertical, 8);
     perm_box.append(&perms.grid);
@@ -209,8 +210,8 @@ pub fn show(
         .close_response("cancel")
         .default_response("ok")
         .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("ok", "OK");
+    dialog.add_response("cancel", &tr!("Cancel"));
+    dialog.add_response("ok", &tr!("OK"));
     dialog.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
     dialog.set_extra_child(Some(&content));
 
@@ -276,14 +277,19 @@ impl Permissions {
         let specials: [gtk::CheckButton; 3] = std::array::from_fn(|i| {
             let bit = [0o4000u32, 0o2000, 0o1000][i];
             gtk::CheckButton::builder()
-                .label(["Set UID", "Set GID", "Sticky bit"][i])
+                .label(match i {
+                    0 => tr!("Set UID"),
+                    1 => tr!("Set GID"),
+                    _ => tr!("Sticky bit"),
+                })
                 .active(initial & bit != 0)
                 .build()
         });
 
-        for (class, class_name) in ["Owner", "Group", "Others"].iter().enumerate() {
+        let class_names = [tr!("Owner"), tr!("Group"), tr!("Others")];
+        for (class, class_name) in class_names.iter().enumerate() {
             let label = gtk::Label::builder()
-                .label(*class_name)
+                .label(class_name)
                 .halign(gtk::Align::Start)
                 .build();
             grid.attach(&label, 0, class as i32, 1, 1);
@@ -294,7 +300,7 @@ impl Permissions {
         }
 
         let octal_label = gtk::Label::builder()
-            .label("Octal")
+            .label(&tr!("Octal"))
             .halign(gtk::Align::Start)
             .build();
         grid.attach(&octal_label, 0, 3, 1, 1);
@@ -407,9 +413,9 @@ fn initial_mode(entries: &[FsEntry]) -> u32 {
 /// "1.5 MB (1,572,864 bytes)" style size text.
 fn exact_size(bytes: u64) -> String {
     if bytes < 1024 {
-        return format!("{bytes} bytes");
+        return tr!("{} bytes", bytes);
     }
-    format!("{} ({} bytes)", format_size(bytes), group_digits(bytes))
+    tr!("{} ({} bytes)", format_size(bytes), group_digits(bytes))
 }
 
 fn group_digits(value: u64) -> String {
@@ -427,18 +433,18 @@ fn group_digits(value: u64) -> String {
 fn type_description(entry: &FsEntry) -> String {
     if entry.is_symlink {
         return if entry.is_dir {
-            "Symbolic link to folder".into()
+            tr!("Symbolic link to folder")
         } else {
-            "Symbolic link".into()
+            tr!("Symbolic link")
         };
     }
     if entry.is_dir {
-        return "Folder".into();
+        return tr!("Folder");
     }
     let (content_type, uncertain) =
         gio::content_type_guess(Some(std::path::Path::new(&entry.name)), None);
     if uncertain && content_type == "application/octet-stream" {
-        return "File".into();
+        return tr!("File");
     }
     gio::content_type_get_description(&content_type).to_string()
 }

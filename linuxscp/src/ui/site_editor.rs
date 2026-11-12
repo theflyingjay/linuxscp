@@ -16,6 +16,7 @@ use gtk::glib;
 use super::key_import;
 use linuxscp::settings::Site;
 use linuxscp::ssh::ppk;
+use linuxscp::tr;
 use linuxscp::types::{AuthMethod, Elevation};
 
 /// What to do with the site's stored secret after editing.
@@ -65,11 +66,15 @@ impl SiteForm {
         let root = gtk::Box::new(gtk::Orientation::Vertical, 12);
 
         // --- Connection group ---
-        let conn_group = adw::PreferencesGroup::builder().title("Connection").build();
-        let name_row = adw::EntryRow::builder().title("Name").build();
-        let host_row = adw::EntryRow::builder().title("Host").build();
-        let user_row = adw::EntryRow::builder().title("Username").build();
-        let port_row = adw::EntryRow::builder().title("Port (blank = 22)").build();
+        let conn_group = adw::PreferencesGroup::builder()
+            .title(&tr!("Connection"))
+            .build();
+        let name_row = adw::EntryRow::builder().title(&tr!("Name")).build();
+        let host_row = adw::EntryRow::builder().title(&tr!("Host")).build();
+        let user_row = adw::EntryRow::builder().title(&tr!("Username")).build();
+        let port_row = adw::EntryRow::builder()
+            .title(&tr!("Port (blank = 22)"))
+            .build();
         conn_group.add(&name_row);
         conn_group.add(&host_row);
         conn_group.add(&user_row);
@@ -78,22 +83,24 @@ impl SiteForm {
 
         // --- Authentication group ---
         let auth_group = adw::PreferencesGroup::builder()
-            .title("Authentication")
+            .title(&tr!("Authentication"))
             .build();
-        let auth_model = gtk::StringList::new(&AuthMethod::ALL.map(|a| a.label()));
+        let auth_labels: Vec<String> = AuthMethod::ALL.iter().map(AuthMethod::label).collect();
+        let auth_model =
+            gtk::StringList::new(&auth_labels.iter().map(String::as_str).collect::<Vec<_>>());
         let auth_row = adw::ComboRow::builder()
-            .title("Method")
+            .title(&tr!("Method"))
             .model(&auth_model)
             .build();
         auth_group.add(&auth_row);
 
         // Key file chooser (visible for Key auth).
         let key_row = adw::ActionRow::builder()
-            .title("Key file")
-            .subtitle("None selected")
+            .title(&tr!("Key file"))
+            .subtitle(&tr!("None selected"))
             .build();
         let convert_button = gtk::Button::builder()
-            .label("Convert…")
+            .label(&tr!("Convert…"))
             .valign(gtk::Align::Center)
             .visible(false)
             .tooltip_text(
@@ -111,19 +118,29 @@ impl SiteForm {
         auth_group.add(&key_row);
 
         // Secret entry (password, or key passphrase).
-        let secret_row = adw::PasswordEntryRow::builder().title("Password").build();
+        let secret_row = adw::PasswordEntryRow::builder()
+            .title(&tr!("Password"))
+            .build();
         auth_group.add(&secret_row);
         root.append(&auth_group);
 
         // --- Session group ---
-        let session_group = adw::PreferencesGroup::builder().title("Session").build();
-        let elevation_model = gtk::StringList::new(&Elevation::ALL.map(|e| e.label()));
+        let session_group = adw::PreferencesGroup::builder()
+            .title(&tr!("Session"))
+            .build();
+        let elevation_labels: Vec<String> = Elevation::ALL.iter().map(Elevation::label).collect();
+        let elevation_model = gtk::StringList::new(
+            &elevation_labels
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+        );
         let elevation_row = adw::ComboRow::builder()
-            .title("Login as")
+            .title(&tr!("Login as"))
             .model(&elevation_model)
             .build();
         let dir_row = adw::EntryRow::builder()
-            .title("Remote directory (optional)")
+            .title(&tr!("Remote directory (optional)"))
             .build();
         session_group.add(&elevation_row);
         session_group.add(&dir_row);
@@ -178,7 +195,7 @@ impl SiteForm {
                     return;
                 }
                 let dialog = gtk::FileDialog::builder()
-                    .title("Select private key")
+                    .title(&tr!("Select private key"))
                     .build();
                 if let Some(dir) = dirs::home_dir() {
                     let ssh_dir = dir.join(".ssh");
@@ -189,10 +206,10 @@ impl SiteForm {
                 // default; the PuTTY filter is there to make .ppk import
                 // discoverable.
                 let all_files = gtk::FileFilter::new();
-                all_files.set_name(Some("All files"));
+                all_files.set_name(Some(&tr!("All files")));
                 all_files.add_pattern("*");
                 let putty = gtk::FileFilter::new();
-                putty.set_name(Some("PuTTY private keys (*.ppk)"));
+                putty.set_name(Some(&tr!("PuTTY private keys (*.ppk)")));
                 putty.add_suffix("ppk");
                 let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
                 filters.append(&all_files);
@@ -392,11 +409,11 @@ impl SiteForm {
         let show_secret = matches!(method, AuthMethod::Password | AuthMethod::Key);
         self.secret_row.set_visible(show_secret);
         self.secret_row
-            .set_title(match (method, self.had_secret.get()) {
-                (AuthMethod::Key, true) => "Passphrase (leave blank to keep saved)",
-                (AuthMethod::Key, false) => "Passphrase (optional)",
-                (_, true) => "Password (leave blank to keep saved)",
-                (_, false) => "Password",
+            .set_title(&match (method, self.had_secret.get()) {
+                (AuthMethod::Key, true) => tr!("Passphrase (leave blank to keep saved)"),
+                (AuthMethod::Key, false) => tr!("Passphrase (optional)"),
+                (_, true) => tr!("Password (leave blank to keep saved)"),
+                (_, false) => tr!("Password"),
             });
     }
 }

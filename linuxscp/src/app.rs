@@ -18,6 +18,7 @@ use crate::ui::tab_strip::TabStrip;
 use crate::ui::workspace::Workspace;
 use linuxscp::runtime::runtime;
 use linuxscp::settings::{Folder, Settings, Site};
+use linuxscp::tr;
 use linuxscp::types::{Backend, ConnectSpec, Event, FsEntry, SessionId, TransferRequest};
 use linuxscp::{fsops, secrets, sessions, ssh, transfers};
 
@@ -76,15 +77,15 @@ impl App {
 
         let hidden_btn = gtk::ToggleButton::new();
         hidden_btn.set_icon_name("view-conceal-symbolic");
-        hidden_btn.set_tooltip_text(Some("Show hidden files (Ctrl+H)"));
+        hidden_btn.set_tooltip_text(Some(&tr!("Show hidden files (Ctrl+H)")));
         header.pack_end(&hidden_btn);
 
         let menu = gtk::gio::Menu::new();
-        menu.append(Some("Open Terminal Here"), Some("win.terminal"));
-        menu.append(Some("Save as Site…"), Some("win.bookmark"));
-        menu.append(Some("Preferences"), Some("win.preferences"));
-        menu.append(Some("Keyboard Shortcuts"), Some("win.shortcuts"));
-        menu.append(Some("About LinuxSCP"), Some("win.about"));
+        menu.append(Some(&tr!("Open Terminal Here")), Some("win.terminal"));
+        menu.append(Some(&tr!("Save as Site…")), Some("win.bookmark"));
+        menu.append(Some(&tr!("Preferences")), Some("win.preferences"));
+        menu.append(Some(&tr!("Keyboard Shortcuts")), Some("win.shortcuts"));
+        menu.append(Some(&tr!("About LinuxSCP")), Some("win.about"));
         let menu_btn = gtk::MenuButton::builder()
             .icon_name("open-menu-symbolic")
             .menu_model(&menu)
@@ -92,7 +93,7 @@ impl App {
         header.pack_end(&menu_btn);
 
         let terminal_btn = gtk::Button::from_icon_name("utilities-terminal-symbolic");
-        terminal_btn.set_tooltip_text(Some("Open terminal here (Ctrl+T)"));
+        terminal_btn.set_tooltip_text(Some(&tr!("Open terminal here (Ctrl+T)")));
         terminal_btn.set_action_name(Some("win.terminal"));
         header.pack_start(&terminal_btn);
 
@@ -168,7 +169,7 @@ impl App {
 
         // The first, always-present tab; the site manager opens over it at
         // launch (see main.rs) so a saved site is one click away.
-        this.add_workspace("My Server");
+        this.add_workspace(&tr!("My Server"));
 
         {
             let this = this.clone();
@@ -328,7 +329,7 @@ impl App {
                     .retain(|ws| ws.page().as_ref() != Some(page));
                 // Never leave the window tab-less.
                 if this.tabs.n_pages() == 0 {
-                    this.add_workspace("My Server");
+                    this.add_workspace(&tr!("My Server"));
                 }
             });
         }
@@ -360,8 +361,9 @@ impl App {
         for pane in ws.panes() {
             pane.set_show_hidden(self.hidden.get());
         }
-        ws.left.set_backend(Backend::Local, home.clone(), "Local");
-        ws.right.set_backend(Backend::Local, home, "Local");
+        ws.left
+            .set_backend(Backend::Local, home.clone(), &tr!("Local"));
+        ws.right.set_backend(Backend::Local, home, &tr!("Local"));
 
         if let Some(page) = ws.page() {
             self.tabs.set_selected_page(&page);
@@ -372,7 +374,7 @@ impl App {
     /// Open a fresh session tab and immediately show the site manager for
     /// its right pane (the New Session action).
     fn new_session(self: &Rc<Self>) {
-        let ws = self.add_workspace("New Session");
+        let ws = self.add_workspace(&tr!("New Session"));
         self.open_site_manager(ws.right.clone());
     }
 
@@ -472,7 +474,7 @@ impl App {
             .find_map(|pane| pane.session_id());
         match remote {
             Some(id) => {
-                let text = self.session_label(id).unwrap_or_else(|| "Remote".into());
+                let text = self.session_label(id).unwrap_or_else(|| tr!("Remote"));
                 page.set_title(&text);
                 page.set_tooltip(&text);
                 page.set_icon(Some(&themed_icon("network-server-symbolic")));
@@ -491,24 +493,24 @@ impl App {
     /// controlled through the actions' enabled state at popup time.
     fn context_menu_model() -> gio::Menu {
         let clipboard = gio::Menu::new();
-        clipboard.append(Some("Copy"), Some("ctx.copy"));
-        clipboard.append(Some("Cut"), Some("ctx.cut"));
-        clipboard.append(Some("Paste"), Some("ctx.paste"));
-        clipboard.append(Some("Copy To…"), Some("ctx.copy-to"));
+        clipboard.append(Some(&tr!("Copy")), Some("ctx.copy"));
+        clipboard.append(Some(&tr!("Cut")), Some("ctx.cut"));
+        clipboard.append(Some(&tr!("Paste")), Some("ctx.paste"));
+        clipboard.append(Some(&tr!("Copy To…")), Some("ctx.copy-to"));
 
         let files = gio::Menu::new();
-        files.append(Some("Rename…"), Some("ctx.rename"));
-        files.append(Some("New Symlink…"), Some("ctx.symlink"));
+        files.append(Some(&tr!("Rename…")), Some("ctx.rename"));
+        files.append(Some(&tr!("New Symlink…")), Some("ctx.symlink"));
 
         let danger = gio::Menu::new();
-        danger.append(Some("Delete"), Some("ctx.delete"));
+        danger.append(Some(&tr!("Delete")), Some("ctx.delete"));
 
         let dir = gio::Menu::new();
-        dir.append(Some("New Folder…"), Some("ctx.new-folder"));
-        dir.append(Some("Refresh"), Some("ctx.refresh"));
+        dir.append(Some(&tr!("New Folder…")), Some("ctx.new-folder"));
+        dir.append(Some(&tr!("Refresh")), Some("ctx.refresh"));
 
         let props = gio::Menu::new();
-        props.append(Some("Properties"), Some("ctx.properties"));
+        props.append(Some(&tr!("Properties")), Some("ctx.properties"));
 
         let root = gio::Menu::new();
         root.append_section(None, &clipboard);
@@ -625,8 +627,8 @@ impl App {
 
     fn show_preferences(self: &Rc<Self>) {
         let group = adw::PreferencesGroup::builder()
-            .title("Notifications")
-            .description("How LinuxSCP tells you a transfer has finished")
+            .title(&tr!("Notifications"))
+            .description(&tr!("How LinuxSCP tells you a transfer has finished"))
             .build();
 
         let (sound_on, desktop_on) = {
@@ -635,13 +637,13 @@ impl App {
         };
 
         let sound_row = adw::SwitchRow::builder()
-            .title("Play sound on completion")
-            .subtitle("Plays a success chime when a transfer finishes")
+            .title(&tr!("Play sound on completion"))
+            .subtitle(&tr!("Plays a success chime when a transfer finishes"))
             .active(sound_on)
             .build();
         let desktop_row = adw::SwitchRow::builder()
-            .title("Desktop notifications")
-            .subtitle("Show a GNOME notification when a transfer finishes")
+            .title(&tr!("Desktop notifications"))
+            .subtitle(&tr!("Show a GNOME notification when a transfer finishes"))
             .active(desktop_on)
             .build();
 
@@ -670,12 +672,14 @@ impl App {
         group.add(&desktop_row);
 
         let tabs_group = adw::PreferencesGroup::builder()
-            .title("Tabs")
-            .description("How connected tabs are labeled")
+            .title(&tr!("Tabs"))
+            .description(&tr!("How connected tabs are labeled"))
             .build();
         let tab_name_row = adw::SwitchRow::builder()
-            .title("Show site name on tabs")
-            .subtitle("Show the saved site's name on the tab instead of its host")
+            .title(&tr!("Show site name on tabs"))
+            .subtitle(&tr!(
+                "Show the saved site's name on the tab instead of its host"
+            ))
             .active(self.settings.borrow().tab_shows_name)
             .build();
         {
@@ -694,7 +698,7 @@ impl App {
         page.add(&group);
         page.add(&tabs_group);
         let dialog = adw::PreferencesDialog::new();
-        dialog.set_title("Preferences");
+        dialog.set_title(&tr!("Preferences"));
         dialog.add(&page);
         dialog.present(Some(&self.window));
     }
@@ -728,7 +732,7 @@ impl App {
         list.add_css_class("boxed-list");
         let group = adw::PreferencesGroup::new();
         for (keys, desc) in shortcuts {
-            let row = adw::ActionRow::builder().title(*desc).build();
+            let row = adw::ActionRow::builder().title(&tr!(*desc)).build();
             let kbd = gtk::Label::new(Some(keys));
             kbd.add_css_class("dim-label");
             kbd.add_css_class("monospace");
@@ -740,7 +744,7 @@ impl App {
         let page = adw::PreferencesPage::new();
         page.add(&group);
         let dialog = adw::PreferencesDialog::new();
-        dialog.set_title("Keyboard Shortcuts");
+        dialog.set_title(&tr!("Keyboard Shortcuts"));
         dialog.add(&page);
         dialog.present(Some(&self.window));
     }
@@ -842,11 +846,11 @@ impl App {
         let dst = self.inactive_pane().clone();
         let items = src.selected_entries();
         if items.is_empty() {
-            self.toast("Nothing selected");
+            self.toast(&tr!("Nothing selected"));
             return;
         }
         if src.backend() == dst.backend() && src.current_dir() == dst.current_dir() {
-            self.toast("Source and destination are the same directory");
+            self.toast(&tr!("Source and destination are the same directory"));
             return;
         }
         let request = TransferRequest {
@@ -867,22 +871,28 @@ impl App {
 
     fn mkdir_in(self: &Rc<Self>, pane: Rc<Pane>) {
         let this = self.clone();
-        prompts::ask_text(&self.window, "New Directory", "", "Create", move |name| {
-            let backend = pane.backend();
-            let dir = pane.current_dir();
-            let path = fsops::join(&dir, &name);
-            let this = this.clone();
-            glib::spawn_future_local(async move {
-                let result = runtime()
-                    .spawn(async move { fsops::mkdir_all(backend, &path).await })
-                    .await;
-                match result {
-                    Ok(Ok(())) => this.reload_views(backend, &dir),
-                    Ok(Err(err)) => this.toast(&format!("Create failed: {err:#}")),
-                    Err(err) => this.toast(&err.to_string()),
-                }
-            });
-        });
+        prompts::ask_text(
+            &self.window,
+            &tr!("New Directory"),
+            "",
+            &tr!("Create"),
+            move |name| {
+                let backend = pane.backend();
+                let dir = pane.current_dir();
+                let path = fsops::join(&dir, &name);
+                let this = this.clone();
+                glib::spawn_future_local(async move {
+                    let result = runtime()
+                        .spawn(async move { fsops::mkdir_all(backend, &path).await })
+                        .await;
+                    match result {
+                        Ok(Ok(())) => this.reload_views(backend, &dir),
+                        Ok(Err(err)) => this.toast(&tr!("Create failed: {}", format!("{err:#}"))),
+                        Err(err) => this.toast(&err.to_string()),
+                    }
+                });
+            },
+        );
     }
 
     fn rename(self: &Rc<Self>) {
@@ -891,16 +901,16 @@ impl App {
 
     fn rename_in(self: &Rc<Self>, pane: Rc<Pane>) {
         let Some(entry) = pane.focused_entry() else {
-            self.toast("Nothing selected");
+            self.toast(&tr!("Nothing selected"));
             return;
         };
         let this = self.clone();
         let initial = entry.name.clone();
         prompts::ask_text(
             &self.window,
-            "Rename",
+            &tr!("Rename"),
             &initial,
-            "Rename",
+            &tr!("Rename"),
             move |new_name| {
                 if new_name == entry.name {
                     return;
@@ -916,7 +926,7 @@ impl App {
                         .await;
                     match result {
                         Ok(Ok(())) => this.reload_views(backend, &dir),
-                        Ok(Err(err)) => this.toast(&format!("Rename failed: {err:#}")),
+                        Ok(Err(err)) => this.toast(&tr!("Rename failed: {}", format!("{err:#}"))),
                         Err(err) => this.toast(&err.to_string()),
                     }
                 });
@@ -936,7 +946,7 @@ impl App {
             Backend::Local => spawn_terminal(terminal.as_deref(), Some(&dir), None),
             Backend::Remote(id) => {
                 let Some(spec) = self.session_specs.borrow().get(&id).cloned() else {
-                    self.toast("Session is closed");
+                    self.toast(&tr!("Session is closed"));
                     return;
                 };
                 // Elevated (sudo/su) sessions open the terminal as the login
@@ -950,7 +960,7 @@ impl App {
             }
         };
         if let Err(err) = result {
-            self.toast(&format!("Could not open terminal: {err}"));
+            self.toast(&tr!("Could not open terminal: {}", err));
         }
     }
 
@@ -966,7 +976,7 @@ impl App {
             return;
         }
         if src_backend == dst_pane.backend() {
-            self.toast("Source and destination are the same");
+            self.toast(&tr!("Source and destination are the same"));
             return;
         }
         let request = TransferRequest {
@@ -991,7 +1001,7 @@ impl App {
     ) {
         let (mut items, errors) = fsops::local::entries_from_paths(&paths);
         for (path, err) in errors {
-            self.toast(&format!("Could not read {path}: {err}"));
+            self.toast(&tr!("Could not read {}: {}", path, err));
         }
         let dst_dir = dst_pane.current_dir();
         // Unlike pane-to-pane drags, an external drop may target the local
@@ -1013,13 +1023,10 @@ impl App {
                 }
             });
             if !onto_itself.is_empty() {
-                self.toast(&format!(
-                    "Already in this folder: {}",
-                    onto_itself.join(", ")
-                ));
+                self.toast(&tr!("Already in this folder: {}", onto_itself.join(", ")));
             }
             if !into_itself.is_empty() {
-                self.toast(&format!(
+                self.toast(&tr!(
                     "Cannot copy a folder into itself: {}",
                     into_itself.join(", ")
                 ));
@@ -1047,23 +1054,29 @@ impl App {
     fn delete_in(self: &Rc<Self>, pane: Rc<Pane>) {
         let entries = pane.selected_entries();
         if entries.is_empty() {
-            self.toast("Nothing selected");
+            self.toast(&tr!("Nothing selected"));
             return;
         }
         let body = if entries.len() == 1 {
-            format!("Permanently delete \u{201c}{}\u{201d}?", entries[0].name)
+            tr!("Permanently delete \u{201c}{}\u{201d}?", entries[0].name)
         } else {
-            format!("Permanently delete {} items?", entries.len())
+            tr!("Permanently delete {} items?", entries.len())
         };
         let this = self.clone();
         let backend = pane.backend();
-        prompts::confirm(&self.window, "Delete", &body, "Delete", move || {
-            // Runs as a queue job: the row shows the removal count climbing
-            // and can be cancelled; every pane refreshes when it finishes
-            // (success, failure or cancel alike — reload_all_panes fires on
-            // any terminal state, so partial deletions show up too).
-            transfers::start_delete(backend, entries.clone(), this.events_tx.clone());
-        });
+        prompts::confirm(
+            &self.window,
+            &tr!("Delete"),
+            &body,
+            &tr!("Delete"),
+            move || {
+                // Runs as a queue job: the row shows the removal count climbing
+                // and can be cancelled; every pane refreshes when it finishes
+                // (success, failure or cancel alike — reload_all_panes fires on
+                // any terminal state, so partial deletions show up too).
+                transfers::start_delete(backend, entries.clone(), this.events_tx.clone());
+            },
+        );
     }
 
     // ---- Clipboard (copy / cut / paste) ---------------------------------
@@ -1072,20 +1085,21 @@ impl App {
     fn clip_selection(self: &Rc<Self>, pane: &Rc<Pane>, cut: bool) {
         let items = pane.selected_entries();
         if items.is_empty() {
-            self.toast("Nothing selected");
+            self.toast(&tr!("Nothing selected"));
             return;
         }
         let noun = if items.len() == 1 {
             format!("\u{201c}{}\u{201d}", items[0].name)
         } else {
-            format!("{} items", items.len())
+            tr!("{} items", items.len())
         };
-        self.toast(&format!(
-            "{noun} ready to {}",
+        self.toast(&tr!(
+            "{} ready to {}",
+            noun,
             if cut {
-                "move — paste somewhere"
+                tr!("move — paste somewhere")
             } else {
-                "copy — paste somewhere"
+                tr!("copy — paste somewhere")
             }
         ));
         *self.clipboard.borrow_mut() = Some(ClipboardState {
@@ -1098,7 +1112,7 @@ impl App {
 
     fn paste_into(self: &Rc<Self>, pane: &Rc<Pane>) {
         let Some(clip) = self.clipboard.borrow().clone() else {
-            self.toast("Nothing to paste");
+            self.toast(&tr!("Nothing to paste"));
             return;
         };
         let source_gone = match clip.backend {
@@ -1106,13 +1120,13 @@ impl App {
             Backend::Local => false,
         };
         if source_gone {
-            self.toast("The connection the files were copied from is closed");
+            self.toast(&tr!("The connection the files were copied from is closed"));
             self.clipboard.borrow_mut().take();
             return;
         }
         let dst_dir = pane.current_dir();
         if clip.backend == pane.backend() && clip.dir == dst_dir {
-            self.toast("Source and destination are the same directory");
+            self.toast(&tr!("Source and destination are the same directory"));
             return;
         }
 
@@ -1191,7 +1205,7 @@ impl App {
     fn copy_selection_to(self: &Rc<Self>, pane: &Rc<Pane>) {
         let items = pane.selected_entries();
         if items.is_empty() {
-            self.toast("Nothing selected");
+            self.toast(&tr!("Nothing selected"));
             return;
         }
         let this = self.clone();
@@ -1199,13 +1213,13 @@ impl App {
         let current = pane.current_dir();
         prompts::ask_text(
             &self.window,
-            "Copy to Directory",
+            &tr!("Copy to Directory"),
             &current,
-            "Copy",
+            &tr!("Copy"),
             move |dst_dir| {
                 let dst_dir = dst_dir.trim().to_string();
                 if dst_dir.is_empty() || dst_dir == pane.current_dir() {
-                    this.toast("Destination is the current directory");
+                    this.toast(&tr!("Destination is the current directory"));
                     return;
                 }
                 let backend = pane.backend();
@@ -1232,7 +1246,7 @@ impl App {
                             );
                         }
                         Ok(Err(err)) => {
-                            this.toast(&format!("Could not create destination: {err:#}"))
+                            this.toast(&tr!("Could not create destination: {}", format!("{err:#}")))
                         }
                         Err(err) => this.toast(&err.to_string()),
                     }
@@ -1244,16 +1258,16 @@ impl App {
     /// Create a symlink next to the selected entry, pointing at it.
     fn symlink_selection(self: &Rc<Self>, pane: &Rc<Pane>) {
         let Some(entry) = pane.focused_entry() else {
-            self.toast("Nothing selected");
+            self.toast(&tr!("Nothing selected"));
             return;
         };
         let this = self.clone();
         let pane = pane.clone();
         prompts::ask_text(
             &self.window,
-            "New Symlink",
+            &tr!("New Symlink"),
             &format!("{}-link", entry.name),
-            "Create",
+            &tr!("Create"),
             move |name| {
                 let name = name.trim().to_string();
                 if name.is_empty() || name == entry.name {
@@ -1272,7 +1286,7 @@ impl App {
                         .await;
                     match result {
                         Ok(Ok(())) => this.reload_views(backend, &dir),
-                        Ok(Err(err)) => this.toast(&format!("Symlink failed: {err:#}")),
+                        Ok(Err(err)) => this.toast(&tr!("Symlink failed: {}", format!("{err:#}"))),
                         Err(err) => this.toast(&err.to_string()),
                     }
                 });
@@ -1283,7 +1297,7 @@ impl App {
     fn properties_of_selection(self: &Rc<Self>, pane: &Rc<Pane>) {
         let entries = pane.selected_entries();
         if entries.is_empty() {
-            self.toast("Nothing selected");
+            self.toast(&tr!("Nothing selected"));
             return;
         }
         let this = self.clone();
@@ -1385,7 +1399,7 @@ impl App {
         match secret {
             SecretUpdate::Set(value) => {
                 if let Err(err) = secrets::set(&site.id, &value) {
-                    self.toast(&format!("Could not save password to keyring: {err}"));
+                    self.toast(&tr!("Could not save password to keyring: {}", err));
                 }
             }
             SecretUpdate::Clear => secrets::delete(&site.id),
@@ -1403,7 +1417,7 @@ impl App {
             }
         });
         let _ = site_id;
-        self.toast("Site saved");
+        self.toast(&tr!("Site saved"));
     }
 
     fn delete_site(self: &Rc<Self>, id: &str) {
@@ -1464,7 +1478,7 @@ impl App {
         let this = self.clone();
         let events = self.events_tx.clone();
         let id = sessions::next_id();
-        self.toast(&format!("Connecting to {}…", spec.host));
+        self.toast(&tr!("Connecting to {}…", spec.host));
         glib::spawn_future_local(async move {
             let spec_for_task = spec.clone();
             let events_for_task = events.clone();
@@ -1488,14 +1502,14 @@ impl App {
                     if let Some(ws) = this.workspace_of_pane(&pane) {
                         this.refresh_tab_title(&ws);
                     }
-                    this.toast(&format!("Connected to {}", spec.host));
+                    this.toast(&tr!("Connected to {}", spec.host));
                 }
                 Ok(Err(err)) => {
                     prompts::confirm(
                         &this.window,
-                        "Connection Failed",
+                        &tr!("Connection Failed"),
                         &format!("{err:#}"),
-                        "Retry",
+                        &tr!("Retry"),
                         {
                             let this = this.clone();
                             move || this.connect_session(pane.clone(), spec.clone())
@@ -1515,7 +1529,7 @@ impl App {
     pub fn bookmark_current(self: &Rc<Self>) {
         let pane = self.active_pane();
         let Backend::Remote(id) = pane.backend() else {
-            self.toast("Connect to a server first");
+            self.toast(&tr!("Connect to a server first"));
             return;
         };
         let Some(spec) = self.session_specs.borrow().get(&id).cloned() else {
@@ -1600,8 +1614,8 @@ impl App {
                         // Offer a one-click reconnect for unexpected drops.
                         match (spec, affected.into_iter().next()) {
                             (Some(spec), Some(pane)) => {
-                                let toast = adw::Toast::new(&format!("Connection lost: {reason}"));
-                                toast.set_button_label(Some("Reconnect"));
+                                let toast = adw::Toast::new(&tr!("Connection lost: {}", reason));
+                                toast.set_button_label(Some(&tr!("Reconnect")));
                                 toast.set_timeout(8);
                                 let this2 = this.clone();
                                 toast.connect_button_clicked(move |_| {
@@ -1609,7 +1623,7 @@ impl App {
                                 });
                                 this.toasts.add_toast(toast);
                             }
-                            _ => this.toast(&format!("Connection lost: {reason}")),
+                            _ => this.toast(&tr!("Connection lost: {}", reason)),
                         }
                     }
                 }
