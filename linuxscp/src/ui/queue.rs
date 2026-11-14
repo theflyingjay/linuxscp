@@ -536,7 +536,7 @@ fn running_detail(snap: &TransferSnapshot) -> String {
             return if snap.scanning {
                 tr!("Collecting items… {} changed", snap.files_done)
             } else {
-                format!("{} / {}", snap.files_done, snap.files_total)
+                tr!("{} / {} changed", snap.files_done, snap.files_total)
             };
         }
         TransferKind::Copy | TransferKind::Move => {}

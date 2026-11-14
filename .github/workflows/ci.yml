@@ -34,9 +34,13 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Translation catalogs
-        # Fails on malformed .po files (bad plural forms, mismatched
-        # placeholders) without needing a translation to be complete.
-        run: for po in po/*.po; do msgfmt --check -o /dev/null "$po"; done
+        # msgfmt --check catches malformed .po files (bad plural forms,
+        # mismatched printf directives). check-po.py covers what it cannot
+        # see: a translation that drops a `{}` placeholder, which would
+        # silently lose the substituted value at run time.
+        run: |
+          for po in po/*.po; do msgfmt --check -o /dev/null "$po"; done
+          ./scripts/check-po.py
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings

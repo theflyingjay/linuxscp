@@ -16,6 +16,7 @@ use crate::ui::queue::QueueView;
 use crate::ui::site_editor::SecretUpdate;
 use crate::ui::tab_strip::TabStrip;
 use crate::ui::workspace::Workspace;
+use linuxscp::i18n;
 use linuxscp::runtime::runtime;
 use linuxscp::settings::{Folder, Settings, Site};
 use linuxscp::tr;
@@ -36,36 +37,6 @@ struct ClipboardState {
     dir: String,
     items: Vec<FsEntry>,
     cut: bool,
-}
-
-/// One pane's state, captured before the window is rebuilt for a new
-/// language.
-#[derive(Clone)]
-struct PaneSnapshot {
-    backend: Backend,
-    dir: String,
-}
-
-/// One tab's state, captured before the window is rebuilt for a new language.
-#[derive(Clone)]
-struct WorkspaceSnapshot {
-    default_title: String,
-    left: PaneSnapshot,
-    right: PaneSnapshot,
-    left_active: bool,
-}
-
-type EventChannel = (async_channel::Sender<Event>, async_channel::Receiver<Event>);
-
-thread_local! {
-    /// One event channel per process, so connections opened by an earlier
-    /// window keep reporting to whichever window is current after a rebuild
-    /// (language switch).
-    static EVENTS: RefCell<Option<EventChannel>> = const { RefCell::new(None) };
-    /// The window that should receive events right now. Holding it strongly
-    /// keeps the window (and its Rust state) alive for the app's lifetime.
-    static CURRENT_APP: RefCell<Option<Rc<App>>> = const { RefCell::new(None) };
-    static EVENT_LOOP_STARTED: Cell<bool> = const { Cell::new(false) };
 }
 
 pub struct App {
@@ -97,11 +68,7 @@ pub struct App {
 
 impl App {
     pub fn build(app: &adw::Application) -> Rc<Self> {
-        let (events_tx, events_rx) = EVENTS.with(|slot| {
-            let mut slot = slot.borrow_mut();
-            let (tx, rx) = slot.get_or_insert_with(async_channel::unbounded::<Event>);
-            (tx.clone(), rx.clone())
-        });
+        let (events_tx, events_rx) = async_channel::unbounded::<Event>();
 
         let queue = QueueView::new();
 
@@ -199,10 +166,7 @@ impl App {
         this.wire_shortcuts();
         this.wire_actions();
         this.wire_hidden_toggle(&hidden_btn);
-
-        // This window takes over event delivery (and keeps itself alive).
-        CURRENT_APP.with(|slot| *slot.borrow_mut() = Some(this.clone()));
-        Self::start_event_loop(events_rx);
+        this.spawn_event_loop(events_rx);
 
         // The first, always-present tab; the site manager opens over it at
         // launch (see main.rs) so a saved site is one click away.
@@ -667,16 +631,20 @@ impl App {
         // persists the choice and asks for a restart.
         let language_group = adw::PreferencesGroup::builder()
             .title(tr!("Language"))
-            .description(tr!("Applies immediately; open sessions are closed"))
+            .description(tr!("Restart LinuxSCP to apply a new language"))
             .build();
         let system_default = tr!("System default");
-        let language_model =
-            gtk::StringList::new(&[system_default.as_str(), "English", "简体中文"]);
-        let selected_language = match self.settings.borrow().language.as_deref() {
-            Some("en") => 1,
-            Some("zh_CN") => 2,
-            _ => 0,
-        };
+        let mut names: Vec<&str> = vec![&system_default];
+        names.extend(i18n::AVAILABLE.iter().map(|(_, native)| *native));
+        let language_model = gtk::StringList::new(&names);
+        // Row 0 is the system locale; the rest map onto `AVAILABLE`.
+        let selected_language = self
+            .settings
+            .borrow()
+            .language
+            .as_deref()
+            .and_then(|saved| i18n::AVAILABLE.iter().position(|(code, _)| *code == saved))
+            .map_or(0, |index| index as u32 + 1);
         let language_row = adw::ComboRow::builder()
             .title(tr!("Language"))
             .model(&language_model)
@@ -685,14 +653,13 @@ impl App {
         {
             let this = self.clone();
             language_row.connect_selected_notify(move |row| {
-                let language = match row.selected() {
-                    1 => Some("en".to_string()),
-                    2 => Some("zh_CN".to_string()),
-                    _ => None,
-                };
-                this.with_settings_saved(|s| s.language = language.clone());
-                linuxscp::i18n::set_language(language.as_deref());
-                this.rebuild_for_language();
+                let language = row
+                    .selected()
+                    .checked_sub(1)
+                    .and_then(|index| i18n::AVAILABLE.get(index as usize))
+                    .map(|(code, _)| (*code).to_string());
+                this.with_settings_saved(|s| s.language = language);
+                this.toast(&tr!("Language saved — restart LinuxSCP to apply it"));
             });
         }
         language_group.add(&language_row);
@@ -845,7 +812,7 @@ impl App {
             .website("https://github.com/theflyingjay/linuxscp")
             .build();
         about.add_credit_section(
-            Some("简体中文翻译"),
+            Some(&tr!("Translation")),
             &["SkyBlue0404 https://github.com/SkyBlue0404"],
         );
         about.present(Some(&self.window));
@@ -1471,94 +1438,6 @@ impl App {
         settings.save();
     }
 
-    /// Recreate the main window so a newly selected language takes effect.
-    ///
-    /// GTK copies strings into widgets when they are built, so there is no
-    /// retranslation pass to run; rebuilding the window is the same work the
-    /// first launch does. SSH sessions live in the process-wide registry, so
-    /// open tabs, their directories and their connections are reattached to
-    /// the new window instead of being closed.
-    fn rebuild_for_language(self: &Rc<Self>) {
-        let Some(application) = self.window.application().and_downcast::<adw::Application>() else {
-            return;
-        };
-
-        let snapshots = self.snapshot_workspaces();
-        let specs = self.session_specs.borrow().clone();
-        let hidden = self.hidden.get();
-        let left_width = self.left_width.get();
-
-        let app = App::build(&application);
-        *app.session_specs.borrow_mut() = specs;
-        app.left_width.set(left_width);
-        app.hidden.set(hidden);
-        app.hidden_btn.set_active(hidden);
-
-        // The first snapshot reuses the workspace `build` already made.
-        let mut snapshots = snapshots.into_iter();
-        if let Some(first) = snapshots.next() {
-            let workspace = app.workspaces.borrow()[0].clone();
-            app.restore_workspace(&workspace, &first);
-        }
-        for snapshot in snapshots {
-            let workspace = app.add_workspace(&snapshot.default_title);
-            app.restore_workspace(&workspace, &snapshot);
-        }
-        if let Some(page) = app.workspaces.borrow().first().and_then(|ws| ws.page()) {
-            app.tabs.set_selected_page(&page);
-        }
-
-        app.window.present();
-        self.window.close();
-    }
-
-    /// Capture the panes' backends and directories so a rebuilt window can
-    /// reattach to the same sessions.
-    fn snapshot_workspaces(&self) -> Vec<WorkspaceSnapshot> {
-        let pane = |pane: &Rc<Pane>| PaneSnapshot {
-            backend: pane.backend(),
-            dir: pane.current_dir(),
-        };
-        self.workspaces
-            .borrow()
-            .iter()
-            .map(|ws| WorkspaceSnapshot {
-                default_title: ws.default_title(),
-                left: pane(&ws.left),
-                right: pane(&ws.right),
-                left_active: Rc::ptr_eq(&ws.active_pane(), &ws.left),
-            })
-            .collect()
-    }
-
-    /// Point a freshly built workspace at the snapshot's sessions and paths.
-    fn restore_workspace(self: &Rc<Self>, ws: &Rc<Workspace>, snapshot: &WorkspaceSnapshot) {
-        ws.set_default_title(&snapshot.default_title);
-        for (pane, saved) in [(&ws.left, &snapshot.left), (&ws.right, &snapshot.right)] {
-            let live = match saved.backend {
-                Backend::Remote(id) => sessions::get(id).map(|handle| (id, handle.host)),
-                Backend::Local => None,
-            };
-            match live {
-                Some((id, host)) => pane.set_backend(Backend::Remote(id), saved.dir.clone(), &host),
-                None => {
-                    // Local pane, or the session went away while switching.
-                    let dir = if saved.backend.is_remote() {
-                        dirs::home_dir()
-                            .map(|p| p.to_string_lossy().into_owned())
-                            .unwrap_or_else(|| "/".into())
-                    } else {
-                        saved.dir.clone()
-                    };
-                    pane.set_backend(Backend::Local, dir, &tr!("Local"));
-                }
-            }
-            pane.set_show_hidden(self.hidden.get());
-        }
-        ws.set_left_active(snapshot.left_active);
-        self.refresh_tab_title(ws);
-    }
-
     /// Create or update a site under `parent_id` (empty = root), persisting
     /// any secret change to the keyring.
     fn save_site(self: &Rc<Self>, site: Site, secret: SecretUpdate, parent_id: &str) {
@@ -1746,66 +1625,55 @@ impl App {
     }
 
     #[allow(clippy::type_complexity)]
-    /// Deliver events to whichever window is current. Started once per
-    /// process; a rebuilt window (language switch) simply becomes current.
-    fn start_event_loop(events_rx: async_channel::Receiver<Event>) {
-        if EVENT_LOOP_STARTED.with(|started| started.replace(true)) {
-            return;
-        }
+    fn spawn_event_loop(self: &Rc<Self>, events_rx: async_channel::Receiver<Event>) {
+        let this = self.clone();
         glib::spawn_future_local(async move {
             while let Ok(event) = events_rx.recv().await {
-                let app = CURRENT_APP.with(|slot| slot.borrow_mut().as_ref().map(Rc::clone));
-                if let Some(app) = app {
-                    app.handle_event(event);
-                }
-            }
-        });
-    }
-
-    fn handle_event(self: &Rc<Self>, event: Event) {
-        match event {
-            Event::Prompt(request) => prompts::show_prompt(&self.window, request),
-            Event::Conflict(request) => prompts::show_conflict(&self.window, request),
-            Event::TransferUpdate(snapshot) => {
-                self.on_transfer_snapshot(&snapshot);
-                // Edit downloads/uploads piggyback on the queue;
-                // the manager reacts when its jobs finish.
-                self.edit.on_job_terminal(&snapshot);
-                self.queue.update(snapshot);
-            }
-            Event::SessionClosed { id, reason } => {
-                sessions::forget(id);
-                let spec = self.session_specs.borrow_mut().remove(&id);
-                let mut affected: Vec<Rc<Pane>> = Vec::new();
-                for ws in self.workspaces.borrow().iter() {
-                    for pane in ws.panes() {
-                        if pane.session_id() == Some(id) {
-                            affected.push(pane);
+                match event {
+                    Event::Prompt(request) => prompts::show_prompt(&this.window, request),
+                    Event::Conflict(request) => prompts::show_conflict(&this.window, request),
+                    Event::TransferUpdate(snapshot) => {
+                        this.on_transfer_snapshot(&snapshot);
+                        // Edit downloads/uploads piggyback on the queue;
+                        // the manager reacts when its jobs finish.
+                        this.edit.on_job_terminal(&snapshot);
+                        this.queue.update(snapshot);
+                    }
+                    Event::SessionClosed { id, reason } => {
+                        sessions::forget(id);
+                        let spec = this.session_specs.borrow_mut().remove(&id);
+                        let mut affected: Vec<Rc<Pane>> = Vec::new();
+                        for ws in this.workspaces.borrow().iter() {
+                            for pane in ws.panes() {
+                                if pane.session_id() == Some(id) {
+                                    affected.push(pane);
+                                }
+                            }
+                        }
+                        for pane in &affected {
+                            pane.to_local();
+                            if let Some(ws) = this.workspace_of_pane(pane) {
+                                this.refresh_tab_title(&ws);
+                            }
+                        }
+                        // Offer a one-click reconnect for unexpected drops.
+                        match (spec, affected.into_iter().next()) {
+                            (Some(spec), Some(pane)) => {
+                                let toast = adw::Toast::new(&tr!("Connection lost: {}", reason));
+                                toast.set_button_label(Some(&tr!("Reconnect")));
+                                toast.set_timeout(8);
+                                let this2 = this.clone();
+                                toast.connect_button_clicked(move |_| {
+                                    this2.connect_session(pane.clone(), spec.clone());
+                                });
+                                this.toasts.add_toast(toast);
+                            }
+                            _ => this.toast(&tr!("Connection lost: {}", reason)),
                         }
                     }
                 }
-                for pane in &affected {
-                    pane.to_local();
-                    if let Some(ws) = self.workspace_of_pane(pane) {
-                        self.refresh_tab_title(&ws);
-                    }
-                }
-                // Offer a one-click reconnect for unexpected drops.
-                match (spec, affected.into_iter().next()) {
-                    (Some(spec), Some(pane)) => {
-                        let toast = adw::Toast::new(&tr!("Connection lost: {}", reason));
-                        toast.set_button_label(Some(&tr!("Reconnect")));
-                        toast.set_timeout(8);
-                        let this = self.clone();
-                        toast.connect_button_clicked(move |_| {
-                            this.connect_session(pane.clone(), spec.clone());
-                        });
-                        self.toasts.add_toast(toast);
-                    }
-                    _ => self.toast(&tr!("Connection lost: {}", reason)),
-                }
             }
-        }
+        });
     }
 }
 

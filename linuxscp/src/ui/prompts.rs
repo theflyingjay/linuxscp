@@ -54,8 +54,8 @@ fn show_secret(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
         .close_response("cancel")
         .default_response("ok")
         .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("ok", "OK");
+    dialog.add_response("cancel", &tr!("Cancel"));
+    dialog.add_response("ok", &tr!("OK"));
     dialog.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
 
     let entry = gtk::PasswordEntry::builder()
@@ -91,8 +91,8 @@ fn show_yes_no(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
         .close_response("no")
         .default_response("no")
         .build();
-    dialog.add_response("no", "No");
-    dialog.add_response("yes", "Yes");
+    dialog.add_response("no", &tr!("No"));
+    dialog.add_response("yes", &tr!("Yes"));
     dialog.set_response_appearance("yes", adw::ResponseAppearance::Suggested);
 
     let reply: SharedReply<Option<String>> = Rc::new(RefCell::new(Some(request.reply)));
@@ -124,7 +124,7 @@ pub fn show_conflict(parent: &impl IsA<gtk::Widget>, request: ConflictRequest) {
     dialog.add_response("overwrite", &tr!("Overwrite"));
     dialog.add_response("overwrite_all", &tr!("Overwrite All"));
     if request.dst_size < request.src_size {
-        dialog.add_response("resume", &tr!("Resume"));
+        dialog.add_response("resume", &tr!("Resume Transfer"));
     }
     dialog.add_response("skip", &tr!("Skip"));
     dialog.add_response("skip_all", &tr!("Skip All"));

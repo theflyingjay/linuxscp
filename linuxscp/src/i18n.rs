@@ -2,20 +2,30 @@
 //!
 //! User-visible strings are wrapped with [`tr!`](crate::tr), which translates
 //! the English message id through the catalog installed as
-//! `/usr/share/locale/<lang>/LC_MESSAGES/linuxscp.mo` (built from `po/`).
-//! Strings without placeholders can also use [`gettext`] directly.
+//! `<localedir>/<lang>/LC_MESSAGES/linuxscp.mo` (built from `po/`).
 //!
 //! Message ids are the English source strings, so a missing or partial
 //! translation simply leaves that string in English.
 
 use std::fmt::{Display, Write as _};
+use std::path::PathBuf;
 
 /// gettext text domain; must match the installed `.mo` file name.
 pub const DOMAIN: &str = "linuxscp";
 
-/// Where the catalogs are installed (`scripts/build-deb.sh` and the
-/// `Makefile` both use the system locale directory).
-const LOCALEDIR: &str = "/usr/share/locale";
+/// Languages with a catalog in `po/`, as (locale name, native name). The
+/// native name is what the Preferences picker shows, so it is not itself
+/// translated.
+pub const AVAILABLE: [(&str, &str); 2] = [("en", "English"), ("zh_CN", "简体中文")];
+
+/// True for a locale this build actually ships a catalog for.
+///
+/// `settings.json` is user-editable, so the saved value is never trusted:
+/// gettext resolves `LANGUAGE` as a path component, where `..` would load a
+/// catalog from outside the locale directory and a NUL byte panics.
+pub fn is_supported(language: &str) -> bool {
+    AVAILABLE.iter().any(|(code, _)| *code == language)
+}
 
 /// Switch the process to the user's locale and bind the translation domain.
 ///
@@ -25,7 +35,8 @@ const LOCALEDIR: &str = "/usr/share/locale";
 ///
 /// An explicit language chosen in Preferences (stored in the settings file)
 /// overrides the environment through `LANGUAGE`, which gettext consults
-/// before `LC_MESSAGES`.
+/// before `LC_MESSAGES`. gettext cannot retranslate live widgets, so the
+/// choice takes effect on the next launch.
 pub fn init() {
     apply_saved_language();
     // SAFETY: called once, before any threads are spawned, so no other
@@ -33,7 +44,7 @@ pub fn init() {
     unsafe {
         gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
     }
-    let _ = gettextrs::bindtextdomain(DOMAIN, LOCALEDIR);
+    let _ = gettextrs::bindtextdomain(DOMAIN, locale_dir());
     let _ = gettextrs::bind_textdomain_codeset(DOMAIN, "UTF-8");
     let _ = gettextrs::textdomain(DOMAIN);
 }
@@ -43,32 +54,53 @@ fn apply_saved_language() {
     let Some(language) = crate::settings::Settings::load().language else {
         return;
     };
+    if !is_supported(&language) {
+        tracing::warn!("ignoring unknown language {language:?} from settings");
+        return;
+    }
     // SAFETY: called before any threads are spawned (see `init`).
     unsafe {
         std::env::set_var("LANGUAGE", language);
     }
 }
 
-/// Switch languages at run time.
+/// Where the `.mo` files live.
 ///
-/// gettext picks the catalog up on the next `gettext` call once the locale
-/// is re-applied (`setlocale` bumps glibc's catalog counter). Callers must
-/// rebuild any already-built widgets: GTK strings are set once, so the
-/// window is recreated to pick up the new language.
-pub fn set_language(language: Option<&str>) {
-    // SAFETY: GTK runs this from the main thread and the app has no other
-    // thread reading the locale at this point; the environment write races
-    // only with the workers, which never touch the locale.
-    unsafe {
-        match language {
-            Some(language) => std::env::set_var("LANGUAGE", language),
-            None => std::env::remove_var("LANGUAGE"),
-        }
-        gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
+/// Depends on how the app was installed, so try, in order: an explicit
+/// override for packagers and debugging, the directory baked in at build
+/// time, then the distro (`/usr`), `make install` (`/usr/local`, the
+/// Makefile default) and Flatpak (`/app`) locations. A directory only wins
+/// if it actually holds one of our catalogs, so a `/usr/local` install is
+/// not shadowed by the distro package's empty `/usr/share/locale`.
+fn locale_dir() -> PathBuf {
+    if let Some(dir) = std::env::var_os("LINUXSCP_LOCALEDIR") {
+        return PathBuf::from(dir);
     }
-    let _ = gettextrs::bindtextdomain(DOMAIN, LOCALEDIR);
-    let _ = gettextrs::bind_textdomain_codeset(DOMAIN, "UTF-8");
-    let _ = gettextrs::textdomain(DOMAIN);
+
+    let mut candidates = Vec::with_capacity(4);
+    if let Some(dir) = option_env!("LINUXSCP_LOCALEDIR") {
+        candidates.push(PathBuf::from(dir));
+    }
+    candidates.push(PathBuf::from("/usr/share/locale"));
+    candidates.push(PathBuf::from("/usr/local/share/locale"));
+    candidates.push(PathBuf::from("/app/share/locale"));
+
+    candidates
+        .iter()
+        .find(|dir| has_catalog(dir))
+        .or_else(|| candidates.first())
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from("/usr/share/locale"))
+}
+
+/// True when `dir` holds a catalog this build ships.
+fn has_catalog(dir: &std::path::Path) -> bool {
+    AVAILABLE.iter().any(|(code, _)| {
+        dir.join(code)
+            .join("LC_MESSAGES")
+            .join("linuxscp.mo")
+            .is_file()
+    })
 }
 
 /// Translate a message id (the English source string).
@@ -152,7 +184,33 @@ macro_rules! tr {
 
 #[cfg(test)]
 mod tests {
-    use super::format_translated;
+    use super::{format_translated, has_catalog, is_supported};
+
+    #[test]
+    fn only_shipped_languages_are_accepted() {
+        assert!(is_supported("en"));
+        assert!(is_supported("zh_CN"));
+        // The saved value comes from a user-editable file: a path traversal
+        // or an embedded NUL must never reach gettext.
+        assert!(!is_supported(""));
+        assert!(!is_supported("../../tmp"));
+        assert!(!is_supported("zh_CN\0"));
+        assert!(!is_supported("zh_CN.UTF-8"));
+    }
+
+    #[test]
+    fn a_directory_only_counts_when_it_holds_a_catalog() {
+        let dir = std::env::temp_dir().join(format!("linuxscp-i18n-{}", std::process::id()));
+        let mo = dir.join("zh_CN").join("LC_MESSAGES").join("linuxscp.mo");
+        assert!(!has_catalog(&dir));
+
+        std::fs::create_dir_all(mo.parent().unwrap()).unwrap();
+        std::fs::write(&mo, b"").unwrap();
+        assert!(has_catalog(&dir));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(!has_catalog(&dir));
+    }
 
     #[test]
     fn substitutes_positional_placeholders_in_order() {

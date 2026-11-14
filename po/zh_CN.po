@@ -14,1006 +14,1405 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
+#: linuxscp/src/ui/queue.rs
 msgid "  •  {} left"
 msgstr "  •  剩余 {}"
 
+#: linuxscp/src/ui/queue.rs
 msgid "  •  {}/s"
 msgstr "  •  {}/秒"
 
+#: linuxscp/src/ui/queue.rs
 msgid " • {}/s"
 msgstr " • {}/秒"
 
+#: linuxscp/src/ui/key_import.rs
 msgid ", encrypted"
 msgstr "，已加密"
 
+#: linuxscp/src/ui/key_import.rs
 msgid ", not encrypted"
 msgstr "，未加密"
 
+#: linuxscp/src/ui/tree_node.rs
 msgid "1 site"
 msgstr "1 个站点"
 
+#: linuxscp/src/ui/queue.rs
 msgid "< 1 s"
 msgstr "< 1 秒"
 
+#: linuxscp/src/app.rs
+msgid ""
+"A commander-style SFTP client for GNOME. Works directly with your ~/.ssh/"
+"config and supports sudo/su elevation and resumable transfers."
+msgstr ""
+"适用于 GNOME 的 Commander 风格 SFTP 客户端。直接使用你的 ~/.ssh/config，支持 "
+"sudo/su 提权与可续传的传输。"
+
+#: linuxscp/src/app.rs
 msgid "About LinuxSCP"
 msgstr "关于 LinuxSCP"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Add X to directories"
 msgstr "为目录添加 X 权限"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "All files"
 msgstr "所有文件"
 
+#: linuxscp/src/app.rs
 msgid "Already in this folder: {}"
 msgstr "已在此文件夹中：{}"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Authentication"
 msgstr "认证"
 
+#: linuxscp/src/ui/prompts.rs
 msgid "Authentication Required"
 msgstr "需要认证"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Calculate"
 msgstr "计算"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Calculating…"
 msgstr "正在计算…"
 
+#: linuxscp/src/ui/config_editor.rs, linuxscp/src/ui/edit.rs,
+#: linuxscp/src/ui/key_import.rs, linuxscp/src/ui/prompts.rs,
+#: linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
 msgid "Cancel"
 msgstr "取消"
 
+#: linuxscp/src/ui/prompts.rs
 msgid "Cancel Transfer"
 msgstr "取消传输"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Cancelled — {} changed"
 msgstr "已取消 — {} 项已更改"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Cancelled — {} of {} • {}/{} files"
 msgstr "已取消 — {} / {} • {}/{} 个文件"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Cancelled — {} removed"
 msgstr "已取消 — 已移除 {} 项"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Cancelled — {} • {}"
 msgstr "已取消 — {} • {}"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Cannot Import Key"
 msgstr "无法导入密钥"
 
+#: linuxscp/src/app.rs
 msgid "Cannot copy a folder into itself: {}"
 msgstr "无法将文件夹复制到其自身：{}"
 
+# ---- Core transport / filesystem error messages ----
+#: linuxscp/src/transfers.rs
+msgid "Change {}"
+msgstr "更改 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "Change {} items"
+msgstr "更改 {} 个项目"
+
+#: linuxscp/src/ui/queue.rs
 msgid "Changed {}"
 msgstr "已更改 {}"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Clear Finished"
 msgstr "清除已完成"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Close"
 msgstr "关闭"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Collecting items… {} changed"
 msgstr "正在收集项目… {} 项已更改"
 
+#: linuxscp/src/ui/splash.rs
 msgid "Commander-style SFTP client for GNOME"
 msgstr "适用于 GNOME 的 Commander 风格 SFTP 客户端"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Comment"
 msgstr "注释"
 
+#: linuxscp/src/app.rs
+msgid "Complete the folder being typed in the path"
+msgstr "补全路径中正在输入的文件夹"
+
+#: linuxscp/src/ui/prompts.rs
 msgid "Confirm"
 msgstr "确认"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Connect"
 msgstr "连接"
 
+#: linuxscp/src/types.rs
 msgid "Connect as yourself"
 msgstr "以本人身份连接"
 
+#: linuxscp/src/app.rs
 msgid "Connect to a server first"
 msgstr "请先连接到服务器"
 
+#: linuxscp/src/ui/pane.rs
 msgid "Connect to server…"
 msgstr "连接到服务器…"
 
+#: linuxscp/src/app.rs
 msgid "Connected to {}"
 msgstr "已连接到 {}"
 
+#: linuxscp/src/app.rs
 msgid "Connecting to {}…"
 msgstr "正在连接 {}…"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Connection"
 msgstr "连接"
 
+#: linuxscp/src/app.rs
 msgid "Connection Failed"
 msgstr "连接失败"
 
+#: linuxscp/src/app.rs
 msgid "Connection lost: {}"
 msgstr "连接已断开：{}"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Contents"
 msgstr "内容"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Convert"
 msgstr "转换"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Convert…"
 msgstr "转换…"
 
+#: linuxscp/src/app.rs
 msgid "Copy"
 msgstr "复制"
 
+#: linuxscp/src/app.rs
+msgid "Copy / cut selection"
+msgstr "复制/剪切所选内容"
+
+#: linuxscp/src/app.rs
 msgid "Copy To…"
 msgstr "复制到…"
 
+#: linuxscp/src/app.rs
 msgid "Copy to Directory"
 msgstr "复制到目录"
 
+#: linuxscp/src/app.rs
+msgid "Copy to other pane"
+msgstr "复制到另一窗格"
+
+#: linuxscp/src/transfers.rs
+msgid "Copy {}"
+msgstr "复制 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "Copy {} items"
+msgstr "复制 {} 个项目"
+
+#: linuxscp/src/ui/config_editor.rs
 msgid "Could Not Save"
 msgstr "无法保存"
 
+#: linuxscp/src/ui/edit.rs
 msgid "Could not create a temp folder: {}"
 msgstr "无法创建临时文件夹：{}"
 
+#: linuxscp/src/app.rs
 msgid "Could not create destination: {}"
 msgstr "无法创建目标：{}"
 
+#: linuxscp/src/app.rs
 msgid "Could not open terminal: {}"
 msgstr "无法打开终端：{}"
 
+#: linuxscp/src/ui/edit.rs
 msgid "Could not open the editor: {}"
 msgstr "无法打开编辑器：{}"
 
+#: linuxscp/src/ui/edit.rs
 msgid "Could not read the saved file: {}"
 msgstr "无法读取已保存的文件：{}"
 
+#: linuxscp/src/app.rs, linuxscp/src/ui/key_import.rs
 msgid "Could not read {}: {}"
 msgstr "无法读取 {}：{}"
 
+#: linuxscp/src/app.rs
 msgid "Could not save password to keyring: {}"
 msgstr "无法将密码保存到密钥环：{}"
 
+#: linuxscp/src/ui/edit.rs
 msgid "Could not watch the temp copy: {}"
 msgstr "无法监视临时副本：{}"
 
+#: linuxscp/src/app.rs, linuxscp/src/ui/connect_dialog.rs
 msgid "Create"
 msgstr "创建"
 
+#: linuxscp/src/app.rs
 msgid "Create failed: {}"
 msgstr "创建失败：{}"
 
+#: linuxscp/src/app.rs
 msgid "Cut"
 msgstr "剪切"
 
+#: linuxscp/src/app.rs, linuxscp/src/ui/connect_dialog.rs
 msgid "Delete"
 msgstr "删除"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Delete Folder"
 msgstr "删除文件夹"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Delete Site"
 msgstr "删除站点"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Delete this folder and every site inside it?"
 msgstr "删除此文件夹及其中的所有站点？"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Delete this saved site and its stored password?"
 msgstr "删除此已保存的站点及其存储的密码？"
 
+#: linuxscp/src/transfers.rs
+msgid "Delete {}"
+msgstr "删除 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "Delete {} items"
+msgstr "删除 {} 个项目"
+
+#: linuxscp/src/app.rs
 msgid "Desktop notifications"
 msgstr "桌面通知"
 
+#: linuxscp/src/app.rs
 msgid "Destination is the current directory"
 msgstr "目标就是当前目录"
 
+#: linuxscp/src/ui/pane.rs
 msgid "Disconnect"
 msgstr "断开连接"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Done — {} in {}"
-msgstr "完成 — {} 用时 {}"
+msgstr "完成 — {}，共 {}"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Download"
 msgstr "下载"
 
+#: linuxscp/src/ssh/ppk.rs
 msgid "Ed448 keys are not supported by OpenSSH"
 msgstr "OpenSSH 不支持 Ed448 密钥"
 
+#: linuxscp/src/ui/config_editor.rs
 msgid "Edit SSH Config"
 msgstr "编辑 SSH 配置"
 
+#: linuxscp/src/app.rs
+msgid "Edit file in text editor"
+msgstr "在文本编辑器中编辑文件"
+
+#: linuxscp/src/app.rs
+msgid "Edit path"
+msgstr "编辑路径"
+
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Edit ~/.ssh/config"
 msgstr "编辑 ~/.ssh/config"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Failed"
 msgstr "失败"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Failed — {}"
 msgstr "失败 — {}"
 
+#: linuxscp/src/ui/properties.rs
 msgid "File"
 msgstr "文件"
 
+#: linuxscp/src/ui/prompts.rs
 msgid "File Exists"
 msgstr "文件已存在"
 
+#: linuxscp/src/app.rs
+msgid "File context menu"
+msgstr "文件上下文菜单"
+
+#: linuxscp/src/ui/key_import.rs
 msgid "Fingerprint"
 msgstr "指纹"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Finished {}, took {}"
 msgstr "完成于 {}，耗时 {}"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Folder"
 msgstr "文件夹"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Format"
 msgstr "格式"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Group"
 msgstr "所属组"
 
+#: linuxscp/src/ui/pane.rs
 msgid "Home directory"
 msgstr "主目录"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Host"
 msgstr "主机"
 
-msgid "Host blocks defined here appear in the host list and are used by the system ssh — aliases, jump hosts, keys and all."
-msgstr "此处定义的主机块会出现在主机列表中，并由系统 ssh 使用 — 包括别名、跳板主机和密钥等。"
+#: linuxscp/src/ui/config_editor.rs
+msgid ""
+"Host blocks defined here appear in the host list and are used by the system "
+"ssh — aliases, jump hosts, keys and all."
+msgstr ""
+"此处定义的主机块会出现在主机列表中，并由系统 ssh 使用 — 包括别名、跳板主机和"
+"密钥等。"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Hosts from ~/.ssh/config"
 msgstr "来自 ~/.ssh/config 的主机"
 
+#: linuxscp/src/app.rs
 msgid "How LinuxSCP tells you a transfer has finished"
 msgstr "LinuxSCP 如何提示传输已完成"
 
+#: linuxscp/src/app.rs
 msgid "How connected tabs are labeled"
 msgstr "已连接的标签页如何命名"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Import"
 msgstr "导入"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Import PuTTY Key"
 msgstr "导入 PuTTY 密钥"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Key"
 msgstr "密钥"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Key file"
 msgstr "密钥文件"
 
+#: linuxscp/src/types.rs
 msgid "Key file (OpenSSH or PuTTY .ppk)"
 msgstr "密钥文件（OpenSSH 或 PuTTY .ppk）"
 
+#: linuxscp/src/app.rs
 msgid "Keyboard Shortcuts"
 msgstr "键盘快捷键"
 
+# ---- Language picker ----
+#: linuxscp/src/app.rs
+msgid "Language"
+msgstr "语言"
+
+#: linuxscp/src/app.rs
+msgid "Language saved — restart LinuxSCP to apply it"
+msgstr "语言已保存 — 重启 LinuxSCP 后生效"
+
+#: linuxscp/src/ui/properties.rs
 msgid "Link target"
 msgstr "链接目标"
 
+#: linuxscp/src/app.rs, linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs,
+#: linuxscp/src/ui/queue.rs
 msgid "Local"
 msgstr "本地"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Location"
 msgstr "位置"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Login as"
 msgstr "登录身份"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Method"
 msgstr "方式"
 
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
 msgid "Modified"
 msgstr "修改时间"
 
+#: linuxscp/src/app.rs
+msgid "Move to other pane"
+msgstr "移动到另一窗格"
+
+#: linuxscp/src/transfers.rs
+msgid "Move {}"
+msgstr "移动 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "Move {} items"
+msgstr "移动 {} 个项目"
+
+#: linuxscp/src/app.rs
 msgid "My Server"
 msgstr "我的服务器"
 
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/site_editor.rs
 msgid "Name"
 msgstr "名称"
 
+#: linuxscp/src/app.rs
 msgid "New Directory"
 msgstr "新建目录"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "New Folder"
 msgstr "新建文件夹"
 
+#: linuxscp/src/app.rs
 msgid "New Folder…"
 msgstr "新建文件夹…"
 
+#: linuxscp/src/app.rs, linuxscp/src/ui/tab_strip.rs
 msgid "New Session"
 msgstr "新建会话"
 
+#: linuxscp/src/app.rs
 msgid "New Symlink"
 msgstr "新建符号链接"
 
+#: linuxscp/src/app.rs
 msgid "New Symlink…"
 msgstr "新建符号链接…"
 
+#: linuxscp/src/app.rs
+msgid "New directory"
+msgstr "新建目录"
+
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "New folder"
 msgstr "新建文件夹"
 
+#: linuxscp/src/ui/pane.rs
 msgid "New folder (F7)"
 msgstr "新建文件夹 (F7)"
 
+#: linuxscp/src/ui/connect_dialog.rs, linuxscp/src/ui/site_editor.rs
 msgid "New site"
 msgstr "新站点"
 
+#: linuxscp/src/ui/tab_strip.rs
 msgid "Next session"
 msgstr "下一个会话"
 
-msgid "No Host entries yet.\n\nUse the edit button above to add some to ~/.ssh/config."
-msgstr "还没有主机条目。\n\n使用上方的编辑按钮向 ~/.ssh/config 添加一些。"
+#: linuxscp/src/ui/prompts.rs
+msgid "No"
+msgstr "否"
 
+#: linuxscp/src/ui/connect_dialog.rs
+msgid ""
+"No Host entries yet.\n"
+"\n"
+"Use the edit button above to add some to ~/.ssh/config."
+msgstr ""
+"还没有主机条目。\n"
+"\n"
+"使用上方的编辑按钮向 ~/.ssh/config 添加一些。"
+
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "No Site Selected"
 msgstr "未选择站点"
 
+#: linuxscp/src/ui/edit.rs
 msgid "No default text editor is configured"
 msgstr "未配置默认文本编辑器"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "No hosts match the search."
 msgstr "没有匹配搜索的主机。"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "None selected"
 msgstr "未选择"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Not calculated"
 msgstr "未计算"
 
+#: linuxscp/src/app.rs
 msgid "Nothing selected"
 msgstr "未选择任何内容"
 
+#: linuxscp/src/app.rs
 msgid "Nothing to paste"
 msgstr "没有可粘贴的内容"
 
+#: linuxscp/src/app.rs
 msgid "Notifications"
 msgstr "通知"
 
+#: linuxscp/src/ui/config_editor.rs, linuxscp/src/ui/key_import.rs,
+#: linuxscp/src/ui/prompts.rs, linuxscp/src/ui/properties.rs
 msgid "OK"
 msgstr "确定"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Octal"
 msgstr "八进制"
 
+#: linuxscp/src/ui/edit.rs
 msgid "Open Anyway"
 msgstr "仍然打开"
 
+#: linuxscp/src/ui/edit.rs
 msgid "Open Large File?"
 msgstr "打开大文件？"
 
+#: linuxscp/src/app.rs
 msgid "Open Terminal Here"
 msgstr "在此打开终端"
 
+#: linuxscp/src/ui/tab_strip.rs
+msgid "Open a new session tab"
+msgstr "打开新的会话标签页"
+
+#: linuxscp/src/app.rs
+msgid "Open directory"
+msgstr "打开目录"
+
+#: linuxscp/src/app.rs
+msgid "Open terminal here"
+msgstr "在此打开终端"
+
+#: linuxscp/src/app.rs
 msgid "Open terminal here (Ctrl+T)"
 msgstr "在此打开终端 (Ctrl+T)"
 
-msgid "OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. A copy in OpenSSH format is written to {} and selected for this site; the .ppk file is not changed."
-msgstr "LinuxSCP 所使用的 OpenSSH 无法读取 PuTTY 的 .ppk 格式。将以 OpenSSH 格式把副本写入 {} 并为此站点选中；.ppk 文件不会被更改。"
+#: linuxscp/src/ui/key_import.rs
+msgid ""
+"OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. A "
+"copy in OpenSSH format is written to {} and selected for this site; the .ppk "
+"file is not changed."
+msgstr ""
+"LinuxSCP 所使用的 OpenSSH 无法读取 PuTTY 的 .ppk 格式。将以 OpenSSH 格式把副"
+"本写入 {} 并为此站点选中；.ppk 文件不会被更改。"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Others"
 msgstr "其他"
 
+#: linuxscp/src/ui/prompts.rs
 msgid "Overwrite"
 msgstr "覆盖"
 
+#: linuxscp/src/ui/prompts.rs
 msgid "Overwrite All"
 msgstr "全部覆盖"
 
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
 msgid "Owner"
 msgstr "所有者"
 
+#: linuxscp/src/app.rs
+msgid "Parent directory"
+msgstr "上级目录"
+
+#: linuxscp/src/ui/pane.rs
 msgid "Parent directory (Backspace)"
 msgstr "上级目录（退格键）"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Passphrase"
 msgstr "密钥口令"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Passphrase (leave blank to keep saved)"
 msgstr "密钥口令（留空以保留已保存的口令）"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Passphrase (optional)"
 msgstr "密钥口令（可选）"
 
+#: linuxscp/src/types.rs, linuxscp/src/ui/site_editor.rs
 msgid "Password"
 msgstr "密码"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Password (leave blank to keep saved)"
 msgstr "密码（留空以保留已保存的密码）"
 
+#: linuxscp/src/app.rs
 msgid "Paste"
 msgstr "粘贴"
 
+#: linuxscp/src/app.rs
+msgid "Paste into active pane"
+msgstr "粘贴到活动窗格"
+
+#: linuxscp/src/ui/queue.rs
 msgid "Pause"
 msgstr "暂停"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Paused"
 msgstr "已暂停"
 
+#: linuxscp/src/app.rs
 msgid "Permanently delete {} items?"
 msgstr "永久删除 {} 个项目？"
 
+#: linuxscp/src/app.rs
 msgid "Permanently delete “{}”?"
 msgstr "永久删除“{}”？"
 
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
 msgid "Permissions"
 msgstr "权限"
 
+#: linuxscp/src/app.rs
+msgid "Pick a suggested folder in the path (Enter opens it)"
+msgstr "选择路径中建议的文件夹（回车打开）"
+
+#: linuxscp/src/app.rs
 msgid "Play sound on completion"
 msgstr "完成时播放声音"
 
+#: linuxscp/src/app.rs
 msgid "Plays a success chime when a transfer finishes"
 msgstr "传输完成时播放成功提示音"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Port (blank = 22)"
 msgstr "端口（留空 = 22）"
 
+#: linuxscp/src/app.rs
 msgid "Preferences"
 msgstr "首选项"
 
+#: linuxscp/src/ui/tab_strip.rs
 msgid "Previous session"
 msgstr "上一个会话"
 
+#: linuxscp/src/app.rs
 msgid "Properties"
 msgstr "属性"
 
+#: linuxscp/src/app.rs
+msgid "Properties (owner, group, permissions)"
+msgstr "属性（所有者、所属组、权限）"
+
+#: linuxscp/src/ui/key_import.rs
 msgid "Protect the converted key with the same passphrase"
 msgstr "使用相同口令保护转换后的密钥"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "PuTTY PPK version {}{}"
 msgstr "PuTTY PPK 版本 {}{}"
 
+#: linuxscp/src/ssh/ppk.rs
 msgid "PuTTY key file format version {} is not supported"
 msgstr "不支持 PuTTY 密钥文件格式版本 {}"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "PuTTY private keys (*.ppk)"
 msgstr "PuTTY 私钥 (*.ppk)"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Queued"
 msgstr "已排队"
 
+#: linuxscp/src/app.rs
 msgid "Reconnect"
 msgstr "重新连接"
 
+#: linuxscp/src/app.rs
 msgid "Refresh"
 msgstr "刷新"
 
+#: linuxscp/src/ui/pane.rs
 msgid "Refresh (Ctrl+R)"
 msgstr "刷新 (Ctrl+R)"
 
+#: linuxscp/src/app.rs, linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
 msgid "Remote"
 msgstr "远程"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Remote directory (optional)"
 msgstr "远程目录（可选）"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Remove"
 msgstr "移除"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Removed {}"
 msgstr "已移除 {}"
 
+#: linuxscp/src/app.rs
 msgid "Rename"
 msgstr "重命名"
 
+#: linuxscp/src/app.rs
 msgid "Rename failed: {}"
 msgstr "重命名失败：{}"
 
+#: linuxscp/src/app.rs
 msgid "Rename…"
 msgstr "重命名…"
 
+#: linuxscp/src/app.rs
+msgid "Restart LinuxSCP to apply a new language"
+msgstr "重启 LinuxSCP 以应用新语言"
+
+#: linuxscp/src/ui/queue.rs
 msgid "Resume"
 msgstr "继续"
 
+#: linuxscp/src/ui/prompts.rs
+msgid "Resume Transfer"
+msgstr "续传"
+
+#: linuxscp/src/app.rs
 msgid "Retry"
 msgstr "重试"
 
+#: linuxscp/src/types.rs
 msgid "Root via su -"
 msgstr "通过 su - 以 root 身份"
 
+#: linuxscp/src/types.rs
 msgid "Root via sudo"
 msgstr "通过 sudo 以 root 身份"
 
+#: linuxscp/src/types.rs
 msgid "SSH agent / default keys"
 msgstr "SSH 代理 / 默认密钥"
 
+#: linuxscp/src/ui/config_editor.rs, linuxscp/src/ui/connect_dialog.rs
 msgid "Save"
 msgstr "保存"
 
+#: linuxscp/src/ui/key_import.rs
 msgid "Save as"
 msgstr "另存为"
 
+#: linuxscp/src/app.rs
 msgid "Save as Site…"
 msgstr "另存为站点…"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Saved connections"
 msgstr "已保存的连接"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Saved sites"
 msgstr "已保存的站点"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Scanning… {} files found"
 msgstr "正在扫描… 已找到 {} 个文件"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Search hosts, sites, and folders"
 msgstr "搜索主机、站点和文件夹"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Select a saved site, or create a new one to edit it here."
 msgstr "选择一个已保存的站点，或新建一个在此编辑。"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Select private key"
 msgstr "选择私钥"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Session"
 msgstr "会话"
 
+#: linuxscp/src/app.rs
 msgid "Session is closed"
 msgstr "会话已关闭"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Set GID"
 msgstr "设置 GID"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Set UID"
 msgstr "设置 UID"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Set owner, group and permissions recursively"
 msgstr "递归设置所有者、所属组和权限"
 
+#: linuxscp/src/app.rs
 msgid "Show a GNOME notification when a transfer finishes"
 msgstr "传输完成时显示 GNOME 通知"
 
+#: linuxscp/src/app.rs
 msgid "Show hidden files (Ctrl+H)"
 msgstr "显示隐藏文件 (Ctrl+H)"
 
+#: linuxscp/src/app.rs
 msgid "Show site name on tabs"
 msgstr "在标签页上显示站点名称"
 
+#: linuxscp/src/app.rs
 msgid "Show the saved site's name on the tab instead of its host"
 msgstr "在标签页上显示已保存站点的名称，而不是其主机"
 
+#: linuxscp/src/ui/connect_dialog.rs
 msgid "Site Manager"
 msgstr "站点管理器"
 
+#: linuxscp/src/app.rs
 msgid "Site saved"
 msgstr "站点已保存"
 
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
 msgid "Size"
 msgstr "大小"
 
+#: linuxscp/src/ui/prompts.rs
 msgid "Skip"
 msgstr "跳过"
 
+#: linuxscp/src/ui/prompts.rs
 msgid "Skip All"
 msgstr "全部跳过"
 
+#: linuxscp/src/app.rs
 msgid "Source and destination are the same"
 msgstr "源和目标相同"
 
+#: linuxscp/src/app.rs
 msgid "Source and destination are the same directory"
 msgstr "源和目标为同一目录"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Sticky bit"
 msgstr "粘滞位"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Stored on"
 msgstr "存储于"
 
+# Keyboard-shortcuts dialog descriptions (looked up at run time).
+#: linuxscp/src/app.rs
+msgid "Switch active pane"
+msgstr "切换活动窗格"
+
+#: linuxscp/src/ui/properties.rs
 msgid "Symbolic link"
 msgstr "符号链接"
 
+#: linuxscp/src/ui/properties.rs
 msgid "Symbolic link to folder"
 msgstr "指向文件夹的符号链接"
 
+#: linuxscp/src/app.rs
 msgid "Symlink failed: {}"
 msgstr "创建符号链接失败：{}"
 
+#: linuxscp/src/app.rs
+msgid "System default"
+msgstr "跟随系统"
+
+#: linuxscp/src/app.rs
 msgid "Tabs"
 msgstr "标签页"
 
+#: linuxscp/src/ui/edit.rs
 msgid "That file is still being saved; try again when the upload finishes."
 msgstr "该文件仍在保存中；请在上传完成后重试。"
 
+#: linuxscp/src/app.rs
 msgid "The connection the files were copied from is closed"
 msgstr "复制文件时所使用的连接已关闭"
 
+#: linuxscp/src/ui/key_import.rs
+msgid "The file is too large to be a key file."
+msgstr "该文件太大，不可能是密钥文件。"
+
+#: linuxscp/src/app.rs
+msgid "Toggle hidden files"
+msgstr "显示/隐藏隐藏文件"
+
+#: linuxscp/src/ui/notify.rs
 msgid "Transfer complete"
 msgstr "传输完成"
 
+#: linuxscp/src/ui/notify.rs
 msgid "Transfer failed"
 msgstr "传输失败"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Transfers and file operations appear here"
 msgstr "传输和文件操作会显示在这里"
 
+#: linuxscp/src/app.rs
+msgid "Translation"
+msgstr "翻译"
+
+#: linuxscp/src/ui/key_import.rs, linuxscp/src/ui/properties.rs
 msgid "Type"
 msgstr "类型"
 
+#: linuxscp/src/ssh/connect.rs
+msgid "UI closed"
+msgstr "界面已关闭"
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "UI event channel closed"
+msgstr "界面事件通道已关闭"
+
+#: linuxscp/src/ui/properties.rs
 msgid "Unavailable"
 msgstr "不可用"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Upload"
 msgstr "上传"
 
+#: linuxscp/src/ui/site_editor.rs
 msgid "Username"
 msgstr "用户名"
 
+#: linuxscp/src/ui/splash.rs
 msgid "Version {}"
 msgstr "版本 {}"
 
+#: linuxscp/src/ui/queue.rs
 msgid "Waiting for answer…"
 msgstr "等待应答…"
 
+#: linuxscp/src/ui/prompts.rs
+msgid "Yes"
+msgstr "是"
+
+#: linuxscp/src/ui/key_import.rs
 msgid "You can let LinuxSCP remember the passphrase for this site"
 msgstr "你可以让 LinuxSCP 为此站点记住该口令"
 
+#: linuxscp/src/ssh/key_import.rs
 msgid "a key named “{}” already exists in {}"
 msgstr "名为“{}”的密钥已存在于 {} 中"
 
+#: linuxscp/src/ssh/askpass.rs
+msgid "askpass prompt too large"
+msgstr "askpass 提示过大"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "authentication failed (too many attempts)"
+msgstr "认证失败（尝试次数过多）"
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "binding askpass socket"
+msgstr "绑定 askpass 套接字"
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "cancelled"
+msgstr "已取消"
+
+#: linuxscp/src/ssh/ppk.rs
 msgid "certificate keys cannot be imported; convert the plain key instead"
 msgstr "证书密钥无法导入；请改为转换普通密钥"
 
+#: linuxscp/src/fsops.rs
+msgid "changing owner of {}"
+msgstr "更改 {} 的所有者"
+
+#: linuxscp/src/fsops.rs
+msgid "changing permissions of {}"
+msgstr "更改 {} 的权限"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "connection cancelled"
+msgstr "连接已取消"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "connection closed during elevation"
+msgstr "提权过程中连接已关闭"
+
+#: linuxscp/src/transfers.rs
+msgid "copy stopped"
+msgstr "复制已停止"
+
+#: linuxscp/src/transfers.rs
+msgid "copy worker crashed"
+msgstr "复制工作线程崩溃"
+
+#: linuxscp/src/app.rs
 msgid "copy — paste somewhere"
 msgstr "复制 — 粘贴到某处"
 
+#: linuxscp/src/transfers.rs
+msgid "copying {}"
+msgstr "正在复制 {}"
+
+#: linuxscp/src/ssh/key_import.rs
 msgid "could not determine your home directory"
 msgstr "无法确定你的主目录"
 
+#: linuxscp/src/ssh/key_import.rs
 msgid "could not encode the OpenSSH key: {}"
 msgstr "无法编码 OpenSSH 密钥：{}"
 
+#: linuxscp/src/ssh/key_import.rs
 msgid "could not read {}: {}"
 msgstr "无法读取 {}：{}"
 
+#: linuxscp/src/ssh/key_import.rs
 msgid "could not write {}: {}"
 msgstr "无法写入 {}：{}"
 
+#: linuxscp/src/ssh/askpass.rs
+msgid "creating askpass socket dir"
+msgstr "创建 askpass 套接字目录"
+
+#: linuxscp/src/transfers.rs
+msgid "creating directory {}"
+msgstr "创建目录 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "creating remote {}"
+msgstr "创建远程 {}"
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "creating {}"
+msgstr "创建 {}"
+
+#: linuxscp/src/fsops.rs
+msgid "deleting {}"
+msgstr "正在删除 {}"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "establishing SFTP session"
+msgstr "建立 SFTP 会话"
+
+#: linuxscp/src/transfers.rs
+msgid "finalizing file"
+msgstr "完成文件写入"
+
+#: linuxscp/src/fsops.rs
+msgid "id maps unavailable"
+msgstr "ID 映射不可用"
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "listing {}"
+msgstr "列出 {}"
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "locating linuxscp-askpass helper"
+msgstr "定位 linuxscp-askpass 辅助程序"
+
+#: linuxscp/src/app.rs
 msgid "move — paste somewhere"
 msgstr "移动 — 粘贴到某处"
 
+#: linuxscp/src/ssh/connect.rs
+msgid "no response from the SFTP server on {} after {} seconds"
+msgstr "{} 上的 SFTP 服务器在 {} 秒内无响应"
+
+#: linuxscp/src/ssh/ppk.rs
 msgid "not a PuTTY private key file"
 msgstr "不是 PuTTY 私钥文件"
 
+#: linuxscp/src/fsops.rs
+msgid "not found"
+msgstr "未找到"
+
+#: linuxscp/src/transfers.rs
+msgid "opening remote {}"
+msgstr "打开远程 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "opening {}"
+msgstr "打开 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "read failed"
+msgstr "读取失败"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "reading ssh output"
+msgstr "读取 ssh 输出"
+
+#: linuxscp/src/fsops.rs
+msgid "reading {}"
+msgstr "正在读取 {}"
+
+#: linuxscp/src/fsops.rs
+msgid "removing directory {}"
+msgstr "正在删除目录 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "removing source {}"
+msgstr "正在移除源文件 {}"
+
+#: linuxscp/src/transfers.rs
+msgid "renaming completed file into place"
+msgstr "将完成的文件重命名到位"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "resolving remote home directory"
+msgstr "解析远程主目录"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "root password on {}"
+msgstr "{} 的 root 密码"
+
+#: linuxscp/src/fsops.rs
+msgid "server did not report current owner ids for {}"
+msgstr "服务器未报告 {} 的当前所有者 ID"
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "session is closed"
+msgstr "会话已关闭"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "spawning ssh (is OpenSSH installed?)"
+msgstr "启动 ssh（是否已安装 OpenSSH？）"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "ssh exited ({})"
+msgstr "ssh 已退出（{}）"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "ssh exited before the SFTP session started ({})"
+msgstr "ssh 在 SFTP 会话启动前退出（{}）"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "ssh exited during elevation ({})"
+msgstr "ssh 在提权过程中退出（{}）"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "sudo password on {}"
+msgstr "{} 的 sudo 密码"
+
+#: linuxscp/src/ssh/key_import.rs
 msgid "the converted key did not read back correctly"
 msgstr "转换后的密钥无法正确读回"
 
+#: linuxscp/src/ssh/key_import.rs
 msgid "the file is too large to be a key file"
 msgstr "该文件太大，不可能是密钥文件"
 
+#: linuxscp/src/ssh/ppk.rs
 msgid "the key data is invalid: {}"
 msgstr "密钥数据无效：{}"
 
+#: linuxscp/src/ssh/ppk.rs
 msgid "the key file cannot be processed: {}"
 msgstr "无法处理密钥文件：{}"
 
+#: linuxscp/src/ssh/ppk.rs
 msgid "the key file is damaged: {}"
 msgstr "密钥文件已损坏：{}"
 
+#: linuxscp/src/ssh/key_import.rs
 msgid "the key file name is not valid"
 msgstr "密钥文件名无效"
 
+#: linuxscp/src/ssh/ppk.rs
 msgid "the key is encrypted; its passphrase is required"
 msgstr "该密钥已加密；需要其口令"
 
+#: linuxscp/src/ssh/ppk.rs
 msgid "the private key in the file does not match its public key"
 msgstr "文件中的私钥与其公钥不匹配"
 
-msgid "this is a DSA key; OpenSSH dropped DSA support, so it cannot be used from Linux — generate a new key instead"
-msgstr "这是 DSA 密钥；OpenSSH 已移除对 DSA 的支持，因此无法在 Linux 上使用 — 请改为生成新密钥"
+#: linuxscp/src/ssh/ppk.rs
+msgid ""
+"this is a DSA key; OpenSSH dropped DSA support, so it cannot be used from "
+"Linux — generate a new key instead"
+msgstr ""
+"这是 DSA 密钥；OpenSSH 已移除对 DSA 的支持，因此无法在 Linux 上使用 — 请改为"
+"生成新密钥"
 
+#: linuxscp/src/ssh/connect.rs
+msgid "timed out waiting for elevation on {}"
+msgstr "等待 {} 提权超时"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "unexpected output from remote bootstrap"
+msgstr "远程引导程序输出异常"
+
+#: linuxscp/src/ssh/ppk.rs
 msgid "unknown encryption type “{}”"
 msgstr "未知的加密类型“{}”"
 
+#: linuxscp/src/fsops.rs
+msgid "unknown group “{}”"
+msgstr "未知的所属组“{}”"
+
+#: linuxscp/src/fsops.rs
+msgid "unknown user “{}”"
+msgstr "未知用户“{}”"
+
+#: linuxscp/src/ssh/connect.rs
+msgid "wait failed: {}"
+msgstr "等待失败：{}"
+
+#: linuxscp/src/transfers.rs
+msgid "write failed"
+msgstr "写入失败"
+
+#: linuxscp/src/ssh/ppk.rs
 msgid "wrong passphrase (or the key file is damaged)"
 msgstr "口令错误（或密钥文件已损坏）"
 
+#: linuxscp/src/ui/properties.rs
 msgid "{} ({} bytes)"
 msgstr "{}（{} 字节）"
 
+#: linuxscp/src/ui/queue.rs
+msgid "{} / {} changed"
+msgstr "{} / {} 项已更改"
+
+#: linuxscp/src/ui/queue.rs
 msgid "{} / {} • {}/{} files"
 msgstr "{} / {} • {}/{} 个文件"
 
+#: linuxscp/src/ui/properties.rs
 msgid "{} Items"
 msgstr "{} 个项目"
 
+#: linuxscp/src/ui/properties.rs
 msgid "{} bytes"
 msgstr "{} 字节"
 
+#: linuxscp/src/ui/properties.rs
 msgid "{} files"
 msgstr "{} 个文件"
 
+#: linuxscp/src/ssh/connect.rs
+msgid ""
+"{} is a PuTTY private key (.ppk), which OpenSSH cannot read. Open the site "
+"in the Site Manager and choose Convert… next to the key file to turn it into "
+"an OpenSSH key."
+msgstr ""
+"{} 是 PuTTY 私钥（.ppk），OpenSSH 无法读取。请在站点管理器中打开该站点，点击"
+"密钥文件旁的“转换…”将其转换为 OpenSSH 密钥。"
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/pane.rs
 msgid "{} items"
 msgstr "{} 个项目"
 
+#: linuxscp/src/ui/pane.rs
 msgid "{} of {} selected, {}"
 msgstr "已选择 {} / {}，{}"
 
+#: linuxscp/src/app.rs
 msgid "{} ready to {}"
 msgstr "{} 已准备好{}"
 
+#: linuxscp/src/ui/queue.rs
 msgid "{} removed…"
 msgstr "已移除 {}…"
 
+#: linuxscp/src/ui/queue.rs
 msgid "{} s"
 msgstr "{} 秒"
 
+#: linuxscp/src/ui/tree_node.rs
 msgid "{} sites"
 msgstr "{} 个站点"
 
+#: linuxscp/src/ui/properties.rs
 msgid "{} {}, {} {}"
 msgstr "{} {}，{} {}"
 
+#: linuxscp/src/ui/queue.rs
 msgid "{} • {}/{}+ files • counting…"
 msgstr "{} • {}/{}+ 个文件 • 正在计数…"
 
+#: linuxscp/src/ui/queue.rs
 msgid "{}d {}h"
 msgstr "{}天 {}小时"
 
+#: linuxscp/src/ui/queue.rs
 msgid "{}h {}m"
 msgstr "{}时 {}分"
 
+#: linuxscp/src/ui/queue.rs
 msgid "{}m {}s"
 msgstr "{}分 {}秒"
 
+#: linuxscp/src/ui/queue.rs
 msgid "{}s"
 msgstr "{}秒"
 
-msgid "“{}” already exists in the destination.\n\nSource: {}\nDestination: {}"
-msgstr "目标中已存在“{}”。\n\n源：{}\n目标：{}"
+#: linuxscp/src/ui/prompts.rs
+msgid ""
+"“{}” already exists in the destination.\n"
+"\n"
+"Source: {}\n"
+"Destination: {}"
+msgstr ""
+"目标中已存在“{}”。\n"
+"\n"
+"源：{}\n"
+"目标：{}"
 
+#: linuxscp/src/ui/edit.rs
 msgid "“{}” is {}. Large files can be slow to open and edit."
 msgstr "“{}” 大小为 {}。大文件打开和编辑可能很慢。"
 
+#: linuxscp/src/ssh/ppk.rs
+msgid "“{}” keys cannot be converted"
+msgstr "“{}” 密钥无法转换"
+
+#: linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
 msgid "file"
 msgid_plural "files"
 msgstr[0] "个文件"
 
+#: linuxscp/src/ui/properties.rs
 msgid "folder"
 msgid_plural "folders"
 msgstr[0] "个文件夹"
 
-# Keyboard-shortcuts dialog descriptions (looked up at run time).
-msgid "Switch active pane"
-msgstr "切换活动窗格"
-
-msgid "Open directory"
-msgstr "打开目录"
-
-msgid "Edit file in text editor"
-msgstr "在文本编辑器中编辑文件"
-
-msgid "Parent directory"
-msgstr "上级目录"
-
-msgid "Copy to other pane"
-msgstr "复制到另一窗格"
-
-msgid "Move to other pane"
-msgstr "移动到另一窗格"
-
-msgid "New directory"
-msgstr "新建目录"
-
-msgid "Properties (owner, group, permissions)"
-msgstr "属性（所有者、所属组、权限）"
-
-msgid "Copy / cut selection"
-msgstr "复制/剪切所选内容"
-
-msgid "Paste into active pane"
-msgstr "粘贴到活动窗格"
-
-msgid "File context menu"
-msgstr "文件上下文菜单"
-
-msgid "Toggle hidden files"
-msgstr "显示/隐藏隐藏文件"
-
-msgid "Edit path"
-msgstr "编辑路径"
-
-msgid "Complete the folder being typed in the path"
-msgstr "补全路径中正在输入的文件夹"
-
-msgid "Pick a suggested folder in the path (Enter opens it)"
-msgstr "选择路径中建议的文件夹（回车打开）"
-
-msgid "Open terminal here"
-msgstr "在此打开终端"
-
-# ---- Core transport / filesystem error messages ----
-msgid "Change {}"
-msgstr "更改 {}"
-
-msgid "Change {} items"
-msgstr "更改 {} 个项目"
-
-msgid "Copy {}"
-msgstr "复制 {}"
-
-msgid "Copy {} items"
-msgstr "复制 {} 个项目"
-
-msgid "Delete {}"
-msgstr "删除 {}"
-
-msgid "Delete {} items"
-msgstr "删除 {} 个项目"
-
-msgid "Move {}"
-msgstr "移动 {}"
-
-msgid "Move {} items"
-msgstr "移动 {} 个项目"
-
-msgid "Open a new session tab"
-msgstr "打开新的会话标签页"
-
-msgid "The file is too large to be a key file."
-msgstr "该文件太大，不可能是密钥文件。"
-
-msgid "UI closed"
-msgstr "界面已关闭"
-
-msgid "UI event channel closed"
-msgstr "界面事件通道已关闭"
-
-msgid "askpass prompt too large"
-msgstr "askpass 提示过大"
-
-msgid "authentication failed (too many attempts)"
-msgstr "认证失败（尝试次数过多）"
-
-msgid "binding askpass socket"
-msgstr "绑定 askpass 套接字"
-
-msgid "cancelled"
-msgstr "已取消"
-
-msgid "changing owner of {}"
-msgstr "更改 {} 的所有者"
-
-msgid "changing permissions of {}"
-msgstr "更改 {} 的权限"
-
-msgid "connection cancelled"
-msgstr "连接已取消"
-
-msgid "connection closed during elevation"
-msgstr "提权过程中连接已关闭"
-
-msgid "copy stopped"
-msgstr "复制已停止"
-
-msgid "copy worker crashed"
-msgstr "复制工作线程崩溃"
-
-msgid "copying {}"
-msgstr "正在复制 {}"
-
-msgid "creating askpass socket dir"
-msgstr "创建 askpass 套接字目录"
-
-msgid "creating directory {}"
-msgstr "创建目录 {}"
-
-msgid "creating remote {}"
-msgstr "创建远程 {}"
-
-msgid "creating {}"
-msgstr "创建 {}"
-
-msgid "deleting {}"
-msgstr "正在删除 {}"
-
-msgid "establishing SFTP session"
-msgstr "建立 SFTP 会话"
-
-msgid "finalizing file"
-msgstr "完成文件写入"
-
-msgid "id maps unavailable"
-msgstr "ID 映射不可用"
-
-msgid "listing {}"
-msgstr "列出 {}"
-
-msgid "locating linuxscp-askpass helper"
-msgstr "定位 linuxscp-askpass 辅助程序"
-
-msgid "no response from the SFTP server on {} after {} seconds"
-msgstr "{} 上的 SFTP 服务器在 {} 秒内无响应"
-
-msgid "not found"
-msgstr "未找到"
-
-msgid "opening remote {}"
-msgstr "打开远程 {}"
-
-msgid "opening {}"
-msgstr "打开 {}"
-
-msgid "read failed"
-msgstr "读取失败"
-
-msgid "reading ssh output"
-msgstr "读取 ssh 输出"
-
-msgid "reading {}"
-msgstr "正在读取 {}"
-
-msgid "removing directory {}"
-msgstr "正在删除目录 {}"
-
-msgid "removing source {}"
-msgstr "正在移除源文件 {}"
-
-msgid "renaming completed file into place"
-msgstr "将完成的文件重命名到位"
-
-msgid "resolving remote home directory"
-msgstr "解析远程主目录"
-
-msgid "root password on {}"
-msgstr "{} 的 root 密码"
-
-msgid "server did not report current owner ids for {}"
-msgstr "服务器未报告 {} 的当前所有者 ID"
-
-msgid "session is closed"
-msgstr "会话已关闭"
-
-msgid "spawning ssh (is OpenSSH installed?)"
-msgstr "启动 ssh（是否已安装 OpenSSH？）"
-
-msgid "ssh exited ({})"
-msgstr "ssh 已退出（{}）"
-
-msgid "ssh exited before the SFTP session started ({})"
-msgstr "ssh 在 SFTP 会话启动前退出（{}）"
-
-msgid "ssh exited during elevation ({})"
-msgstr "ssh 在提权过程中退出（{}）"
-
-msgid "sudo password on {}"
-msgstr "{} 的 sudo 密码"
-
-msgid "timed out waiting for elevation on {}"
-msgstr "等待 {} 提权超时"
-
-msgid "unexpected output from remote bootstrap"
-msgstr "远程引导程序输出异常"
-
-msgid "unknown group “{}”"
-msgstr "未知的所属组“{}”"
-
-msgid "unknown user “{}”"
-msgstr "未知用户“{}”"
-
-msgid "wait failed: {}"
-msgstr "等待失败：{}"
-
-msgid "write failed"
-msgstr "写入失败"
-
-msgid "{} is a PuTTY private key (.ppk), which OpenSSH cannot read. Open the site in the Site Manager and choose Convert… next to the key file to turn it into an OpenSSH key."
-msgstr "{} 是 PuTTY 私钥（.ppk），OpenSSH 无法读取。请在站点管理器中打开该站点，点击密钥文件旁的“转换…”将其转换为 OpenSSH 密钥。"
-
-msgid "“{}” keys cannot be converted"
-msgstr "“{}” 密钥无法转换"
-
-# ---- Language picker ----
-msgid "Language"
-msgstr "语言"
-
-msgid "System default"
-msgstr "跟随系统"
-
-# ---- Language picker / About ----
-msgid "Applies immediately; open sessions are closed"
-msgstr "立即生效；打开的会话将被关闭"
-
-msgid "A commander-style SFTP client for GNOME. Works directly with your ~/.ssh/config and supports sudo/su elevation and resumable transfers."
-msgstr "适用于 GNOME 的 Commander 风格 SFTP 客户端。直接使用你的 ~/.ssh/config，支持 sudo/su 提权与可续传的传输。"
-
 # Plural noun passed to count() at run time.
+#: linuxscp/src/ui/queue.rs
 msgid "item"
 msgid_plural "items"
 msgstr[0] "个项目"
+
+# ---- Language picker / About ----
+#~ msgid "Applies immediately; open sessions are closed"
+#~ msgstr "立即生效；打开的会话将被关闭"

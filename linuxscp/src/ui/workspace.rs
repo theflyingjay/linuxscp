@@ -88,9 +88,4 @@ impl Workspace {
     pub fn default_title(&self) -> String {
         self.default_title.borrow().clone()
     }
-
-    /// Replace the title used when no remote session names the tab.
-    pub fn set_default_title(&self, title: &str) {
-        *self.default_title.borrow_mut() = title.to_owned();
-    }
 }

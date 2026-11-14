@@ -10,7 +10,7 @@ APP_ID = io.github.theflyingjay.LinuxSCP
 DOMAIN = linuxscp
 LANGS = $(patsubst po/%.po,%,$(wildcard po/*.po))
 
-.PHONY: all build release install uninstall test deb flatpak-sources clean mo
+.PHONY: all build release install uninstall test deb flatpak-sources clean mo pot check-po
 
 all: release
 
@@ -25,6 +25,15 @@ mo: $(patsubst po/%.po,po/%.mo,$(wildcard po/*.po))
 
 po/%.mo: po/%.po
 	msgfmt --check -o $@ $<
+
+# Refresh the template after adding or changing tr!/ngettext/plural text.
+pot:
+	./scripts/i18n-extract.py
+
+# Translations must keep their message id's {} placeholders; msgfmt cannot
+# see those.
+check-po:
+	./scripts/check-po.py
 
 test:
 	cargo test
