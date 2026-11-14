@@ -18,6 +18,7 @@ use ssh_key::{LineEnding, PrivateKey};
 use zeroize::Zeroizing;
 
 use super::ppk::{self, MAX_FILE_LEN, PpkError};
+use crate::tr;
 
 /// Fallback name when the `.ppk` file name yields nothing usable.
 const DEFAULT_NAME: &str = "putty-key";
@@ -46,29 +47,29 @@ pub struct Imported {
 pub enum ImportError {
     #[error(transparent)]
     Ppk(#[from] PpkError),
-    #[error("could not determine your home directory")]
+    #[error("{}", tr!("could not determine your home directory"))]
     NoHome,
-    #[error("the key file name is not valid")]
+    #[error("{}", tr!("the key file name is not valid"))]
     BadName,
-    #[error("a key named \u{201c}{0}\u{201d} already exists in {1}")]
+    #[error("{}", tr!("a key named \u{201c}{}\u{201d} already exists in {}", .0, .1))]
     NameTaken(String, String),
-    #[error("the file is too large to be a key file")]
+    #[error("{}", tr!("the file is too large to be a key file"))]
     TooLarge,
-    #[error("could not read {}: {source}", path.display())]
+    #[error("{}", tr!("could not read {}: {}", path.display(), source))]
     Read {
         path: PathBuf,
         #[source]
         source: io::Error,
     },
-    #[error("could not write {}: {source}", path.display())]
+    #[error("{}", tr!("could not write {}: {}", path.display(), source))]
     Write {
         path: PathBuf,
         #[source]
         source: io::Error,
     },
-    #[error("could not encode the OpenSSH key: {0}")]
+    #[error("{}", tr!("could not encode the OpenSSH key: {}", .0))]
     Encode(ssh_key::Error),
-    #[error("the converted key did not read back correctly")]
+    #[error("{}", tr!("the converted key did not read back correctly"))]
     Verify,
 }
 

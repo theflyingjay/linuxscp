@@ -7,10 +7,11 @@ use anyhow::Context;
 use russh_sftp::protocol::FileType;
 
 use crate::sessions::{self, IdNames};
+use crate::tr;
 use crate::types::{Backend, FsEntry, SessionId};
 
 fn sftp(id: SessionId) -> anyhow::Result<std::sync::Arc<russh_sftp::client::SftpSession>> {
-    Ok(sessions::get(id).context("session is closed")?.sftp)
+    Ok(sessions::get(id).context(tr!("session is closed"))?.sftp)
 }
 
 /// The session's uid/gid → name maps, loading them from the remote
@@ -149,7 +150,7 @@ pub async fn mkdir_all(backend: Backend, path: &str) -> anyhow::Result<()> {
                     Err(_) => sftp
                         .create_dir(current.clone())
                         .await
-                        .with_context(|| format!("creating {current}"))?,
+                        .with_context(|| tr!("creating {}", current))?,
                 }
             }
             Ok(())
@@ -210,7 +211,7 @@ pub async fn chown(
             attrs.uid = uid.or(current.uid);
             attrs.gid = gid.or(current.gid);
             if attrs.uid.is_none() || attrs.gid.is_none() {
-                anyhow::bail!("server did not report current owner ids for {path}");
+                anyhow::bail!(tr!("server did not report current owner ids for {}", path));
             }
             Ok(sftp.set_metadata(path.to_owned(), attrs).await?)
         }
@@ -232,7 +233,7 @@ pub async fn resolve_ids(
             Some(id) => id,
             None => lookup_id(backend, name, true)
                 .await
-                .with_context(|| format!("unknown user \u{201c}{name}\u{201d}"))?,
+                .with_context(|| tr!("unknown user \u{201c}{}\u{201d}", name))?,
         }),
     };
     let gid = match &group {
@@ -241,7 +242,7 @@ pub async fn resolve_ids(
             Some(id) => id,
             None => lookup_id(backend, name, false)
                 .await
-                .with_context(|| format!("unknown group \u{201c}{name}\u{201d}"))?,
+                .with_context(|| tr!("unknown group \u{201c}{}\u{201d}", name))?,
         }),
     };
     Ok((uid, gid))
@@ -251,17 +252,17 @@ async fn lookup_id(backend: Backend, name: &str, is_user: bool) -> anyhow::Resul
     match backend {
         Backend::Local => {
             let file = if is_user { "/etc/passwd" } else { "/etc/group" };
-            local::id_for(name, file).context("not found")
+            local::id_for(name, file).context(tr!("not found"))
         }
         Backend::Remote(id) => {
-            let names_cell = id_names(id).await.context("session is closed")?;
-            let names = names_cell.get().context("id maps unavailable")?;
+            let names_cell = id_names(id).await.context(tr!("session is closed"))?;
+            let names = names_cell.get().context(tr!("id maps unavailable"))?;
             let resolved = if is_user {
                 names.uid_of(name)
             } else {
                 names.gid_of(name)
             };
-            resolved.context("not found")
+            resolved.context(tr!("not found"))
         }
     }
 }
@@ -307,7 +308,7 @@ pub struct OpProgress {
 impl OpProgress {
     fn checkpoint(&self) -> anyhow::Result<()> {
         if self.cancelled.load(std::sync::atomic::Ordering::Relaxed) {
-            anyhow::bail!("cancelled");
+            anyhow::bail!(tr!("cancelled"));
         }
         Ok(())
     }
@@ -357,7 +358,7 @@ pub async fn apply_attrs(
         progress.checkpoint()?;
         let children = list_dir(backend, &dir)
             .await
-            .with_context(|| format!("listing {dir}"))?;
+            .with_context(|| tr!("listing {}", dir))?;
         for child in children {
             if child.is_symlink {
                 continue;
@@ -376,11 +377,11 @@ pub async fn apply_attrs(
         if let Some(mode) = changes.mode_for(is_dir) {
             chmod(backend, &path, mode)
                 .await
-                .with_context(|| format!("changing permissions of {path}"))?;
+                .with_context(|| tr!("changing permissions of {}", path))?;
         }
         chown(backend, &path, changes.uid, changes.gid)
             .await
-            .with_context(|| format!("changing owner of {path}"))?;
+            .with_context(|| tr!("changing owner of {}", path))?;
         changed += 1;
         progress.bump();
     }
@@ -482,7 +483,7 @@ async fn delete_local(path: &str, is_dir: bool, progress: &OpProgress) -> anyhow
         progress.checkpoint()?;
         tokio::fs::remove_file(path)
             .await
-            .with_context(|| format!("deleting {path}"))?;
+            .with_context(|| tr!("deleting {}", path))?;
         progress.bump();
         return Ok(());
     }
@@ -494,14 +495,14 @@ async fn delete_local(path: &str, is_dir: bool, progress: &OpProgress) -> anyhow
         if children_done {
             tokio::fs::remove_dir(&dir)
                 .await
-                .with_context(|| format!("removing directory {dir}"))?;
+                .with_context(|| tr!("removing directory {}", dir))?;
             progress.bump();
             continue;
         }
         stack.push((dir.clone(), true));
         let mut read = tokio::fs::read_dir(&dir)
             .await
-            .with_context(|| format!("reading {dir}"))?;
+            .with_context(|| tr!("reading {}", dir))?;
         while let Some(child) = read.next_entry().await? {
             let child_path = child.path().to_string_lossy().into_owned();
             let meta = child.metadata().await?;
@@ -511,7 +512,7 @@ async fn delete_local(path: &str, is_dir: bool, progress: &OpProgress) -> anyhow
                 progress.checkpoint()?;
                 tokio::fs::remove_file(&child_path)
                     .await
-                    .with_context(|| format!("deleting {child_path}"))?;
+                    .with_context(|| tr!("deleting {}", child_path))?;
                 progress.bump();
             }
         }
@@ -529,7 +530,7 @@ async fn delete_remote(
         progress.checkpoint()?;
         sftp.remove_file(path.to_owned())
             .await
-            .with_context(|| format!("deleting {path}"))?;
+            .with_context(|| tr!("deleting {}", path))?;
         progress.bump();
         return Ok(());
     }
@@ -540,7 +541,7 @@ async fn delete_remote(
         if children_done {
             sftp.remove_dir(dir.clone())
                 .await
-                .with_context(|| format!("removing directory {dir}"))?;
+                .with_context(|| tr!("removing directory {}", dir))?;
             progress.bump();
             continue;
         }
@@ -555,7 +556,7 @@ async fn delete_remote(
                 progress.checkpoint()?;
                 sftp.remove_file(child.clone())
                     .await
-                    .with_context(|| format!("deleting {child}"))?;
+                    .with_context(|| tr!("deleting {}", child))?;
                 progress.bump();
             }
         }
@@ -571,7 +572,7 @@ pub mod local {
     use std::sync::{Mutex, OnceLock};
 
     pub fn list_dir(path: &str) -> anyhow::Result<Vec<FsEntry>> {
-        let read = std::fs::read_dir(path).with_context(|| format!("reading {path}"))?;
+        let read = std::fs::read_dir(path).with_context(|| tr!("reading {}", path))?;
         let mut out = Vec::new();
         for entry in read.flatten() {
             let child = entry.path();

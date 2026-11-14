@@ -4,9 +4,13 @@ PREFIX ?= /usr/local
 DESTDIR ?=
 BINDIR = $(DESTDIR)$(PREFIX)/bin
 DATADIR = $(DESTDIR)$(PREFIX)/share
+LOCALEDIR = $(DATADIR)/locale
 APP_ID = io.github.theflyingjay.LinuxSCP
+# Translation domain; must match `i18n::DOMAIN` in the sources.
+DOMAIN = linuxscp
+LANGS = $(patsubst po/%.po,%,$(wildcard po/*.po))
 
-.PHONY: all build release install uninstall test deb flatpak-sources clean
+.PHONY: all build release install uninstall test deb flatpak-sources clean mo pot check-po
 
 all: release
 
@@ -16,10 +20,25 @@ build:
 release:
 	cargo build --release
 
+# Compile the .po catalogs to .mo (needs gettext's msgfmt).
+mo: $(patsubst po/%.po,po/%.mo,$(wildcard po/*.po))
+
+po/%.mo: po/%.po
+	msgfmt --check -o $@ $<
+
+# Refresh the template after adding or changing tr!/ngettext/plural text.
+pot:
+	./scripts/i18n-extract.py
+
+# Translations must keep their message id's {} placeholders; msgfmt cannot
+# see those.
+check-po:
+	./scripts/check-po.py
+
 test:
 	cargo test
 
-install: release
+install: release mo
 	install -Dm755 target/release/linuxscp $(BINDIR)/linuxscp
 	install -Dm755 target/release/linuxscp-askpass $(BINDIR)/linuxscp-askpass
 	install -Dm644 data/$(APP_ID).desktop $(DATADIR)/applications/$(APP_ID).desktop
@@ -27,6 +46,9 @@ install: release
 	install -Dm644 data/icons/hicolor/256x256/apps/$(APP_ID).png \
 		$(DATADIR)/icons/hicolor/256x256/apps/$(APP_ID).png
 	install -Dm644 data/sounds/success.mp3 $(DATADIR)/linuxscp/sounds/success.mp3
+	for lang in $(LANGS); do \
+		install -Dm644 po/$$lang.mo $(LOCALEDIR)/$$lang/LC_MESSAGES/$(DOMAIN).mo; \
+	done
 	@echo "Installed LinuxSCP to $(PREFIX)"
 
 deb:

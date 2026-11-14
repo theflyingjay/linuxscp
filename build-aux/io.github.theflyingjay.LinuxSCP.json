@@ -35,7 +35,8 @@
                 "install -Dm644 data/io.github.theflyingjay.LinuxSCP.desktop /app/share/applications/io.github.theflyingjay.LinuxSCP.desktop",
                 "install -Dm644 data/io.github.theflyingjay.LinuxSCP.metainfo.xml /app/share/metainfo/io.github.theflyingjay.LinuxSCP.metainfo.xml",
                 "install -Dm644 data/icons/hicolor/256x256/apps/io.github.theflyingjay.LinuxSCP.png /app/share/icons/hicolor/256x256/apps/io.github.theflyingjay.LinuxSCP.png",
-                "install -Dm644 data/sounds/success.mp3 /app/share/linuxscp/sounds/success.mp3"
+                "install -Dm644 data/sounds/success.mp3 /app/share/linuxscp/sounds/success.mp3",
+                "for po in po/*.po; do lang=$(basename \"$po\" .po); msgfmt --check -o /app/share/locale/$lang/LC_MESSAGES/linuxscp.mo \"$po\"; done"
             ],
             "sources": [
                 {

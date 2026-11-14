@@ -7,6 +7,10 @@ use gtk::glib;
 const APP_ID: &str = "io.github.theflyingjay.LinuxSCP";
 
 fn main() -> glib::ExitCode {
+    // Switch to the user's locale and load the translation catalog before
+    // anything builds UI or formats a localized message.
+    linuxscp::i18n::init();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()

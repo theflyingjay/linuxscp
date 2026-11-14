@@ -13,6 +13,7 @@
 use std::rc::Rc;
 
 use adw::prelude::*;
+use linuxscp::tr;
 
 /// Width of one session tab; the bar is sized to this per tab and the tabs
 /// expand to fill it exactly.
@@ -53,8 +54,8 @@ impl TabStrip {
 
         let new_session = new_session_button();
 
-        let prev = flip_button("go-previous-symbolic", "Previous session");
-        let next = flip_button("go-next-symbolic", "Next session");
+        let prev = flip_button("go-previous-symbolic", &tr!("Previous session"));
+        let next = flip_button("go-next-symbolic", &tr!("Next session"));
         let arrows = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         arrows.add_css_class("linked");
         arrows.set_margin_start(4);
@@ -197,10 +198,10 @@ fn flip_button(icon: &str, tooltip: &str) -> gtk::Button {
 fn new_session_button() -> gtk::Button {
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     content.append(&gtk::Image::from_icon_name("list-add-symbolic"));
-    content.append(&gtk::Label::new(Some("New Session")));
+    content.append(&gtk::Label::new(Some(&tr!("New Session"))));
     let button = gtk::Button::builder()
         .child(&content)
-        .tooltip_text("Open a new session tab")
+        .tooltip_text(tr!("Open a new session tab"))
         .build();
     button.add_css_class("flat");
     button.add_css_class("new-session-tab");

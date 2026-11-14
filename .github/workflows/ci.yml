@@ -22,7 +22,7 @@ jobs:
         # shell it finds, and csh is the one with the odd syntax.
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libsecret-1-dev openssh-server openssh-client tcsh
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libsecret-1-dev gettext openssh-server openssh-client tcsh
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -32,6 +32,15 @@ jobs:
 
       - name: Format check
         run: cargo fmt --all -- --check
+
+      - name: Translation catalogs
+        # msgfmt --check catches malformed .po files (bad plural forms,
+        # mismatched printf directives). check-po.py covers what it cannot
+        # see: a translation that drops a `{}` placeholder, which would
+        # silently lose the substituted value at run time.
+        run: |
+          for po in po/*.po; do msgfmt --check -o /dev/null "$po"; done
+          ./scripts/check-po.py
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings

@@ -22,6 +22,7 @@ use russh_sftp::protocol::OpenFlags;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::sync::watch;
 
+use crate::tr;
 use crate::types::{
     Backend, ConflictDecision, ConflictRequest, Event, FsEntry, SessionId, TransferAction,
     TransferDirection, TransferId, TransferKind, TransferRequest, TransferSnapshot, TransferState,
@@ -132,9 +133,9 @@ pub fn start_delete(
     events: async_channel::Sender<Event>,
 ) -> TransferId {
     let title = if entries.len() == 1 {
-        format!("Delete {}", entries[0].name)
+        tr!("Delete {}", entries[0].name)
     } else {
-        format!("Delete {} items", entries.len())
+        tr!("Delete {} items", entries.len())
     };
     start_op(
         TransferKind::Delete,
@@ -159,9 +160,9 @@ pub fn start_attrs(
     events: async_channel::Sender<Event>,
 ) -> TransferId {
     let title = if entries.len() == 1 {
-        format!("Change {}", entries[0].name)
+        tr!("Change {}", entries[0].name)
     } else {
-        format!("Change {} items", entries.len())
+        tr!("Change {} items", entries.len())
     };
     start_op(
         TransferKind::Attributes,
@@ -389,7 +390,7 @@ async fn checkpoint(ctrl: &mut watch::Receiver<Ctrl>) -> anyhow::Result<()> {
     loop {
         let c = *ctrl.borrow();
         if c.cancelled {
-            anyhow::bail!("cancelled");
+            anyhow::bail!(tr!("cancelled"));
         }
         if !c.paused {
             return Ok(());
@@ -412,17 +413,17 @@ impl Job {
         ctrl: watch::Receiver<Ctrl>,
     ) -> Self {
         let title = if request.items.len() == 1 {
-            format!(
-                "{} {}",
-                if request.move_src { "Move" } else { "Copy" },
-                request.items[0].name
-            )
+            if request.move_src {
+                tr!("Move {}", request.items[0].name)
+            } else {
+                tr!("Copy {}", request.items[0].name)
+            }
         } else {
-            format!(
-                "{} {} items",
-                if request.move_src { "Move" } else { "Copy" },
-                request.items.len()
-            )
+            if request.move_src {
+                tr!("Move {} items", request.items.len())
+            } else {
+                tr!("Copy {} items", request.items.len())
+            }
         };
         let direction = match (
             request.src_backend.is_remote(),
@@ -508,7 +509,7 @@ impl Job {
         loop {
             let c = *self.ctrl.borrow();
             if c.cancelled {
-                anyhow::bail!("cancelled");
+                anyhow::bail!(tr!("cancelled"));
             }
             if !c.paused {
                 return Ok(());
@@ -591,7 +592,7 @@ impl Job {
             tokio::select! {
                 results = &mut all => {
                     for result in results {
-                        result.context("copy worker crashed")??;
+                        result.context(tr!("copy worker crashed"))??;
                     }
                     break;
                 }
@@ -615,7 +616,7 @@ impl Job {
                 for item in &items {
                     fsops::delete(src, item)
                         .await
-                        .with_context(|| format!("removing source {}", item.name))?;
+                        .with_context(|| tr!("removing source {}", item.name))?;
                 }
             }
         }
@@ -671,7 +672,7 @@ impl Worker {
                     self.shared.failed.store(true, Ordering::Relaxed);
                     self.rx.close();
                     return Err(err)
-                        .with_context(|| format!("copying {}", fsops::file_name(&item.src_path)));
+                        .with_context(|| tr!("copying {}", fsops::file_name(&item.src_path)));
                 }
             }
         }
@@ -738,7 +739,7 @@ impl Worker {
                         .fetch_add(item.size, Ordering::Relaxed);
                     return Ok(true);
                 }
-                ConflictDecision::CancelJob => anyhow::bail!("cancelled"),
+                ConflictDecision::CancelJob => anyhow::bail!(tr!("cancelled")),
             }
         }
 
@@ -762,17 +763,20 @@ impl Worker {
         let copied: anyhow::Result<()> = async {
             loop {
                 checkpoint(&mut self.ctrl).await?;
-                let n = reader.read(&mut buf).await.context("read failed")?;
+                let n = reader.read(&mut buf).await.context(tr!("read failed"))?;
                 if n == 0 {
                     break;
                 }
-                writer.write_all(&buf[..n]).await.context("write failed")?;
+                writer
+                    .write_all(&buf[..n])
+                    .await
+                    .context(tr!("write failed"))?;
                 self.shared
                     .done_bytes
                     .fetch_add(n as u64, Ordering::Relaxed);
                 self.shared.emit(false).await;
             }
-            writer.shutdown().await.context("finalizing file")?;
+            writer.shutdown().await.context(tr!("finalizing file"))?;
             Ok(())
         }
         .await;
@@ -808,7 +812,7 @@ impl Worker {
             }
             fsops::rename(self.dst, &part_path, &item.dst_final)
                 .await
-                .context("renaming completed file into place")?;
+                .context(tr!("renaming completed file into place"))?;
         }
 
         // Preserve the overwritten destination owner/group best-effort; this
@@ -851,7 +855,7 @@ impl Worker {
             return Ok(ConflictDecision::Skip);
         }
         if self.shared.failed.load(Ordering::Relaxed) || self.ctrl.borrow().cancelled {
-            anyhow::bail!("cancelled");
+            anyhow::bail!(tr!("cancelled"));
         }
 
         self.shared
@@ -919,11 +923,11 @@ impl Scanner {
             if !fsops::exists(self.dst, &dst_path).await {
                 fsops::mkdir(self.dst, &dst_path)
                     .await
-                    .with_context(|| format!("creating directory {dst_path}"))?;
+                    .with_context(|| tr!("creating directory {}", dst_path))?;
             }
             let children = fsops::list_dir(self.src, &entry.path)
                 .await
-                .with_context(|| format!("listing {}", entry.path))?;
+                .with_context(|| tr!("listing {}", entry.path))?;
             for child in &children {
                 Box::pin(self.walk(child, &dst_path)).await?;
             }
@@ -941,7 +945,7 @@ impl Scanner {
             // A send error means the copiers stopped (bailed or cancelled);
             // stop walking rather than keep producing.
             if self.tx.send(Ok(item)).await.is_err() {
-                anyhow::bail!("copy stopped");
+                anyhow::bail!(tr!("copy stopped"));
             }
         }
         Ok(())
@@ -1040,18 +1044,18 @@ async fn open_read(backend: Backend, path: &str, offset: u64) -> anyhow::Result<
         Backend::Local => {
             let mut file = tokio::fs::File::open(path)
                 .await
-                .with_context(|| format!("opening {path}"))?;
+                .with_context(|| tr!("opening {}", path))?;
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
             Ok(Stream::Local(file))
         }
         Backend::Remote(id) => {
-            let sftp = sessions::get(id).context("session is closed")?.sftp;
+            let sftp = sessions::get(id).context(tr!("session is closed"))?.sftp;
             let mut file = sftp
                 .open_with_flags(path.to_owned(), OpenFlags::READ)
                 .await
-                .with_context(|| format!("opening remote {path}"))?;
+                .with_context(|| tr!("opening remote {}", path))?;
             if offset > 0 {
                 // Never touches the server for SeekFrom::Start, so this
                 // can't fail and leak the just-opened handle.
@@ -1073,14 +1077,14 @@ async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result
             let mut file = opts
                 .open(path)
                 .await
-                .with_context(|| format!("creating {path}"))?;
+                .with_context(|| tr!("creating {}", path))?;
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
             Ok(Stream::Local(file))
         }
         Backend::Remote(id) => {
-            let sftp = sessions::get(id).context("session is closed")?.sftp;
+            let sftp = sessions::get(id).context(tr!("session is closed"))?.sftp;
             let flags = if offset == 0 {
                 OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE
             } else {
@@ -1089,7 +1093,7 @@ async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result
             let mut file = sftp
                 .open_with_flags(path.to_owned(), flags)
                 .await
-                .with_context(|| format!("creating remote {path}"))?;
+                .with_context(|| tr!("creating remote {}", path))?;
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
