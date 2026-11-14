@@ -48,7 +48,14 @@ jobs:
         run: cargo test --all --verbose
 
       - name: Integration tests (local sshd)
+        # The tests start ssh with the linuxscp-askpass helper. The library
+        # looks for it beside the running binary and one level up (enough
+        # for test binaries in target/debug/deps), then on PATH. Since cargo
+        # 1.100, test binaries live deeper, under target/debug/build/, so
+        # the first lookup misses: put the helper the Build step produced
+        # on PATH.
         run: |
+          export PATH="$PWD/target/debug:$PATH"
           ./scripts/test-server.sh start
           cargo test -p linuxscp --test sftp_roundtrip --test connect_auth --test ppk_import -- --ignored --test-threads=1
           ./scripts/test-server.sh stop
