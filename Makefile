@@ -65,6 +65,12 @@ uninstall:
 	rm -f $(DATADIR)/metainfo/$(APP_ID).metainfo.xml
 	rm -f $(DATADIR)/icons/hicolor/256x256/apps/$(APP_ID).png
 	rm -f $(DATADIR)/linuxscp/sounds/success.mp3
+	# The catalogs too; the directories are shared with other packages, so
+	# only remove them when this left them empty.
+	for lang in $(LANGS); do \
+		rm -f $(LOCALEDIR)/$$lang/LC_MESSAGES/$(DOMAIN).mo; \
+		rmdir $(LOCALEDIR)/$$lang/LC_MESSAGES $(LOCALEDIR)/$$lang 2>/dev/null || true; \
+	done
 
 clean:
 	cargo clean
