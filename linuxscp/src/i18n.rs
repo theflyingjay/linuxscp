@@ -67,30 +67,35 @@ fn apply_saved_language() {
 /// Where the `.mo` files live.
 ///
 /// Depends on how the app was installed, so try, in order: an explicit
-/// override for packagers and debugging, the directory baked in at build
-/// time, then the distro (`/usr`), `make install` (`/usr/local`, the
-/// Makefile default) and Flatpak (`/app`) locations. A directory only wins
-/// if it actually holds one of our catalogs, so a `/usr/local` install is
-/// not shadowed by the distro package's empty `/usr/share/locale`.
+/// override for packagers and debugging (`LINUXSCP_LOCALEDIR`, read when
+/// the app starts), then the distro (`/usr`), `make install` (`/usr/local`,
+/// the Makefile default) and Flatpak (`/app`) locations. A directory only
+/// wins if it actually holds one of our catalogs, so a `/usr/local` install
+/// is not shadowed by the distro package's empty `/usr/share/locale`.
 fn locale_dir() -> PathBuf {
-    if let Some(dir) = std::env::var_os("LINUXSCP_LOCALEDIR") {
-        return PathBuf::from(dir);
+    if let Some(dir) = override_dir(std::env::var_os("LINUXSCP_LOCALEDIR")) {
+        return dir;
     }
 
-    let mut candidates = Vec::with_capacity(4);
-    if let Some(dir) = option_env!("LINUXSCP_LOCALEDIR") {
-        candidates.push(PathBuf::from(dir));
-    }
-    candidates.push(PathBuf::from("/usr/share/locale"));
-    candidates.push(PathBuf::from("/usr/local/share/locale"));
-    candidates.push(PathBuf::from("/app/share/locale"));
-
+    let candidates = [
+        PathBuf::from("/usr/share/locale"),
+        PathBuf::from("/usr/local/share/locale"),
+        PathBuf::from("/app/share/locale"),
+    ];
     candidates
         .iter()
         .find(|dir| has_catalog(dir))
-        .or_else(|| candidates.first())
-        .cloned()
-        .unwrap_or_else(|| PathBuf::from("/usr/share/locale"))
+        .unwrap_or(&candidates[0])
+        .clone()
+}
+
+/// The `LINUXSCP_LOCALEDIR` override, when it can be used as given.
+///
+/// Only an absolute path counts. gettext resolves a relative directory, an
+/// empty value included, against the current working directory, which would
+/// load catalogs from wherever the app happened to be started.
+fn override_dir(value: Option<std::ffi::OsString>) -> Option<PathBuf> {
+    value.map(PathBuf::from).filter(|dir| dir.is_absolute())
 }
 
 /// True when `dir` holds a catalog this build ships.
@@ -184,7 +189,8 @@ macro_rules! tr {
 
 #[cfg(test)]
 mod tests {
-    use super::{format_translated, has_catalog, is_supported};
+    use super::{format_translated, has_catalog, is_supported, override_dir};
+    use std::path::PathBuf;
 
     #[test]
     fn only_shipped_languages_are_accepted() {
@@ -210,6 +216,19 @@ mod tests {
 
         std::fs::remove_dir_all(&dir).unwrap();
         assert!(!has_catalog(&dir));
+    }
+
+    #[test]
+    fn the_override_must_be_an_absolute_path() {
+        assert_eq!(override_dir(None), None);
+        // gettext would resolve these against the current directory.
+        assert_eq!(override_dir(Some("".into())), None);
+        assert_eq!(override_dir(Some(".".into())), None);
+        assert_eq!(override_dir(Some("share/locale".into())), None);
+        assert_eq!(
+            override_dir(Some("/opt/linuxscp/share/locale".into())),
+            Some(PathBuf::from("/opt/linuxscp/share/locale"))
+        );
     }
 
     #[test]
