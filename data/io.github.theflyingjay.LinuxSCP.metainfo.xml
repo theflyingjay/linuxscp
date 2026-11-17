@@ -43,6 +43,14 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.5.0" date="2026-11-17">
+      <description>
+        <ul>
+          <li>i18n: add gettext support and a Simplified Chinese translation (#20)</li>
+          <li>Unbreak CI under cargo 1.100 and install gettext in the release job (#21)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-11-09">
       <description>
         <ul>
