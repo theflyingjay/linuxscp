@@ -30,6 +30,10 @@ anyhow = "1.0.103"
 async-channel = "2.5.0"
 dirs = "6.0.0"
 futures = "0.3.32"
+# User-interface translations. The `gettext-system` feature links against the
+# libintl that glibc already provides, so the build needs no extra libraries
+# (and no bundled gettext copy) beyond the usual GTK4 development packages.
+gettext-rs = { version = "0.8", features = ["gettext-system"] }
 gio = "0.21"
 glib = "0.21"
 gtk = { version = "0.10.3", package = "gtk4", features = ["v4_12"] }

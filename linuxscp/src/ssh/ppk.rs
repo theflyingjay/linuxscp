@@ -15,6 +15,7 @@
 use std::fmt;
 use std::path::Path;
 
+use crate::tr;
 use base64ct::{Base64, Encoding as _};
 use hmac::digest::KeyInit;
 use hmac::{Hmac, Mac};
@@ -42,44 +43,44 @@ const V2_MAC_KEY_PREFIX: &[u8] = b"putty-private-key-file-mac-key";
 
 #[derive(Debug, thiserror::Error)]
 pub enum PpkError {
-    #[error("not a PuTTY private key file")]
+    #[error("{}", tr!("not a PuTTY private key file"))]
     NotPpk,
-    #[error("PuTTY key file format version {0} is not supported")]
+    #[error("{}", tr!("PuTTY key file format version {} is not supported", .0))]
     UnsupportedVersion(u32),
     #[error("{}", describe_unsupported(.0))]
     UnsupportedAlgorithm(String),
-    #[error("unknown encryption type \u{201c}{0}\u{201d}")]
+    #[error("{}", tr!("unknown encryption type \u{201c}{}\u{201d}", .0))]
     UnsupportedEncryption(String),
-    #[error("the key is encrypted; its passphrase is required")]
+    #[error("{}", tr!("the key is encrypted; its passphrase is required"))]
     PassphraseRequired,
-    #[error("wrong passphrase (or the key file is damaged)")]
+    #[error("{}", tr!("wrong passphrase (or the key file is damaged)"))]
     WrongPassphrase,
-    #[error("the key file is damaged: {0}")]
+    #[error("{}", tr!("the key file is damaged: {}", .0))]
     Corrupt(&'static str),
-    #[error("the private key in the file does not match its public key")]
+    #[error("{}", tr!("the private key in the file does not match its public key"))]
     Inconsistent,
-    #[error("the key file cannot be processed: {0}")]
+    #[error("{}", tr!("the key file cannot be processed: {}", .0))]
     Limits(&'static str),
     /// ssh-key rejected the key material (malformed mpint, bad curve point).
     /// Its messages never include key bytes.
-    #[error("the key data is invalid: {0}")]
+    #[error("{}", tr!("the key data is invalid: {}", .0))]
     Key(ssh_key::Error),
 }
 
 fn describe_unsupported(algorithm: &str) -> String {
     match algorithm {
-        "ssh-dss" => "this is a DSA key; OpenSSH dropped DSA support, so it cannot be used \
-                      from Linux — generate a new key instead"
-            .into(),
-        "ssh-ed448" => "Ed448 keys are not supported by OpenSSH".into(),
+        "ssh-dss" => tr!(
+            "this is a DSA key; OpenSSH dropped DSA support, so it cannot be used \
+             from Linux — generate a new key instead"
+        ),
+        "ssh-ed448" => tr!("Ed448 keys are not supported by OpenSSH"),
         other if other.ends_with("-cert-v01@openssh.com") => {
-            "certificate keys cannot be imported; convert the plain key instead".into()
+            tr!("certificate keys cannot be imported; convert the plain key instead")
         }
-        other => format!("\u{201c}{other}\u{201d} keys cannot be converted"),
+        other => tr!("\u{201c}{}\u{201d} keys cannot be converted", other),
     }
 }
 
-/// How the private blob is protected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Encryption {
     None,

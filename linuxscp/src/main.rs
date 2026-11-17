@@ -7,12 +7,18 @@ use gtk::glib;
 const APP_ID: &str = "io.github.theflyingjay.LinuxSCP";
 
 fn main() -> glib::ExitCode {
+    // Logging first: i18n::init warns about an unusable saved language, and
+    // that warning needs a subscriber to go anywhere.
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "linuxscp=info".into()),
         )
         .init();
+
+    // Switch to the user's locale and load the translation catalog before
+    // anything builds UI or formats a localized message.
+    linuxscp::i18n::init();
 
     // Initialize the tokio runtime early.
     linuxscp::runtime::runtime();

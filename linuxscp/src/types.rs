@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::tr;
+
 pub type SessionId = u64;
 pub type TransferId = u64;
 pub type Reply<T> = tokio::sync::oneshot::Sender<T>;
@@ -100,11 +102,11 @@ pub enum Elevation {
 impl Elevation {
     pub const ALL: [Elevation; 3] = [Elevation::None, Elevation::Sudo, Elevation::Su];
 
-    pub fn label(&self) -> &'static str {
+    pub fn label(&self) -> String {
         match self {
-            Elevation::None => "Connect as yourself",
-            Elevation::Sudo => "Root via sudo",
-            Elevation::Su => "Root via su -",
+            Elevation::None => tr!("Connect as yourself"),
+            Elevation::Sudo => tr!("Root via sudo"),
+            Elevation::Su => tr!("Root via su -"),
         }
     }
 }
@@ -126,11 +128,11 @@ pub enum AuthMethod {
 impl AuthMethod {
     pub const ALL: [AuthMethod; 3] = [AuthMethod::Agent, AuthMethod::Password, AuthMethod::Key];
 
-    pub fn label(&self) -> &'static str {
+    pub fn label(&self) -> String {
         match self {
-            AuthMethod::Agent => "SSH agent / default keys",
-            AuthMethod::Password => "Password",
-            AuthMethod::Key => "Key file (OpenSSH or PuTTY .ppk)",
+            AuthMethod::Agent => tr!("SSH agent / default keys"),
+            AuthMethod::Password => tr!("Password"),
+            AuthMethod::Key => tr!("Key file (OpenSSH or PuTTY .ppk)"),
         }
     }
 }

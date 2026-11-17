@@ -379,6 +379,10 @@ pub struct Settings {
     /// Show the saved site's name on the tab instead of its host.
     #[serde(default)]
     pub tab_shows_name: bool,
+    /// Interface language as a gettext locale name (`zh_CN`, `en`, …).
+    /// `None` follows the system locale.
+    #[serde(default)]
+    pub language: Option<String>,
 }
 
 fn enabled() -> bool {
@@ -397,6 +401,7 @@ impl Default for Settings {
             notify_sound: true,
             notify_desktop: true,
             tab_shows_name: false,
+            language: None,
         }
     }
 }

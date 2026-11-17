@@ -4,6 +4,7 @@
 use adw::prelude::*;
 
 use linuxscp::ssh::config::ssh_dir;
+use linuxscp::tr;
 
 /// Show the editor; `on_saved` runs after a successful write so the caller
 /// can re-parse the host list.
@@ -14,10 +15,10 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
     let header = adw::HeaderBar::new();
     header.set_show_end_title_buttons(false);
     header.set_show_start_title_buttons(false);
-    let title = adw::WindowTitle::new("Edit SSH Config", &path.to_string_lossy());
+    let title = adw::WindowTitle::new(&tr!("Edit SSH Config"), &path.to_string_lossy());
     header.set_title_widget(Some(&title));
-    let cancel_btn = gtk::Button::with_label("Cancel");
-    let save_btn = gtk::Button::with_label("Save");
+    let cancel_btn = gtk::Button::with_label(&tr!("Cancel"));
+    let save_btn = gtk::Button::with_label(&tr!("Save"));
     save_btn.add_css_class("suggested-action");
     header.pack_start(&cancel_btn);
     header.pack_end(&save_btn);
@@ -37,10 +38,10 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
         .child(&view)
         .build();
 
-    let hint = gtk::Label::new(Some(
+    let hint = gtk::Label::new(Some(&tr!(
         "Host blocks defined here appear in the host list and are used by \
          the system ssh — aliases, jump hosts, keys and all.",
-    ));
+    )));
     hint.add_css_class("caption");
     hint.add_css_class("dim-label");
     hint.set_wrap(true);
@@ -59,7 +60,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
     toolbar.set_content(Some(&content_box));
 
     let dialog = adw::Dialog::builder()
-        .title("Edit SSH Config")
+        .title(tr!("Edit SSH Config"))
         .content_width(720)
         .content_height(560)
         .child(&toolbar)
@@ -83,10 +84,10 @@ pub fn show(parent: &impl IsA<gtk::Widget>, on_saved: impl Fn() + 'static) {
                 }
                 Err(err) => {
                     let alert = adw::AlertDialog::builder()
-                        .heading("Could Not Save")
+                        .heading(tr!("Could Not Save"))
                         .body(format!("{err}"))
                         .build();
-                    alert.add_response("ok", "OK");
+                    alert.add_response("ok", &tr!("OK"));
                     alert.present(Some(&parent));
                 }
             }

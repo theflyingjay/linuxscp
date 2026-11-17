@@ -9,3 +9,7 @@
 
 # Local scratch output that has nothing to do with the project.
 /result.json
+
+# Compiled translation catalogs. `make mo` and `make install` build them
+# next to the .po files they come from.
+/po/*.mo

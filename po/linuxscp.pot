@@ -1,0 +1,1364 @@
+# LinuxSCP translation template.
+# Regenerate with scripts/i18n-extract.py.
+msgid ""
+msgstr ""
+"Project-Id-Version: linuxscp\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: linuxscp/src/ui/queue.rs
+msgid "  •  {} left"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "  •  {}/s"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid " • {}/s"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid ", encrypted"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid ", not encrypted"
+msgstr ""
+
+#: linuxscp/src/ui/tree_node.rs
+msgid "1 site"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "< 1 s"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "A commander-style SFTP client for GNOME. Works directly with your ~/.ssh/config and supports sudo/su elevation and resumable transfers."
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "About LinuxSCP"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Add X to directories"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "All files"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Already in this folder: {}"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Authentication"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Authentication Required"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Calculate"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Calculating…"
+msgstr ""
+
+#: linuxscp/src/ui/config_editor.rs, linuxscp/src/ui/edit.rs, linuxscp/src/ui/key_import.rs, linuxscp/src/ui/prompts.rs, linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
+msgid "Cancel"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Cancel Transfer"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Cancelled — {} changed"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Cancelled — {} of {} • {}/{} files"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Cancelled — {} removed"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Cancelled — {} • {}"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Cannot Import Key"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Cannot copy a folder into itself: {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Change {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Change {} items"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Changed {}"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Clear Finished"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Close"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Collecting items… {} changed"
+msgstr ""
+
+#: linuxscp/src/ui/splash.rs
+msgid "Commander-style SFTP client for GNOME"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Comment"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Complete the folder being typed in the path"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Confirm"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Connect"
+msgstr ""
+
+#: linuxscp/src/types.rs
+msgid "Connect as yourself"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Connect to a server first"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "Connect to server…"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Connected to {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Connecting to {}…"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Connection"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Connection Failed"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Connection lost: {}"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Contents"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Convert"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Convert…"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Copy"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Copy / cut selection"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Copy To…"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Copy to Directory"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Copy to other pane"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Copy {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Copy {} items"
+msgstr ""
+
+#: linuxscp/src/ui/config_editor.rs
+msgid "Could Not Save"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "Could not create a temp folder: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Could not create destination: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Could not open terminal: {}"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "Could not open the editor: {}"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "Could not read the saved file: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/key_import.rs
+msgid "Could not read {}: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Could not save password to keyring: {}"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "Could not watch the temp copy: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/connect_dialog.rs
+msgid "Create"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Create failed: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Cut"
+msgstr ""
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/connect_dialog.rs
+msgid "Delete"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Delete Folder"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Delete Site"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Delete this folder and every site inside it?"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Delete this saved site and its stored password?"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Delete {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Delete {} items"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Desktop notifications"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Destination is the current directory"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "Disconnect"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Done — {} in {}"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Download"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "Ed448 keys are not supported by OpenSSH"
+msgstr ""
+
+#: linuxscp/src/ui/config_editor.rs
+msgid "Edit SSH Config"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Edit file in text editor"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Edit path"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Edit ~/.ssh/config"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Failed"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Failed — {}"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "File"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "File Exists"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "File context menu"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Fingerprint"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Finished {}, took {}"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Folder"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Format"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Group"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "Home directory"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Host"
+msgstr ""
+
+#: linuxscp/src/ui/config_editor.rs
+msgid "Host blocks defined here appear in the host list and are used by the system ssh — aliases, jump hosts, keys and all."
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Hosts from ~/.ssh/config"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "How LinuxSCP tells you a transfer has finished"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "How connected tabs are labeled"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Import"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Import PuTTY Key"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Key"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Key file"
+msgstr ""
+
+#: linuxscp/src/types.rs
+msgid "Key file (OpenSSH or PuTTY .ppk)"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Language"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Language saved — restart LinuxSCP to apply it"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Link target"
+msgstr ""
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
+msgid "Local"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Location"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Login as"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Method"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
+msgid "Modified"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Move to other pane"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Move {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "Move {} items"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "My Server"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/site_editor.rs
+msgid "Name"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "New Directory"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "New Folder"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "New Folder…"
+msgstr ""
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/tab_strip.rs
+msgid "New Session"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "New Symlink"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "New Symlink…"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "New directory"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "New folder"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "New folder (F7)"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs, linuxscp/src/ui/site_editor.rs
+msgid "New site"
+msgstr ""
+
+#: linuxscp/src/ui/tab_strip.rs
+msgid "Next session"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "No"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "No Host entries yet.\n\nUse the edit button above to add some to ~/.ssh/config."
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "No Site Selected"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "No default text editor is configured"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "No hosts match the search."
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "None selected"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Not calculated"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Nothing selected"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Nothing to paste"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Notifications"
+msgstr ""
+
+#: linuxscp/src/ui/config_editor.rs, linuxscp/src/ui/key_import.rs, linuxscp/src/ui/prompts.rs, linuxscp/src/ui/properties.rs
+msgid "OK"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Octal"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "Open Anyway"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "Open Large File?"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Open Terminal Here"
+msgstr ""
+
+#: linuxscp/src/ui/tab_strip.rs
+msgid "Open a new session tab"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Open directory"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Open terminal here"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Open terminal here (Ctrl+T)"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "OpenSSH, which LinuxSCP connects with, cannot read PuTTY's .ppk format. A copy in OpenSSH format is written to {} and selected for this site; the .ppk file is not changed."
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Others"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Overwrite"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Overwrite All"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
+msgid "Owner"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Parent directory"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "Parent directory (Backspace)"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Passphrase"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Passphrase (leave blank to keep saved)"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Passphrase (optional)"
+msgstr ""
+
+#: linuxscp/src/types.rs, linuxscp/src/ui/site_editor.rs
+msgid "Password"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Password (leave blank to keep saved)"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Paste"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Paste into active pane"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Pause"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Paused"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Permanently delete {} items?"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Permanently delete “{}”?"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
+msgid "Permissions"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Pick a suggested folder in the path (Enter opens it)"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Play sound on completion"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Plays a success chime when a transfer finishes"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Port (blank = 22)"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Preferences"
+msgstr ""
+
+#: linuxscp/src/ui/tab_strip.rs
+msgid "Previous session"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Properties"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Properties (owner, group, permissions)"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Protect the converted key with the same passphrase"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "PuTTY PPK version {}{}"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "PuTTY key file format version {} is not supported"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "PuTTY private keys (*.ppk)"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Queued"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Reconnect"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Refresh"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "Refresh (Ctrl+R)"
+msgstr ""
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
+msgid "Remote"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Remote directory (optional)"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Remove"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Removed {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Rename"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Rename failed: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Rename…"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Restart LinuxSCP to apply a new language"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Resume"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Resume Transfer"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Retry"
+msgstr ""
+
+#: linuxscp/src/types.rs
+msgid "Root via su -"
+msgstr ""
+
+#: linuxscp/src/types.rs
+msgid "Root via sudo"
+msgstr ""
+
+#: linuxscp/src/types.rs
+msgid "SSH agent / default keys"
+msgstr ""
+
+#: linuxscp/src/ui/config_editor.rs, linuxscp/src/ui/connect_dialog.rs
+msgid "Save"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "Save as"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Save as Site…"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Saved connections"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Saved sites"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Scanning… {} files found"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Search hosts, sites, and folders"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Select a saved site, or create a new one to edit it here."
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Select private key"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Session"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Session is closed"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Set GID"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Set UID"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Set owner, group and permissions recursively"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Show a GNOME notification when a transfer finishes"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Show hidden files (Ctrl+H)"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Show site name on tabs"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Show the saved site's name on the tab instead of its host"
+msgstr ""
+
+#: linuxscp/src/ui/connect_dialog.rs
+msgid "Site Manager"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Site saved"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs
+msgid "Size"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Skip"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Skip All"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Source and destination are the same"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Source and destination are the same directory"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Sticky bit"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Stored on"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Switch active pane"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Symbolic link"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Symbolic link to folder"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Symlink failed: {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "System default"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Tabs"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "That file is still being saved; try again when the upload finishes."
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "The connection the files were copied from is closed"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "The file is too large to be a key file."
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Toggle hidden files"
+msgstr ""
+
+#: linuxscp/src/ui/notify.rs
+msgid "Transfer complete"
+msgstr ""
+
+#: linuxscp/src/ui/notify.rs
+msgid "Transfer failed"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Transfers and file operations appear here"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Translation"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs, linuxscp/src/ui/properties.rs
+msgid "Type"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "UI closed"
+msgstr ""
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "UI event channel closed"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "Unavailable"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Upload"
+msgstr ""
+
+#: linuxscp/src/ui/site_editor.rs
+msgid "Username"
+msgstr ""
+
+#: linuxscp/src/ui/splash.rs
+msgid "Version {}"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "Waiting for answer…"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "Yes"
+msgstr ""
+
+#: linuxscp/src/ui/key_import.rs
+msgid "You can let LinuxSCP remember the passphrase for this site"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "a key named “{}” already exists in {}"
+msgstr ""
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "askpass prompt too large"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "authentication failed (too many attempts)"
+msgstr ""
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "binding askpass socket"
+msgstr ""
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "cancelled"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "certificate keys cannot be imported; convert the plain key instead"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "changing owner of {}"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "changing permissions of {}"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "connection cancelled"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "connection closed during elevation"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "copy stopped"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "copy worker crashed"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "copy — paste somewhere"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "copying {}"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "could not determine your home directory"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "could not encode the OpenSSH key: {}"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "could not read {}: {}"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "could not write {}: {}"
+msgstr ""
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "creating askpass socket dir"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "creating directory {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "creating remote {}"
+msgstr ""
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "creating {}"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "deleting {}"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "establishing SFTP session"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "finalizing file"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "id maps unavailable"
+msgstr ""
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "listing {}"
+msgstr ""
+
+#: linuxscp/src/ssh/askpass.rs
+msgid "locating linuxscp-askpass helper"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "move — paste somewhere"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "no response from the SFTP server on {} after {} seconds"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "not a PuTTY private key file"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "not found"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "opening remote {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "opening {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "read failed"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "reading ssh output"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "reading {}"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "removing directory {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "removing source {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "renaming completed file into place"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "resolving remote home directory"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "root password on {}"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "server did not report current owner ids for {}"
+msgstr ""
+
+#: linuxscp/src/fsops.rs, linuxscp/src/transfers.rs
+msgid "session is closed"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "spawning ssh (is OpenSSH installed?)"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "ssh exited ({})"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "ssh exited before the SFTP session started ({})"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "ssh exited during elevation ({})"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "sudo password on {}"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "the converted key did not read back correctly"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "the file is too large to be a key file"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "the key data is invalid: {}"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "the key file cannot be processed: {}"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "the key file is damaged: {}"
+msgstr ""
+
+#: linuxscp/src/ssh/key_import.rs
+msgid "the key file name is not valid"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "the key is encrypted; its passphrase is required"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "the private key in the file does not match its public key"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "this is a DSA key; OpenSSH dropped DSA support, so it cannot be used from Linux — generate a new key instead"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "timed out waiting for elevation on {}"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "unexpected output from remote bootstrap"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "unknown encryption type “{}”"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "unknown group “{}”"
+msgstr ""
+
+#: linuxscp/src/fsops.rs
+msgid "unknown user “{}”"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "wait failed: {}"
+msgstr ""
+
+#: linuxscp/src/transfers.rs
+msgid "write failed"
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "wrong passphrase (or the key file is damaged)"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "{} ({} bytes)"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{} / {} changed"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{} / {} • {}/{} files"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "{} Items"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "{} bytes"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "{} files"
+msgstr ""
+
+#: linuxscp/src/ssh/connect.rs
+msgid "{} is a PuTTY private key (.ppk), which OpenSSH cannot read. Open the site in the Site Manager and choose Convert… next to the key file to turn it into an OpenSSH key."
+msgstr ""
+
+#: linuxscp/src/app.rs, linuxscp/src/ui/pane.rs
+msgid "{} items"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "{} of {} selected, {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "{} ready to {}"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{} removed…"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{} s"
+msgstr ""
+
+#: linuxscp/src/ui/tree_node.rs
+msgid "{} sites"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "{} {}, {} {}"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{} • {}/{}+ files • counting…"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{}d {}h"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{}h {}m"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{}m {}s"
+msgstr ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "{}s"
+msgstr ""
+
+#: linuxscp/src/ui/prompts.rs
+msgid "“{}” already exists in the destination.\n\nSource: {}\nDestination: {}"
+msgstr ""
+
+#: linuxscp/src/ui/edit.rs
+msgid "“{}” is {}. Large files can be slow to open and edit."
+msgstr ""
+
+#: linuxscp/src/ssh/ppk.rs
+msgid "“{}” keys cannot be converted"
+msgstr ""
+
+#: linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
+msgid "file"
+msgid_plural "files"
+msgstr[0] ""
+
+#: linuxscp/src/ui/properties.rs
+msgid "folder"
+msgid_plural "folders"
+msgstr[0] ""
+
+#: linuxscp/src/ui/queue.rs
+msgid "item"
+msgid_plural "items"
+msgstr[0] ""
+

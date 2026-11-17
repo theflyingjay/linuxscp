@@ -61,6 +61,19 @@ done
 # Transfer-completion sound.
 install -Dm644 data/sounds/success.mp3 "$STAGE/usr/share/linuxscp/sounds/success.mp3"
 
+# Compiled translations, one .mo per language under the system locale dir.
+if ! command -v msgfmt >/dev/null 2>&1; then
+    echo "error: msgfmt not found; install gettext to build the translations" >&2
+    exit 1
+fi
+for po in po/*.po; do
+    [ -e "$po" ] || continue
+    lang="$(basename "$po" .po)"
+    mo="$TARGET_DIR/${lang}.mo"
+    msgfmt --check -o "$mo" "$po"
+    install -Dm644 "$mo" "$STAGE/usr/share/locale/$lang/LC_MESSAGES/$PKG.mo"
+done
+
 # Debian policy: copyright file, plus a changelog.
 install -Dm644 LICENSE "$STAGE/usr/share/doc/$PKG/copyright"
 {

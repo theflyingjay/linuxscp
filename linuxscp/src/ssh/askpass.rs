@@ -13,6 +13,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use tokio_util::sync::CancellationToken;
 
+use crate::tr;
 use crate::types::{Event, PromptKind, PromptRequest};
 
 /// One-shot secret used to auto-answer the first password/passphrase prompt
@@ -38,12 +39,12 @@ impl AskpassServer {
             .map(PathBuf::from)
             .unwrap_or_else(std::env::temp_dir)
             .join("linuxscp");
-        std::fs::create_dir_all(&dir).context("creating askpass socket dir")?;
+        std::fs::create_dir_all(&dir).context(tr!("creating askpass socket dir"))?;
 
         static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let sock_path = dir.join(format!("askpass-{}-{n}.sock", std::process::id()));
-        let listener = UnixListener::bind(&sock_path).context("binding askpass socket")?;
+        let listener = UnixListener::bind(&sock_path).context(tr!("binding askpass socket"))?;
 
         let preset: Preset = Arc::new(Mutex::new(preset));
         let cancel = CancellationToken::new();
@@ -91,7 +92,7 @@ impl AskpassServer {
 
     /// Environment variables the spawned ssh process needs.
     pub fn ssh_env(&self) -> anyhow::Result<Vec<(&'static str, String)>> {
-        let helper = helper_path().context("locating linuxscp-askpass helper")?;
+        let helper = helper_path().context(tr!("locating linuxscp-askpass helper"))?;
         Ok(vec![
             ("SSH_ASKPASS", helper.to_string_lossy().into_owned()),
             ("SSH_ASKPASS_REQUIRE", "force".into()),
@@ -147,7 +148,7 @@ async fn handle_client(mut stream: UnixStream, client: Client) -> anyhow::Result
     let mut len = [0u8; 4];
     stream.read_exact(&mut len).await?;
     let len = u32::from_be_bytes(len) as usize;
-    anyhow::ensure!(len < 64 * 1024, "askpass prompt too large");
+    anyhow::ensure!(len < 64 * 1024, tr!("askpass prompt too large"));
     let mut prompt = vec![0u8; len];
     stream.read_exact(&mut prompt).await?;
     let prompt = String::from_utf8_lossy(&prompt).into_owned();
@@ -176,7 +177,7 @@ async fn handle_client(mut stream: UnixStream, client: Client) -> anyhow::Result
         }))
         .await
         .ok()
-        .context("UI event channel closed")?;
+        .context(tr!("UI event channel closed"))?;
 
     // Wait for the user — unless the connection attempt ends first, in which
     // case dropping `rx` is what lets the UI dismiss the stale dialog.

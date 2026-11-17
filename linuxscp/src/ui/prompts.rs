@@ -8,6 +8,7 @@ use std::task::Poll;
 use adw::prelude::*;
 use gtk::glib;
 
+use linuxscp::tr;
 use linuxscp::types::{ConflictDecision, ConflictRequest, PromptKind, PromptRequest, Reply};
 
 pub fn show_prompt(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
@@ -48,13 +49,13 @@ fn dismiss_when_abandoned<T: 'static>(
 
 fn show_secret(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
     let dialog = adw::AlertDialog::builder()
-        .heading("Authentication Required")
+        .heading(tr!("Authentication Required"))
         .body(&request.prompt)
         .close_response("cancel")
         .default_response("ok")
         .build();
-    dialog.add_response("cancel", "Cancel");
-    dialog.add_response("ok", "OK");
+    dialog.add_response("cancel", &tr!("Cancel"));
+    dialog.add_response("ok", &tr!("OK"));
     dialog.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
 
     let entry = gtk::PasswordEntry::builder()
@@ -84,14 +85,14 @@ fn show_secret(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
 
 fn show_yes_no(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
     let dialog = adw::AlertDialog::builder()
-        .heading("Confirm")
+        .heading(tr!("Confirm"))
         .body(&request.prompt)
         .body_use_markup(false)
         .close_response("no")
         .default_response("no")
         .build();
-    dialog.add_response("no", "No");
-    dialog.add_response("yes", "Yes");
+    dialog.add_response("no", &tr!("No"));
+    dialog.add_response("yes", &tr!("Yes"));
     dialog.set_response_appearance("yes", adw::ResponseAppearance::Suggested);
 
     let reply: SharedReply<Option<String>> = Rc::new(RefCell::new(Some(request.reply)));
@@ -108,26 +109,26 @@ fn show_yes_no(parent: &impl IsA<gtk::Widget>, request: PromptRequest) {
 }
 
 pub fn show_conflict(parent: &impl IsA<gtk::Widget>, request: ConflictRequest) {
-    let body = format!(
+    let body = tr!(
         "\u{201c}{}\u{201d} already exists in the destination.\n\nSource: {}\nDestination: {}",
         request.file_name,
         super::entry_object::format_size(request.src_size),
         super::entry_object::format_size(request.dst_size),
     );
     let dialog = adw::AlertDialog::builder()
-        .heading("File Exists")
+        .heading(tr!("File Exists"))
         .body(&body)
         .close_response("cancel")
         .default_response("overwrite")
         .build();
-    dialog.add_response("overwrite", "Overwrite");
-    dialog.add_response("overwrite_all", "Overwrite All");
+    dialog.add_response("overwrite", &tr!("Overwrite"));
+    dialog.add_response("overwrite_all", &tr!("Overwrite All"));
     if request.dst_size < request.src_size {
-        dialog.add_response("resume", "Resume");
+        dialog.add_response("resume", &tr!("Resume Transfer"));
     }
-    dialog.add_response("skip", "Skip");
-    dialog.add_response("skip_all", "Skip All");
-    dialog.add_response("cancel", "Cancel Transfer");
+    dialog.add_response("skip", &tr!("Skip"));
+    dialog.add_response("skip_all", &tr!("Skip All"));
+    dialog.add_response("cancel", &tr!("Cancel Transfer"));
     dialog.set_response_appearance("overwrite", adw::ResponseAppearance::Destructive);
     dialog.set_response_appearance("overwrite_all", adw::ResponseAppearance::Destructive);
     dialog.set_response_appearance("cancel", adw::ResponseAppearance::Default);
@@ -163,7 +164,7 @@ pub fn ask_text(
         .close_response("cancel")
         .default_response("ok")
         .build();
-    dialog.add_response("cancel", "Cancel");
+    dialog.add_response("cancel", &tr!("Cancel"));
     dialog.add_response("ok", accept_label);
     dialog.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
 
@@ -201,7 +202,7 @@ pub fn confirm(
         .close_response("cancel")
         .default_response("cancel")
         .build();
-    dialog.add_response("cancel", "Cancel");
+    dialog.add_response("cancel", &tr!("Cancel"));
     dialog.add_response("do", action_label);
     dialog.set_response_appearance("do", adw::ResponseAppearance::Destructive);
     dialog.connect_response(None, move |dialog, response| {
