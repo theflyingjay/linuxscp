@@ -23,6 +23,7 @@ use russh_sftp::protocol::OpenFlags;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::sync::watch;
 
+use crate::sessions::SessionHandle;
 use crate::ssh::connect::MAX_CONCURRENT_WRITES;
 use crate::tr;
 use crate::types::{
@@ -961,8 +962,17 @@ impl Scanner {
 /// server was still working through that file's in-flight writes.
 enum Stream {
     Local(tokio::fs::File),
-    /// Boxed: a remote file is about three times the size of a local one.
-    Remote(Box<RemoteFile>),
+    /// Boxed: several times the size of a local file.
+    Remote(Box<Remote>),
+}
+
+/// A file on an SFTP session, together with that session.
+struct Remote {
+    file: RemoteFile,
+    /// The session the file is on. Writes are sent through it, which is
+    /// what gives them longer to be acknowledged than other requests (see
+    /// [`SessionHandle::send_write`]).
+    session: SessionHandle,
 }
 
 impl Stream {
@@ -977,9 +987,10 @@ impl Stream {
         // finds none left goes on to close the handle. That makes one
         // attempt per write that can be in flight, then the one that closes.
         const ATTEMPTS: usize = MAX_CONCURRENT_WRITES + 1;
-        let Stream::Remote(file) = self else {
+        let Stream::Remote(remote) = self else {
             return; // local files release their fd on drop
         };
+        let file = &mut remote.file;
         let settle = async {
             for _ in 0..ATTEMPTS {
                 match file.shutdown().await {
@@ -1017,7 +1028,7 @@ impl AsyncRead for Stream {
     ) -> Poll<io::Result<()>> {
         match &mut *self {
             Stream::Local(f) => Pin::new(f).poll_read(cx, buf),
-            Stream::Remote(f) => Pin::new(f).poll_read(cx, buf),
+            Stream::Remote(remote) => Pin::new(&mut remote.file).poll_read(cx, buf),
         }
     }
 }
@@ -1030,21 +1041,27 @@ impl AsyncWrite for Stream {
     ) -> Poll<io::Result<usize>> {
         match &mut *self {
             Stream::Local(f) => Pin::new(f).poll_write(cx, buf),
-            Stream::Remote(f) => Pin::new(f).poll_write(cx, buf),
+            Stream::Remote(remote) => {
+                // A remote file's `poll_write` queues the write and returns
+                // without waiting for the server, which is all that
+                // `send_write` allows.
+                let Remote { file, session } = &mut **remote;
+                session.send_write(|| Pin::new(file).poll_write(cx, buf))
+            }
         }
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<io::Result<()>> {
         match &mut *self {
             Stream::Local(f) => Pin::new(f).poll_flush(cx),
-            Stream::Remote(f) => Pin::new(f).poll_flush(cx),
+            Stream::Remote(remote) => Pin::new(&mut remote.file).poll_flush(cx),
         }
     }
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<io::Result<()>> {
         match &mut *self {
             Stream::Local(f) => Pin::new(f).poll_shutdown(cx),
-            Stream::Remote(f) => Pin::new(f).poll_shutdown(cx),
+            Stream::Remote(remote) => Pin::new(&mut remote.file).poll_shutdown(cx),
         }
     }
 }
@@ -1061,8 +1078,9 @@ async fn open_read(backend: Backend, path: &str, offset: u64) -> anyhow::Result<
             Ok(Stream::Local(file))
         }
         Backend::Remote(id) => {
-            let sftp = sessions::get(id).context(tr!("session is closed"))?.sftp;
-            let mut file = sftp
+            let session = sessions::get(id).context(tr!("session is closed"))?;
+            let mut file = session
+                .sftp
                 .open_with_flags(path.to_owned(), OpenFlags::READ)
                 .await
                 .with_context(|| tr!("opening remote {}", path))?;
@@ -1071,7 +1089,7 @@ async fn open_read(backend: Backend, path: &str, offset: u64) -> anyhow::Result<
                 // fail.
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Stream::Remote(Box::new(file)))
+            Ok(Stream::Remote(Box::new(Remote { file, session })))
         }
     }
 }
@@ -1094,20 +1112,21 @@ async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result
             Ok(Stream::Local(file))
         }
         Backend::Remote(id) => {
-            let sftp = sessions::get(id).context(tr!("session is closed"))?.sftp;
+            let session = sessions::get(id).context(tr!("session is closed"))?;
             let flags = if offset == 0 {
                 OpenFlags::WRITE | OpenFlags::CREATE | OpenFlags::TRUNCATE
             } else {
                 OpenFlags::WRITE | OpenFlags::CREATE
             };
-            let mut file = sftp
+            let mut file = session
+                .sftp
                 .open_with_flags(path.to_owned(), flags)
                 .await
                 .with_context(|| tr!("creating remote {}", path))?;
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Stream::Remote(Box::new(file)))
+            Ok(Stream::Remote(Box::new(Remote { file, session })))
         }
     }
 }
@@ -1115,9 +1134,11 @@ async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ssh::connect::{REQUEST_TIMEOUT_SECS, TRANSFER_TIMEOUT_SECS};
     use russh_sftp::client::SftpSession;
     use tokio::io::DuplexStream;
     use tokio::task::JoinHandle;
+    use tokio_util::sync::CancellationToken;
 
     // SFTP packet types and status codes (draft-ietf-secsh-filexfer-02),
     // as far as the scripted server below needs them.
@@ -1126,6 +1147,7 @@ mod tests {
     const FXP_OPEN: u8 = 3;
     const FXP_CLOSE: u8 = 4;
     const FXP_WRITE: u8 = 6;
+    const FXP_STAT: u8 = 17;
     const FXP_STATUS: u8 = 101;
     const FXP_HANDLE: u8 = 102;
     const FX_OK: u32 = 0;
@@ -1138,6 +1160,8 @@ mod tests {
         Refused,
         /// Never answer.
         Unanswered,
+        /// Accept it, but only after this long.
+        Late(Duration),
     }
 
     fn put_string(packet: &mut Vec<u8>, text: &[u8]) {
@@ -1154,8 +1178,9 @@ mod tests {
     }
 
     /// A minimal SFTP server on the far end of an in-memory pipe: enough of
-    /// the protocol to open a file, then refuse or ignore every write to
-    /// it. `closes` counts the close requests it has answered.
+    /// the protocol to open a file, then treat every write to it as
+    /// `writes` says. It never answers a stat. `closes` counts the close
+    /// requests it has answered.
     async fn serve(mut stream: DuplexStream, writes: Writes, closes: Arc<AtomicU32>) {
         loop {
             let Ok(len) = stream.read_u32().await else {
@@ -1181,7 +1206,12 @@ mod tests {
                 FXP_WRITE => match writes {
                     Writes::Refused => put_status(&mut reply, id, FX_FAILURE),
                     Writes::Unanswered => continue,
+                    Writes::Late(delay) => {
+                        tokio::time::sleep(delay).await;
+                        put_status(&mut reply, id, FX_OK);
+                    }
                 },
+                FXP_STAT => continue,
                 FXP_CLOSE => {
                     closes.fetch_add(1, Ordering::SeqCst);
                     put_status(&mut reply, id, FX_OK);
@@ -1206,11 +1236,17 @@ mod tests {
         let sftp = SftpSession::new_with_config(client, crate::ssh::connect::sftp_config())
             .await
             .expect("handshake with the scripted server");
+        sftp.set_timeout(REQUEST_TIMEOUT_SECS);
         let file = sftp
             .open_with_flags("file", OpenFlags::WRITE | OpenFlags::CREATE)
             .await
             .expect("open on the scripted server");
-        (Stream::Remote(Box::new(file)), closes, server)
+        let session = SessionHandle::new(Arc::new(sftp), CancellationToken::new(), "host".into());
+        (
+            Stream::Remote(Box::new(Remote { file, session })),
+            closes,
+            server,
+        )
     }
 
     /// Fail a test promptly instead of sitting out the engine's timeouts.
@@ -1248,6 +1284,71 @@ mod tests {
         assert!(session_ended(&unanswered), "{unanswered:?}");
         let unsendable = promptly(stream.shutdown()).await.unwrap_err();
         assert!(session_ended(&unsendable), "{unsendable:?}");
+    }
+
+    // The two tests below run on a paused clock, which skips ahead whenever
+    // everything is waiting, so their minutes pass at once.
+
+    #[tokio::test(start_paused = true)]
+    async fn a_write_may_take_far_longer_than_other_requests_to_be_answered() {
+        // On a slow uplink a write is acknowledged once everything in
+        // flight ahead of it has crossed the link.
+        let late = Duration::from_secs(REQUEST_TIMEOUT_SECS + 60);
+        assert!(late < Duration::from_secs(TRANSFER_TIMEOUT_SECS));
+        let (mut stream, closes, _server) = remote_file(Writes::Late(late)).await;
+        let started = tokio::time::Instant::now();
+
+        stream.write_all(b"data").await.unwrap();
+        // Waits for the write to be acknowledged, then closes the file.
+        stream
+            .shutdown()
+            .await
+            .expect("the write outlasts the request timeout");
+
+        assert!(started.elapsed() >= late);
+        assert_eq!(closes.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn sending_a_write_leaves_other_requests_on_the_request_timeout() {
+        let (mut stream, _closes, _server) = remote_file(Writes::Unanswered).await;
+        stream.write_all(b"data").await.unwrap();
+        let Stream::Remote(remote) = &stream else {
+            unreachable!("remote_file opens a remote file");
+        };
+        let started = tokio::time::Instant::now();
+
+        let unanswered = remote.session.sftp.metadata("file").await;
+
+        assert!(
+            matches!(unanswered, Err(SftpError::Timeout)),
+            "{unanswered:?}"
+        );
+        assert_eq!(started.elapsed().as_secs(), REQUEST_TIMEOUT_SECS);
+    }
+
+    #[tokio::test]
+    async fn write_sends_on_one_session_take_turns() {
+        // Several files upload over one session at once. Were two of them
+        // sending at the same moment, the first to finish would switch the
+        // timeout back before the other had sent its write.
+        let (stream, _closes, _server) = remote_file(Writes::Unanswered).await;
+        let Stream::Remote(remote) = &stream else {
+            unreachable!("remote_file opens a remote file");
+        };
+        let session = &remote.session;
+        let second_sent = AtomicBool::new(false);
+
+        std::thread::scope(|threads| {
+            session.send_write(|| {
+                threads.spawn(|| session.send_write(|| second_sent.store(true, Ordering::SeqCst)));
+                // Ample time for the other thread to get in, if it could.
+                std::thread::sleep(Duration::from_millis(100));
+                assert!(!second_sent.load(Ordering::SeqCst));
+            });
+        });
+
+        assert!(second_sent.load(Ordering::SeqCst));
     }
 
     #[test]

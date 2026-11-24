@@ -62,9 +62,15 @@ const SU_PROMPT: &[u8] = b"Password:";
 /// a doomed attempt right away.
 const HANDSHAKE_TIMEOUT_SECS: u64 = 300;
 /// Per-request timeout once the session is up, counted from when a request
-/// is handed to ssh. Every write a transfer has in flight is a request of
-/// its own, so this also bounds how long each may take to be acknowledged.
-const REQUEST_TIMEOUT_SECS: u64 = 30;
+/// is handed to ssh. Writes of file data are the exception: see
+/// [`TRANSFER_TIMEOUT_SECS`].
+pub(crate) const REQUEST_TIMEOUT_SECS: u64 = 30;
+/// How long a write of file data may wait to be acknowledged. A transfer
+/// keeps several writes in flight and the server answers them in order, so
+/// each one waits for everything ahead of it to cross the link. On a slow
+/// uplink that takes minutes and is no sign of trouble; this is a backstop
+/// for a server that has stopped answering altogether.
+pub(crate) const TRANSFER_TIMEOUT_SECS: u64 = 60 * 60;
 /// How long to wait for ssh's last words on stderr after it exits.
 const STDERR_SETTLE: Duration = Duration::from_millis(500);
 /// Write requests a remote file keeps in flight. With OpenSSH's 255 KiB
