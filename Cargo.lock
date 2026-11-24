@@ -1039,7 +1039,7 @@ dependencies = [
 
 [[package]]
 name = "linuxscp"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aes",
  "anyhow",
@@ -1074,7 +1074,7 @@ dependencies = [
 
 [[package]]
 name = "linuxscp-askpass"
-version = "0.5.0"
+version = "0.5.1"
 
 [[package]]
 name = "locale_config"
