@@ -43,6 +43,13 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.5.1" date="2026-11-24">
+      <description>
+        <ul>
+          <li>Update russh-sftp to 4.0.0 to drop unmaintained chrono (RUSTSEC-2026-0543) (#24)</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-11-17">
       <description>
         <ul>

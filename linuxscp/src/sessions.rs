@@ -2,11 +2,12 @@
 //! creates and closes sessions) and tokio tasks (which use them).
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use russh_sftp::client::SftpSession;
 use tokio_util::sync::CancellationToken;
 
+use crate::ssh::connect::{REQUEST_TIMEOUT_SECS, TRANSFER_TIMEOUT_SECS};
 use crate::types::SessionId;
 
 /// uid/gid → name maps read from the remote /etc/passwd and /etc/group, so
@@ -55,6 +56,8 @@ pub struct SessionHandle {
     pub host: String,
     /// Lazily-loaded remote id → name maps (see [`IdNames`]).
     pub id_names: Arc<tokio::sync::OnceCell<IdNames>>,
+    /// Held while [`Self::send_write`] has the session's timeout switched.
+    write_gate: Arc<Mutex<()>>,
 }
 
 impl SessionHandle {
@@ -64,7 +67,46 @@ impl SessionHandle {
             cancel,
             host,
             id_names: Arc::new(tokio::sync::OnceCell::new()),
+            write_gate: Arc::default(),
         }
+    }
+
+    /// Send a write of file data: a request that gets
+    /// [`TRANSFER_TIMEOUT_SECS`] to be answered, not the request timeout
+    /// the session applies to everything else.
+    ///
+    /// russh-sftp has one timeout per session, and each request keeps the
+    /// value that was in force when it was sent. So the session is switched
+    /// over for just as long as `send` runs, and `send` must do nothing but
+    /// queue the write, which takes microseconds. The gate keeps two
+    /// transfers on one session from interleaving their switches. A request
+    /// that another task sends during those microseconds gets the longer
+    /// timeout as well, which would only show if the server then never
+    /// answered it.
+    pub(crate) fn send_write<T>(&self, send: impl FnOnce() -> T) -> T {
+        /// Puts the request timeout back and only then, as its field is
+        /// dropped, opens the gate to the next write.
+        struct Switched<'a> {
+            sftp: &'a SftpSession,
+            _gate: MutexGuard<'a, ()>,
+        }
+        impl Drop for Switched<'_> {
+            fn drop(&mut self) {
+                self.sftp.set_timeout(REQUEST_TIMEOUT_SECS);
+            }
+        }
+        // A poisoned gate means a transfer panicked while sending; the
+        // timeout was put back as it unwound, so carry on.
+        let gate = self
+            .write_gate
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let _switched = Switched {
+            sftp: &self.sftp,
+            _gate: gate,
+        };
+        self.sftp.set_timeout(TRANSFER_TIMEOUT_SECS);
+        send()
     }
 }
 
