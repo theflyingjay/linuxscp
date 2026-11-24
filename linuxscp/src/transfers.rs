@@ -961,7 +961,8 @@ impl Scanner {
 /// server was still working through that file's in-flight writes.
 enum Stream {
     Local(tokio::fs::File),
-    Remote(RemoteFile),
+    /// Boxed: a remote file is about three times the size of a local one.
+    Remote(Box<RemoteFile>),
 }
 
 impl Stream {
@@ -1070,7 +1071,7 @@ async fn open_read(backend: Backend, path: &str, offset: u64) -> anyhow::Result<
                 // fail.
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Stream::Remote(file))
+            Ok(Stream::Remote(Box::new(file)))
         }
     }
 }
@@ -1106,7 +1107,7 @@ async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result
             if offset > 0 {
                 file.seek(SeekFrom::Start(offset)).await?;
             }
-            Ok(Stream::Remote(file))
+            Ok(Stream::Remote(Box::new(file)))
         }
     }
 }
@@ -1209,7 +1210,7 @@ mod tests {
             .open_with_flags("file", OpenFlags::WRITE | OpenFlags::CREATE)
             .await
             .expect("open on the scripted server");
-        (Stream::Remote(file), closes, server)
+        (Stream::Remote(Box::new(file)), closes, server)
     }
 
     /// Fail a test promptly instead of sitting out the engine's timeouts.
