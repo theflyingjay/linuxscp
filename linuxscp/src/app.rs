@@ -28,6 +28,34 @@ const DEFAULT_QUEUE_HEIGHT: i32 = 200;
 /// Thickness of a paned divider in the Adwaita stylesheet; the queue's
 /// height is measured without it.
 const PANED_HANDLE: i32 = 1;
+/// Width of a pane's bookmarks dropdown.
+const BOOKMARKS_WIDTH: i32 = 340;
+/// Tallest the list in a bookmarks dropdown grows before it scrolls.
+const BOOKMARKS_MAX_HEIGHT: i32 = 320;
+
+/// The widgets of one pane's bookmarks dropdown.
+#[derive(Clone)]
+struct BookmarkMenu {
+    popover: gtk::Popover,
+    /// "Bookmark this folder".
+    add: gtk::Button,
+    list: gtk::ListBox,
+}
+
+impl BookmarkMenu {
+    /// Give the keyboard focus to the row at `index`, or to the last row
+    /// when there are fewer; with no rows at all, to the add button.
+    fn focus_row(&self, index: i32) {
+        let mut rows = 0;
+        while self.list.row_at_index(rows).is_some() {
+            rows += 1;
+        }
+        match self.list.row_at_index(index.min(rows - 1)) {
+            Some(row) => row.grab_focus(),
+            None => self.add.grab_focus(),
+        };
+    }
+}
 
 /// Files marked by Copy/Cut, pasted into a pane later.
 #[derive(Clone)]
@@ -355,21 +383,24 @@ impl App {
 
         self.wire_workspace(&ws);
 
-        // Start both panes at the local home; apply the current hidden state.
-        let home = dirs::home_dir()
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "/".into());
+        // Start both panes in the local start folder; apply the current
+        // hidden state.
+        let start = self.local_start_dir();
         for pane in ws.panes() {
             pane.set_show_hidden(self.hidden.get());
+            pane.open_local(start.clone());
         }
-        ws.left
-            .set_backend(Backend::Local, home.clone(), &tr!("Local"));
-        ws.right.set_backend(Backend::Local, home, &tr!("Local"));
 
         if let Some(page) = ws.page() {
             self.tabs.set_selected_page(&page);
         }
         ws
+    }
+
+    /// The folder local panes open in, from Preferences; `None` for the
+    /// home folder.
+    fn local_start_dir(&self) -> Option<String> {
+        self.settings.borrow().start_dir().map(str::to_owned)
     }
 
     /// Open a fresh session tab and immediately show the site manager for
@@ -415,13 +446,14 @@ impl App {
                 let this = self.clone();
                 let pane_for_btn = pane.clone();
                 pane.disconnect_button.connect_clicked(move |_| {
-                    pane_for_btn.to_local();
+                    pane_for_btn.to_local(this.local_start_dir());
                     if let Some(ws) = this.workspace_of_pane(&pane_for_btn) {
                         this.refresh_tab_title(&ws);
                     }
                 });
             }
 
+            self.wire_bookmarks(&pane);
             self.wire_context_menu(&pane);
             {
                 let this = self.clone();
@@ -444,6 +476,144 @@ impl App {
                     this.edit.open(pane_for_edit.backend(), entry);
                 });
             }
+        }
+    }
+
+    // ---- Local folder bookmarks -------------------------------------------
+
+    /// Give `pane` its bookmarks dropdown: a button that bookmarks the
+    /// folder the pane is showing, above the bookmarked folders. Bookmarks
+    /// are shared by every pane, so the list is filled from the settings
+    /// each time the dropdown opens.
+    fn wire_bookmarks(self: &Rc<Self>, pane: &Rc<Pane>) {
+        let add = gtk::Button::with_label(&tr!("Bookmark this folder"));
+        // The margins keep the scroller from clipping the list's outline.
+        let list = gtk::ListBox::builder()
+            .selection_mode(gtk::SelectionMode::None)
+            .css_classes(["boxed-list"])
+            .margin_top(2)
+            .margin_bottom(2)
+            .margin_start(2)
+            .margin_end(2)
+            .build();
+        let empty = gtk::Label::builder()
+            .label(tr!("No bookmarks yet"))
+            .css_classes(["dim-label"])
+            .margin_top(12)
+            .margin_bottom(12)
+            .build();
+        list.set_placeholder(Some(&empty));
+        let scroller = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_height(true)
+            .max_content_height(BOOKMARKS_MAX_HEIGHT)
+            .child(&list)
+            .build();
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 6);
+        content.set_width_request(BOOKMARKS_WIDTH);
+        content.append(&add);
+        content.append(&scroller);
+        // Start-aligned, so the dropdown opens over its own pane.
+        let popover = gtk::Popover::builder()
+            .child(&content)
+            .halign(gtk::Align::Start)
+            .build();
+        pane.bookmark_button.set_popover(Some(&popover));
+
+        let menu = BookmarkMenu { popover, add, list };
+        {
+            let this = self.clone();
+            let pane = pane.clone();
+            let menu_for_show = menu.clone();
+            menu.popover
+                .connect_show(move |_| this.fill_bookmarks(&pane, &menu_for_show));
+        }
+        {
+            let this = self.clone();
+            let pane = pane.clone();
+            let menu_for_add = menu.clone();
+            menu.add.connect_clicked(move |_| {
+                let dir = pane.current_dir();
+                this.with_settings_saved(|s| {
+                    s.add_local_bookmark(&dir);
+                });
+                this.fill_bookmarks(&pane, &menu_for_add);
+                // The button has just switched itself off; hand the
+                // keyboard focus to the new row, which is the last one.
+                menu_for_add.focus_row(i32::MAX);
+            });
+        }
+    }
+
+    /// Fill a bookmarks dropdown from the settings: one row per bookmarked
+    /// folder, opening it in `pane` when activated, with a button to remove
+    /// it.
+    fn fill_bookmarks(self: &Rc<Self>, pane: &Rc<Pane>, menu: &BookmarkMenu) {
+        let saved: Vec<String> = self
+            .settings
+            .borrow()
+            .bookmarked_dirs()
+            .map(str::to_owned)
+            .collect();
+        menu.add.set_sensitive(!saved.contains(&pane.current_dir()));
+        // Row by row: `remove_all` would take the placeholder with it.
+        while let Some(row) = menu.list.row_at_index(0) {
+            menu.list.remove(&row);
+        }
+        for (index, dir) in (0i32..).zip(saved) {
+            // The root folder has no name of its own.
+            let name = match fsops::file_name(&dir) {
+                "" => dir.as_str(),
+                name => name,
+            };
+            let row = adw::ActionRow::builder()
+                .title(name)
+                .subtitle(&dir)
+                .subtitle_lines(1)
+                .tooltip_text(&dir)
+                .use_markup(false)
+                .activatable(true)
+                .build();
+            let remove = gtk::Button::from_icon_name("user-trash-symbolic");
+            remove.set_tooltip_text(Some(&tr!("Remove bookmark")));
+            remove.set_valign(gtk::Align::Center);
+            remove.add_css_class("flat");
+            row.add_suffix(&remove);
+            {
+                let pane = pane.clone();
+                let popover = menu.popover.clone();
+                let dir = dir.clone();
+                row.connect_activated(move |_| {
+                    popover.popdown();
+                    pane.navigate(dir.clone());
+                    pane.view.grab_focus();
+                });
+            }
+            {
+                let this = self.clone();
+                let pane = pane.clone();
+                let menu = menu.clone();
+                remove.connect_clicked(move |_| {
+                    this.with_settings_saved(|s| {
+                        s.remove_local_bookmark(&dir);
+                    });
+                    this.fill_bookmarks(&pane, &menu);
+                    // The clicked button went with its row; keep the
+                    // keyboard focus where the row was.
+                    menu.focus_row(index);
+                });
+            }
+            menu.list.append(&row);
+        }
+    }
+
+    /// Open the active pane's bookmarks dropdown (Ctrl+D).
+    fn show_bookmarks(&self) {
+        let pane = self.active_pane();
+        if pane.backend().is_remote() {
+            self.toast(&tr!("Bookmarks are for local folders"));
+        } else {
+            pane.bookmark_button.popup();
         }
     }
 
@@ -734,12 +904,102 @@ impl App {
 
         let page = adw::PreferencesPage::new();
         page.add(&language_group);
+        page.add(&self.local_files_group());
         page.add(&group);
         page.add(&tabs_group);
         let dialog = adw::PreferencesDialog::new();
         dialog.set_title(&tr!("Preferences"));
         dialog.add(&page);
         dialog.present(Some(&self.window));
+    }
+
+    /// The Preferences group for the local start folder: a row showing the
+    /// folder, with one button to pick another and one to go back to the
+    /// home folder. Saved on every change, like the other preferences;
+    /// panes that are already open stay where they are.
+    fn local_files_group(self: &Rc<Self>) -> adw::PreferencesGroup {
+        let start_row = adw::ActionRow::builder()
+            .title(tr!("Start folder"))
+            .use_markup(false)
+            .build();
+        let flat_button = |icon: &str, tooltip: String| {
+            let button = gtk::Button::from_icon_name(icon);
+            button.set_tooltip_text(Some(&tooltip));
+            button.set_valign(gtk::Align::Center);
+            button.add_css_class("flat");
+            button
+        };
+        let reset = flat_button("go-home-symbolic", tr!("Use the home folder"));
+        let choose = flat_button("document-open-symbolic", tr!("Choose a folder…"));
+        start_row.add_suffix(&reset);
+        start_row.add_suffix(&choose);
+        start_row.set_activatable_widget(Some(&choose));
+
+        // Put the saved folder on the row.
+        let show_saved = {
+            let this = self.clone();
+            let start_row = start_row.clone();
+            let reset = reset.clone();
+            let choose = choose.clone();
+            move || {
+                let start = this.local_start_dir();
+                // A button that is switched off while it has the keyboard
+                // focus leaves the dialog without one, and Escape with it.
+                if start.is_none() && reset.has_focus() {
+                    choose.grab_focus();
+                }
+                reset.set_sensitive(start.is_some());
+                start_row.set_subtitle(&start.unwrap_or_else(|| tr!("Home folder")));
+            }
+        };
+        show_saved();
+
+        {
+            let this = self.clone();
+            let show_saved = show_saved.clone();
+            choose.connect_clicked(move |_| {
+                let dialog = gtk::FileDialog::builder()
+                    .title(tr!("Select start folder"))
+                    .modal(true)
+                    .build();
+                let initial = this
+                    .local_start_dir()
+                    .map(std::path::PathBuf::from)
+                    .or_else(dirs::home_dir);
+                if let Some(dir) = initial {
+                    dialog.set_initial_folder(Some(&gio::File::for_path(dir)));
+                }
+                let window = this.window.clone();
+                let this = this.clone();
+                let show_saved = show_saved.clone();
+                dialog.select_folder(Some(&window), gio::Cancellable::NONE, move |picked| {
+                    // Cancelled, or a place without a local path: keep the
+                    // folder that was set.
+                    let Some(path) = picked.ok().and_then(|folder| folder.path()) else {
+                        return;
+                    };
+                    let dir = path.to_string_lossy().into_owned();
+                    this.with_settings_saved(|s| s.local_start_dir = Some(dir));
+                    show_saved();
+                });
+            });
+        }
+        {
+            let this = self.clone();
+            reset.connect_clicked(move |_| {
+                this.with_settings_saved(|s| s.local_start_dir = None);
+                show_saved();
+            });
+        }
+
+        let group = adw::PreferencesGroup::builder()
+            .title(tr!("Local Files"))
+            .description(tr!(
+                "Where local panes open in new tabs and after a disconnect"
+            ))
+            .build();
+        group.add(&start_row);
+        group
     }
 
     fn show_shortcuts(&self) {
@@ -762,6 +1022,7 @@ impl App {
             ("Ctrl+H", tr!("Toggle hidden files")),
             ("Ctrl+R", tr!("Refresh")),
             ("Ctrl+L", tr!("Edit path")),
+            ("Ctrl+D", tr!("Bookmarks for local folders")),
             ("Tab", tr!("Complete the folder being typed in the path")),
             (
                 "Up / Down",
@@ -873,6 +1134,10 @@ impl App {
                 }
                 Key::l | Key::L if ctrl => {
                     this.active_pane().path_entry.grab_focus();
+                }
+                // Not over a dialog: the dropdown would open on top of it.
+                Key::d | Key::D if ctrl && this.window.visible_dialog().is_none() => {
+                    this.show_bookmarks();
                 }
                 Key::t | Key::T if ctrl => {
                     this.open_terminal();
@@ -1650,8 +1915,9 @@ impl App {
                                 }
                             }
                         }
+                        let start = this.local_start_dir();
                         for pane in &affected {
-                            pane.to_local();
+                            pane.to_local(start.clone());
                             if let Some(ws) = this.workspace_of_pane(pane) {
                                 this.refresh_tab_title(&ws);
                             }
