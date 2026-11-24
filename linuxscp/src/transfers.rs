@@ -17,11 +17,13 @@ use std::task::{self, Poll};
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
+use russh_sftp::client::error::Error as SftpError;
 use russh_sftp::client::fs::File as RemoteFile;
 use russh_sftp::protocol::OpenFlags;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::sync::watch;
 
+use crate::ssh::connect::MAX_CONCURRENT_WRITES;
 use crate::tr;
 use crate::types::{
     Backend, ConflictDecision, ConflictRequest, Event, FsEntry, SessionId, TransferAction,
@@ -953,50 +955,57 @@ impl Scanner {
 }
 
 /// One endpoint of a copy. A concrete type rather than a boxed trait object
-/// so the copy loop can settle handles explicitly: dropping a remote
-/// [`RemoteFile`] sends its close packet fire-and-forget, and russh-sftp
-/// (2.3.0) never decrements its client-side open-handle counter on that
-/// path. Each drop then permanently burns one of the handle slots the
-/// server advertised via `limits@openssh.com` (~1000 on stock OpenSSH),
-/// after which every open on the session fails with "Limit exceeded:
-/// handle limit reached". Only the awaited close performed by `shutdown()`
-/// keeps the counter honest.
+/// so the copy loop can close a remote handle explicitly and wait for the
+/// server to confirm it. Dropping a [`RemoteFile`] closes it as well, but
+/// only by sending the request, so a job could report its outcome while the
+/// server was still working through that file's in-flight writes.
 enum Stream {
     Local(tokio::fs::File),
     Remote(RemoteFile),
 }
 
 impl Stream {
-    /// Explicitly close a remote handle, waiting for the server's ack so
-    /// the session's handle accounting stays correct (see type docs).
-    /// Best-effort: a handle that won't settle within the grace period is
-    /// dropped as before — one leaked counter slot — so a dead connection
-    /// can delay a worker but never wedge it.
+    /// Close a remote handle and wait for the server's reply. Best-effort:
+    /// a handle that has not settled within the grace period is left to
+    /// [`RemoteFile`]'s drop, which sends the close without waiting, so a
+    /// stalled connection can delay a worker but never wedge it.
     async fn close(&mut self) {
         const GRACE: Duration = Duration::from_secs(30);
+        // After a failed or cancelled copy, each `shutdown` call reports
+        // one failed in-flight write and stops there; only a call that
+        // finds none left goes on to close the handle. That makes one
+        // attempt per write that can be in flight, then the one that closes.
+        const ATTEMPTS: usize = MAX_CONCURRENT_WRITES + 1;
         let Stream::Remote(file) = self else {
             return; // local files release their fd on drop
         };
         let settle = async {
-            // After a failed or cancelled copy, shutdown surfaces each
-            // queued write error before performing the close itself, so it
-            // can take one attempt per errored in-flight write (at most
-            // russh-sftp's max_concurrent_writes, 8) before the one that
-            // closes. More attempts than that aren't going to succeed.
-            for _ in 0..10 {
+            for _ in 0..ATTEMPTS {
                 match file.shutdown().await {
                     Ok(()) => return true,
-                    // Session torn down: the handle died with it.
-                    Err(err) if err.kind() == io::ErrorKind::BrokenPipe => return true,
+                    // The handle went with the session.
+                    Err(err) if session_ended(&err) => return true,
                     Err(_) => {}
                 }
             }
             false
         };
         if !matches!(tokio::time::timeout(GRACE, settle).await, Ok(true)) {
-            tracing::warn!("remote file failed to close; leaking a handle slot");
+            tracing::debug!("remote file close was not confirmed; leaving it to drop");
         }
     }
+}
+
+/// Whether an error from a remote file means its SFTP session is over (ssh
+/// exited, or the session was closed) rather than that the server refused a
+/// request. russh-sftp reports both a request it can no longer send and one
+/// whose reply will never arrive as `UnexpectedBehavior`.
+fn session_ended(err: &io::Error) -> bool {
+    matches!(
+        err.get_ref()
+            .and_then(|inner| inner.downcast_ref::<SftpError>()),
+        Some(SftpError::UnexpectedBehavior(_))
+    )
 }
 
 impl AsyncRead for Stream {
@@ -1057,8 +1066,8 @@ async fn open_read(backend: Backend, path: &str, offset: u64) -> anyhow::Result<
                 .await
                 .with_context(|| tr!("opening remote {}", path))?;
             if offset > 0 {
-                // Never touches the server for SeekFrom::Start, so this
-                // can't fail and leak the just-opened handle.
+                // SeekFrom::Start never touches the server, so this can't
+                // fail.
                 file.seek(SeekFrom::Start(offset)).await?;
             }
             Ok(Stream::Remote(file))
@@ -1105,6 +1114,140 @@ async fn open_write(backend: Backend, path: &str, offset: u64) -> anyhow::Result
 #[cfg(test)]
 mod tests {
     use super::*;
+    use russh_sftp::client::SftpSession;
+    use tokio::io::DuplexStream;
+    use tokio::task::JoinHandle;
+
+    // SFTP packet types and status codes (draft-ietf-secsh-filexfer-02),
+    // as far as the scripted server below needs them.
+    const FXP_INIT: u8 = 1;
+    const FXP_VERSION: u8 = 2;
+    const FXP_OPEN: u8 = 3;
+    const FXP_CLOSE: u8 = 4;
+    const FXP_WRITE: u8 = 6;
+    const FXP_STATUS: u8 = 101;
+    const FXP_HANDLE: u8 = 102;
+    const FX_OK: u32 = 0;
+    const FX_FAILURE: u32 = 4;
+
+    /// What the scripted server does with a write request.
+    #[derive(Clone, Copy)]
+    enum Writes {
+        /// Answer with a failure status, as a full disk would.
+        Refused,
+        /// Never answer.
+        Unanswered,
+    }
+
+    fn put_string(packet: &mut Vec<u8>, text: &[u8]) {
+        packet.extend_from_slice(&(text.len() as u32).to_be_bytes());
+        packet.extend_from_slice(text);
+    }
+
+    fn put_status(packet: &mut Vec<u8>, id: &[u8], code: u32) {
+        packet.push(FXP_STATUS);
+        packet.extend_from_slice(id);
+        packet.extend_from_slice(&code.to_be_bytes());
+        put_string(packet, b"status");
+        put_string(packet, b"en");
+    }
+
+    /// A minimal SFTP server on the far end of an in-memory pipe: enough of
+    /// the protocol to open a file, then refuse or ignore every write to
+    /// it. `closes` counts the close requests it has answered.
+    async fn serve(mut stream: DuplexStream, writes: Writes, closes: Arc<AtomicU32>) {
+        loop {
+            let Ok(len) = stream.read_u32().await else {
+                return;
+            };
+            let mut request = vec![0u8; len as usize];
+            if stream.read_exact(&mut request).await.is_err() {
+                return;
+            }
+            // Every request but INIT starts with its id.
+            let (kind, id) = (request[0], &request[1..5]);
+            let mut reply = Vec::new();
+            match kind {
+                FXP_INIT => {
+                    reply.push(FXP_VERSION);
+                    reply.extend_from_slice(&3u32.to_be_bytes());
+                }
+                FXP_OPEN => {
+                    reply.push(FXP_HANDLE);
+                    reply.extend_from_slice(id);
+                    put_string(&mut reply, b"handle");
+                }
+                FXP_WRITE => match writes {
+                    Writes::Refused => put_status(&mut reply, id, FX_FAILURE),
+                    Writes::Unanswered => continue,
+                },
+                FXP_CLOSE => {
+                    closes.fetch_add(1, Ordering::SeqCst);
+                    put_status(&mut reply, id, FX_OK);
+                }
+                _ => put_status(&mut reply, id, FX_OK),
+            }
+            let mut packet = (reply.len() as u32).to_be_bytes().to_vec();
+            packet.extend_from_slice(&reply);
+            if stream.write_all(&packet).await.is_err() {
+                return;
+            }
+        }
+    }
+
+    /// A remote file open for writing on a session with the scripted
+    /// server, set up as `connect` sets up real ones. Aborting the returned
+    /// task is the server going away.
+    async fn remote_file(writes: Writes) -> (Stream, Arc<AtomicU32>, JoinHandle<()>) {
+        let (client, server) = tokio::io::duplex(4096);
+        let closes = Arc::new(AtomicU32::new(0));
+        let server = tokio::spawn(serve(server, writes, closes.clone()));
+        let sftp = SftpSession::new_with_config(client, crate::ssh::connect::sftp_config())
+            .await
+            .expect("handshake with the scripted server");
+        let file = sftp
+            .open_with_flags("file", OpenFlags::WRITE | OpenFlags::CREATE)
+            .await
+            .expect("open on the scripted server");
+        (Stream::Remote(file), closes, server)
+    }
+
+    /// Fail a test promptly instead of sitting out the engine's timeouts.
+    async fn promptly<T>(future: impl Future<Output = T>) -> T {
+        tokio::time::timeout(Duration::from_secs(10), future)
+            .await
+            .expect("did not finish in time")
+    }
+
+    #[tokio::test]
+    async fn close_gets_past_a_full_window_of_failed_writes() {
+        let (mut stream, closes, _server) = remote_file(Writes::Refused).await;
+        // As many writes as can be in flight, every one of them refused.
+        for _ in 0..MAX_CONCURRENT_WRITES {
+            stream.write_all(b"data").await.unwrap();
+        }
+        promptly(stream.close()).await;
+        // Checked while the file is still alive: had `close` given up
+        // early, dropping the file would send the close instead.
+        assert_eq!(closes.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn session_end_is_told_apart_from_a_refused_request() {
+        let (mut stream, _closes, _server) = remote_file(Writes::Refused).await;
+        stream.write_all(b"data").await.unwrap();
+        let refused = promptly(stream.shutdown()).await.unwrap_err();
+        assert!(!session_ended(&refused), "{refused:?}");
+
+        // A write whose reply will never come, then no session at all.
+        let (mut stream, _closes, server) = remote_file(Writes::Unanswered).await;
+        stream.write_all(b"data").await.unwrap();
+        server.abort();
+        let unanswered = promptly(stream.shutdown()).await.unwrap_err();
+        assert!(session_ended(&unanswered), "{unanswered:?}");
+        let unsendable = promptly(stream.shutdown()).await.unwrap_err();
+        assert!(session_ended(&unsendable), "{unsendable:?}");
+    }
 
     #[test]
     fn session_ids_skips_local_and_dedupes() {

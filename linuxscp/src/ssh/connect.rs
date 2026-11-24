@@ -61,10 +61,36 @@ const SU_PROMPT: &[u8] = b"Password:";
 /// LoginGraceTime, connection refused) or the user cancelling a prompt ends
 /// a doomed attempt right away.
 const HANDSHAKE_TIMEOUT_SECS: u64 = 300;
-/// Per-request timeout once the session is up.
+/// Per-request timeout once the session is up, counted from when a request
+/// is handed to ssh. Every write a transfer has in flight is a request of
+/// its own, so this also bounds how long each may take to be acknowledged.
 const REQUEST_TIMEOUT_SECS: u64 = 30;
 /// How long to wait for ssh's last words on stderr after it exits.
 const STDERR_SETTLE: Duration = Duration::from_millis(500);
+/// Write requests a remote file keeps in flight. With OpenSSH's 255 KiB
+/// write limit that is an upload window of up to 2 MiB per file. The
+/// transfer engine sizes its close retries from this (see
+/// `transfers::Stream::close`).
+pub(crate) const MAX_CONCURRENT_WRITES: usize = 8;
+
+/// SFTP client settings for a new session. How much a transfer keeps in
+/// flight is set here explicitly: russh-sftp's own defaults for it differ
+/// from release to release.
+pub(crate) fn sftp_config() -> russh_sftp::client::Config {
+    let defaults = russh_sftp::client::Config::default();
+    russh_sftp::client::Config {
+        // Covers the handshake only; `connect` lowers it once the session
+        // is up.
+        request_timeout_secs: HANDSHAKE_TIMEOUT_SECS,
+        max_concurrent_writes: MAX_CONCURRENT_WRITES,
+        // A whole packet, so the size of each write is decided by the limit
+        // the server advertises rather than capped below it.
+        max_write_packet_len: defaults.max_packet_len,
+        // No read-ahead: one read request at a time.
+        max_concurrent_reads: 1,
+        ..defaults
+    }
+}
 
 pub struct Connection {
     pub sftp: Arc<SftpSession>,
@@ -150,12 +176,8 @@ pub async fn connect(
     // The handshake's INIT sits in ssh's stdin pipe until authentication is
     // done, so rather than trusting a timer, race it against the ways an
     // attempt ends early: ssh exiting, or the user cancelling a prompt.
-    let config = russh_sftp::client::Config {
-        request_timeout_secs: HANDSHAKE_TIMEOUT_SECS,
-        ..Default::default()
-    };
     let sftp = tokio::select! {
-        result = SftpSession::new_with_config(stream, config) => match result {
+        result = SftpSession::new_with_config(stream, sftp_config()) => match result {
             Ok(sftp) => Arc::new(sftp),
             Err(err) => {
                 let _ = child.kill().await;
