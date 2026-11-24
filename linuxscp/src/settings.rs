@@ -383,6 +383,15 @@ pub struct Settings {
     /// `None` follows the system locale.
     #[serde(default)]
     pub language: Option<String>,
+    /// Folder local panes open in; `None` means the home folder. Read it
+    /// through [`Settings::start_dir`].
+    #[serde(default)]
+    pub local_start_dir: Option<String>,
+    /// Bookmarked local folders, in the order they were added. Read them
+    /// through [`Settings::bookmarked_dirs`]. (`bookmarks` is taken: it is
+    /// the legacy site list above.)
+    #[serde(default)]
+    pub local_bookmarks: Vec<String>,
 }
 
 fn enabled() -> bool {
@@ -402,8 +411,19 @@ impl Default for Settings {
             notify_desktop: true,
             tab_shows_name: false,
             language: None,
+            local_start_dir: None,
+            local_bookmarks: Vec::new(),
         }
     }
+}
+
+/// True for a saved local folder that can be used as given.
+///
+/// `settings.json` is user-editable, so only an absolute path counts: a
+/// relative one would be resolved against wherever the app happened to be
+/// started. Nor can a path hold a NUL byte.
+fn is_usable_dir(dir: &str) -> bool {
+    std::path::Path::new(dir).is_absolute() && !dir.contains('\0')
 }
 
 /// Old bookmark format (pre-site-manager). Kept only for migration.
@@ -437,8 +457,16 @@ impl Settings {
 
     /// Fold any legacy flat bookmarks into the site tree root, once.
     fn migrate_bookmarks(&mut self) {
+        if self.fold_legacy_bookmarks() {
+            self.save();
+        }
+    }
+
+    /// The in-memory half of [`Self::migrate_bookmarks`]. Returns true if
+    /// there was anything to fold.
+    fn fold_legacy_bookmarks(&mut self) -> bool {
         if self.bookmarks.is_empty() {
-            return;
+            return false;
         }
         for bookmark in std::mem::take(&mut self.bookmarks) {
             let mut site = Site::new(bookmark.label, bookmark.host);
@@ -446,13 +474,47 @@ impl Settings {
             site.remote_dir = bookmark.remote_dir;
             self.sites.sites.push(site);
         }
-        self.save();
+        true
     }
 
     pub fn save(&self) {
         if let Ok(json) = serde_json::to_string_pretty(self) {
             let _ = std::fs::write(config_path(), json);
         }
+    }
+
+    /// The folder local panes open in, if one is set and usable as given
+    /// (an absolute path). `None` means the home folder.
+    pub fn start_dir(&self) -> Option<&str> {
+        self.local_start_dir
+            .as_deref()
+            .filter(|dir| is_usable_dir(dir))
+    }
+
+    /// The bookmarked local folders, in the order they were added, leaving
+    /// out any that are not usable as given (absolute paths).
+    pub fn bookmarked_dirs(&self) -> impl Iterator<Item = &str> {
+        self.local_bookmarks
+            .iter()
+            .map(String::as_str)
+            .filter(|dir| is_usable_dir(dir))
+    }
+
+    /// Bookmark a local folder. Returns false, changing nothing, if it is
+    /// already bookmarked or is not usable as given.
+    pub fn add_local_bookmark(&mut self, dir: &str) -> bool {
+        if !is_usable_dir(dir) || self.local_bookmarks.iter().any(|saved| saved == dir) {
+            return false;
+        }
+        self.local_bookmarks.push(dir.to_owned());
+        true
+    }
+
+    /// Remove a bookmarked local folder. Returns false if it was not one.
+    pub fn remove_local_bookmark(&mut self, dir: &str) -> bool {
+        let before = self.local_bookmarks.len();
+        self.local_bookmarks.retain(|saved| saved != dir);
+        self.local_bookmarks.len() != before
     }
 }
 
@@ -633,5 +695,130 @@ mod tests {
         let spec = site.to_spec();
         assert_eq!(spec.user.as_deref(), Some("deploy"));
         assert_eq!(spec.port, Some(2222));
+    }
+
+    #[test]
+    fn settings_saved_before_local_folders_existed_still_load() {
+        let settings: Settings = serde_json::from_str(
+            r#"{
+                "show_hidden": true,
+                "sites": { "id": "root", "name": "", "folders": [], "sites": [] },
+                "terminal": null,
+                "left_width": 640,
+                "queue_height": 200,
+                "notify_sound": false,
+                "notify_desktop": true,
+                "tab_shows_name": true
+            }"#,
+        )
+        .unwrap();
+        assert!(settings.show_hidden);
+        assert_eq!(settings.left_width, Some(640));
+        assert_eq!(settings.start_dir(), None);
+        assert_eq!(settings.bookmarked_dirs().count(), 0);
+    }
+
+    #[test]
+    fn local_folders_survive_a_save_and_load() {
+        let mut settings = Settings {
+            local_start_dir: Some("/srv/projects".into()),
+            ..Default::default()
+        };
+        assert!(settings.add_local_bookmark("/srv/projects"));
+        assert!(settings.add_local_bookmark("/srv/downloads"));
+
+        let json = serde_json::to_string_pretty(&settings).unwrap();
+        let loaded: Settings = serde_json::from_str(&json).unwrap();
+        assert_eq!(loaded.start_dir(), Some("/srv/projects"));
+        assert_eq!(
+            loaded.bookmarked_dirs().collect::<Vec<_>>(),
+            vec!["/srv/projects", "/srv/downloads"]
+        );
+    }
+
+    #[test]
+    fn only_an_absolute_start_folder_counts() {
+        let with = |dir: &str| Settings {
+            local_start_dir: Some(dir.into()),
+            ..Default::default()
+        };
+        assert_eq!(with("/srv/projects").start_dir(), Some("/srv/projects"));
+        assert_eq!(with("/").start_dir(), Some("/"));
+        // The saved value comes from a user-editable file: these would be
+        // resolved against wherever the app happened to be started.
+        assert_eq!(with("").start_dir(), None);
+        assert_eq!(with("projects").start_dir(), None);
+        assert_eq!(with("../projects").start_dir(), None);
+        assert_eq!(with("~/projects").start_dir(), None);
+        assert_eq!(with("/srv/pro\0jects").start_dir(), None);
+        assert_eq!(Settings::default().start_dir(), None);
+    }
+
+    #[test]
+    fn local_bookmarks_add_once_and_remove() {
+        let mut settings = Settings::default();
+        assert!(settings.add_local_bookmark("/srv/a"));
+        assert!(settings.add_local_bookmark("/srv/b"));
+        // Already there: no duplicate, and the order is kept.
+        assert!(!settings.add_local_bookmark("/srv/a"));
+        assert_eq!(
+            settings.bookmarked_dirs().collect::<Vec<_>>(),
+            vec!["/srv/a", "/srv/b"]
+        );
+        // Not usable as given: refused.
+        assert!(!settings.add_local_bookmark("relative/dir"));
+        assert!(!settings.add_local_bookmark(""));
+
+        assert!(settings.remove_local_bookmark("/srv/a"));
+        assert!(!settings.remove_local_bookmark("/srv/a"));
+        assert_eq!(
+            settings.bookmarked_dirs().collect::<Vec<_>>(),
+            vec!["/srv/b"]
+        );
+    }
+
+    #[test]
+    fn unusable_bookmarks_in_the_file_are_not_offered_but_can_be_removed() {
+        let mut settings: Settings =
+            serde_json::from_str(r#"{ "local_bookmarks": ["/srv/a", "relative/dir", ""] }"#)
+                .unwrap();
+        assert_eq!(
+            settings.bookmarked_dirs().collect::<Vec<_>>(),
+            vec!["/srv/a"]
+        );
+        assert!(settings.remove_local_bookmark("relative/dir"));
+        assert_eq!(settings.local_bookmarks, vec!["/srv/a", ""]);
+    }
+
+    #[test]
+    fn legacy_site_bookmarks_still_become_sites() {
+        // `bookmarks` is the pre-site-manager list of servers. It must keep
+        // migrating into the site tree, and stay apart from the local
+        // folder bookmarks stored next to it.
+        let mut settings: Settings = serde_json::from_str(
+            r#"{
+                "bookmarks": [
+                    { "label": "web", "host": "web.example.com", "remote_dir": "/var/www" }
+                ],
+                "local_bookmarks": ["/srv/projects"]
+            }"#,
+        )
+        .unwrap();
+
+        assert!(settings.fold_legacy_bookmarks());
+        assert!(settings.bookmarks.is_empty());
+        assert_eq!(settings.sites.sites.len(), 1);
+        assert_eq!(settings.sites.sites[0].name, "web");
+        assert_eq!(settings.sites.sites[0].host, "web.example.com");
+        assert_eq!(
+            settings.sites.sites[0].remote_dir.as_deref(),
+            Some("/var/www")
+        );
+        assert_eq!(
+            settings.bookmarked_dirs().collect::<Vec<_>>(),
+            vec!["/srv/projects"]
+        );
+        // Nothing left to fold the second time.
+        assert!(!settings.fold_legacy_bookmarks());
     }
 }

@@ -53,6 +53,9 @@ pub struct Pane {
     /// Folder suggestions shown under `path_entry` while a path is typed.
     completion: Rc<PathCompletion>,
     pub new_folder_button: gtk::Button,
+    /// Opens the local folder bookmarks; the app installs its popover.
+    /// Hidden while the pane is remote.
+    pub bookmark_button: gtk::MenuButton,
     pub connect_button: gtk::Button,
     pub disconnect_button: gtk::Button,
     pub conn_chip: gtk::Label,
@@ -131,12 +134,17 @@ impl Pane {
         refresh_button.set_tooltip_text(Some(&tr!("Refresh (Ctrl+R)")));
         let new_folder_button = gtk::Button::from_icon_name("folder-new-symbolic");
         new_folder_button.set_tooltip_text(Some(&tr!("New folder (F7)")));
+        let bookmark_button = gtk::MenuButton::builder()
+            .icon_name("user-bookmarks-symbolic")
+            .tooltip_text(tr!("Bookmarks (Ctrl+D)"))
+            .build();
         let nav_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         nav_box.add_css_class("linked");
         nav_box.append(&up_button);
         nav_box.append(&home_button);
         nav_box.append(&refresh_button);
         nav_box.append(&new_folder_button);
+        nav_box.append(&bookmark_button);
 
         let path_entry = gtk::Entry::builder().hexpand(true).build();
 
@@ -208,6 +216,7 @@ impl Pane {
                 path_entry,
                 completion,
                 new_folder_button,
+                bookmark_button,
                 connect_button,
                 disconnect_button,
                 conn_chip,
@@ -445,17 +454,39 @@ impl Pane {
 
     /// Switch this pane to a (new) backend and open `dir`.
     pub fn set_backend(self: &Rc<Self>, backend: Backend, dir: String, label: &str) {
-        {
-            let mut state = self.state.borrow_mut();
-            state.backend = backend;
-        }
-        self.conn_chip.set_text(label);
-        self.disconnect_button.set_visible(backend.is_remote());
-        self.connect_button.set_visible(!backend.is_remote());
+        self.show_backend(backend, label);
         self.navigate(dir);
     }
 
+    /// Show the local disk, starting in `start_dir`: the home folder when
+    /// there is none, and also when it cannot be opened.
+    pub fn open_local(self: &Rc<Self>, start_dir: Option<String>) {
+        let home = dirs::home_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "/".into());
+        self.show_backend(Backend::Local, &tr!("Local"));
+        match start_dir {
+            Some(dir) => self.navigate_or(dir, Some(home)),
+            None => self.navigate(home),
+        }
+    }
+
+    /// Point the pane's state and header at `backend`.
+    fn show_backend(&self, backend: Backend, label: &str) {
+        self.state.borrow_mut().backend = backend;
+        self.conn_chip.set_text(label);
+        self.disconnect_button.set_visible(backend.is_remote());
+        self.connect_button.set_visible(!backend.is_remote());
+        self.bookmark_button.set_visible(!backend.is_remote());
+    }
+
     pub fn navigate(self: &Rc<Self>, path: String) {
+        self.navigate_or(path, None);
+    }
+
+    /// Open `path`. If that fails and there is a `fallback`, open the
+    /// fallback instead and say so in the status line.
+    fn navigate_or(self: &Rc<Self>, path: String, fallback: Option<String>) {
         let backend = self.backend();
         let generation = {
             let mut state = self.state.borrow_mut();
@@ -464,21 +495,26 @@ impl Pane {
         };
         let this = self.clone();
         glib::spawn_future_local(async move {
-            let path_for_task = path.clone();
+            // The fallback is tried in the same task, so the generation
+            // check below covers both attempts.
             let result = runtime()
                 .spawn(async move {
-                    let dir = fsops::canonicalize(backend, &path_for_task)
-                        .await
-                        .unwrap_or(path_for_task);
-                    let entries = fsops::list_dir(backend, &dir).await?;
-                    Ok::<_, anyhow::Error>((dir, entries))
+                    match open_dir(backend, path.clone()).await {
+                        Ok(listing) => Ok((listing, None)),
+                        Err(err) => match fallback {
+                            Some(fallback) => open_dir(backend, fallback)
+                                .await
+                                .map(|listing| (listing, Some(path))),
+                            None => Err(err),
+                        },
+                    }
                 })
                 .await;
             if this.state.borrow().generation != generation {
                 return; // superseded by a newer navigation
             }
             match result {
-                Ok(Ok((dir, entries))) => {
+                Ok(Ok(((dir, entries), unavailable))) => {
                     // Jump to the top when actually changing directory;
                     // refreshes of the same directory keep their scroll.
                     let changed_dir = this.state.borrow().dir != dir;
@@ -489,6 +525,13 @@ impl Pane {
                     if changed_dir && this.selection.n_items() > 0 {
                         this.view
                             .scroll_to(0, None, gtk::ListScrollFlags::NONE, None);
+                    }
+                    if let Some(wanted) = unavailable {
+                        this.show_error(&tr!(
+                            "{} could not be opened; showing {} instead",
+                            wanted,
+                            dir
+                        ));
                     }
                 }
                 Ok(Err(err)) => this.show_error(&format!("{err:#}")),
@@ -675,16 +718,22 @@ impl Pane {
         }
     }
 
-    /// Fall back to the local home directory (used when a session dies).
-    pub fn to_local(self: &Rc<Self>) {
+    /// Close the remote session, if any, and go back to the local disk
+    /// (see [`Self::open_local`]). Used on disconnect and when a session
+    /// dies.
+    pub fn to_local(self: &Rc<Self>, start_dir: Option<String>) {
         if let Some(id) = self.session_id() {
             sessions::close(id);
         }
-        let home = dirs::home_dir()
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "/".into());
-        self.set_backend(Backend::Local, home, "Local");
+        self.open_local(start_dir);
     }
+}
+
+/// Resolve `path` on `backend` and list it.
+async fn open_dir(backend: Backend, path: String) -> anyhow::Result<(String, Vec<FsEntry>)> {
+    let dir = fsops::canonicalize(backend, &path).await.unwrap_or(path);
+    let entries = fsops::list_dir(backend, &dir).await?;
+    Ok((dir, entries))
 }
 
 fn add_columns(view: &gtk::ColumnView, row_menu: &RowMenuSlot, row_drag: &RowDragSlot) {

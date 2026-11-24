@@ -63,6 +63,22 @@ msgstr ""
 msgid "Authentication Required"
 msgstr ""
 
+#: linuxscp/src/app.rs
+msgid "Bookmark this folder"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "Bookmarks (Ctrl+D)"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Bookmarks are for local folders"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Bookmarks for local folders"
+msgstr ""
+
 #: linuxscp/src/ui/properties.rs
 msgid "Calculate"
 msgstr ""
@@ -113,6 +129,10 @@ msgstr ""
 
 #: linuxscp/src/ui/queue.rs
 msgid "Changed {}"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Choose a folder…"
 msgstr ""
 
 #: linuxscp/src/ui/queue.rs
@@ -379,6 +399,10 @@ msgstr ""
 msgid "Home directory"
 msgstr ""
 
+#: linuxscp/src/app.rs
+msgid "Home folder"
+msgstr ""
+
 #: linuxscp/src/ui/site_editor.rs
 msgid "Host"
 msgstr ""
@@ -435,8 +459,12 @@ msgstr ""
 msgid "Link target"
 msgstr ""
 
-#: linuxscp/src/app.rs, linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs, linuxscp/src/ui/queue.rs
 msgid "Local"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Local Files"
 msgstr ""
 
 #: linuxscp/src/ui/properties.rs
@@ -529,6 +557,10 @@ msgstr ""
 
 #: linuxscp/src/ui/connect_dialog.rs
 msgid "No Site Selected"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "No bookmarks yet"
 msgstr ""
 
 #: linuxscp/src/ui/edit.rs
@@ -747,6 +779,10 @@ msgstr ""
 msgid "Remove"
 msgstr ""
 
+#: linuxscp/src/app.rs
+msgid "Remove bookmark"
+msgstr ""
+
 #: linuxscp/src/ui/queue.rs
 msgid "Removed {}"
 msgstr ""
@@ -827,6 +863,10 @@ msgstr ""
 msgid "Select private key"
 msgstr ""
 
+#: linuxscp/src/app.rs
+msgid "Select start folder"
+msgstr ""
+
 #: linuxscp/src/ui/site_editor.rs
 msgid "Session"
 msgstr ""
@@ -889,6 +929,10 @@ msgstr ""
 
 #: linuxscp/src/app.rs
 msgid "Source and destination are the same directory"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Start folder"
 msgstr ""
 
 #: linuxscp/src/ui/properties.rs
@@ -975,6 +1019,10 @@ msgstr ""
 msgid "Upload"
 msgstr ""
 
+#: linuxscp/src/app.rs
+msgid "Use the home folder"
+msgstr ""
+
 #: linuxscp/src/ui/site_editor.rs
 msgid "Username"
 msgstr ""
@@ -985,6 +1033,10 @@ msgstr ""
 
 #: linuxscp/src/ui/queue.rs
 msgid "Waiting for answer…"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Where local panes open in new tabs and after a disconnect"
 msgstr ""
 
 #: linuxscp/src/ui/prompts.rs
@@ -1277,6 +1329,10 @@ msgstr ""
 
 #: linuxscp/src/ui/properties.rs
 msgid "{} bytes"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "{} could not be opened; showing {} instead"
 msgstr ""
 
 #: linuxscp/src/ui/properties.rs

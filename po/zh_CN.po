@@ -74,6 +74,22 @@ msgstr "认证"
 msgid "Authentication Required"
 msgstr "需要认证"
 
+#: linuxscp/src/app.rs
+msgid "Bookmark this folder"
+msgstr ""
+
+#: linuxscp/src/ui/pane.rs
+msgid "Bookmarks (Ctrl+D)"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Bookmarks are for local folders"
+msgstr ""
+
+#: linuxscp/src/app.rs
+msgid "Bookmarks for local folders"
+msgstr ""
+
 #: linuxscp/src/ui/properties.rs
 msgid "Calculate"
 msgstr "计算"
@@ -128,6 +144,10 @@ msgstr "更改 {} 个项目"
 #: linuxscp/src/ui/queue.rs
 msgid "Changed {}"
 msgstr "已更改 {}"
+
+#: linuxscp/src/app.rs
+msgid "Choose a folder…"
+msgstr ""
 
 #: linuxscp/src/ui/queue.rs
 msgid "Clear Finished"
@@ -393,6 +413,10 @@ msgstr "所属组"
 msgid "Home directory"
 msgstr "主目录"
 
+#: linuxscp/src/app.rs
+msgid "Home folder"
+msgstr ""
+
 #: linuxscp/src/ui/site_editor.rs
 msgid "Host"
 msgstr "主机"
@@ -454,10 +478,14 @@ msgstr "语言已保存 — 重启 LinuxSCP 后生效"
 msgid "Link target"
 msgstr "链接目标"
 
-#: linuxscp/src/app.rs, linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs,
+#: linuxscp/src/ui/pane.rs, linuxscp/src/ui/properties.rs,
 #: linuxscp/src/ui/queue.rs
 msgid "Local"
 msgstr "本地"
+
+#: linuxscp/src/app.rs
+msgid "Local Files"
+msgstr ""
 
 #: linuxscp/src/ui/properties.rs
 msgid "Location"
@@ -556,6 +584,10 @@ msgstr ""
 #: linuxscp/src/ui/connect_dialog.rs
 msgid "No Site Selected"
 msgstr "未选择站点"
+
+#: linuxscp/src/app.rs
+msgid "No bookmarks yet"
+msgstr ""
 
 #: linuxscp/src/ui/edit.rs
 msgid "No default text editor is configured"
@@ -779,6 +811,10 @@ msgstr "远程目录（可选）"
 msgid "Remove"
 msgstr "移除"
 
+#: linuxscp/src/app.rs
+msgid "Remove bookmark"
+msgstr ""
+
 #: linuxscp/src/ui/queue.rs
 msgid "Removed {}"
 msgstr "已移除 {}"
@@ -859,6 +895,10 @@ msgstr "选择一个已保存的站点，或新建一个在此编辑。"
 msgid "Select private key"
 msgstr "选择私钥"
 
+#: linuxscp/src/app.rs
+msgid "Select start folder"
+msgstr ""
+
 #: linuxscp/src/ui/site_editor.rs
 msgid "Session"
 msgstr "会话"
@@ -922,6 +962,10 @@ msgstr "源和目标相同"
 #: linuxscp/src/app.rs
 msgid "Source and destination are the same directory"
 msgstr "源和目标为同一目录"
+
+#: linuxscp/src/app.rs
+msgid "Start folder"
+msgstr ""
 
 #: linuxscp/src/ui/properties.rs
 msgid "Sticky bit"
@@ -1008,6 +1052,10 @@ msgstr "不可用"
 msgid "Upload"
 msgstr "上传"
 
+#: linuxscp/src/app.rs
+msgid "Use the home folder"
+msgstr ""
+
 #: linuxscp/src/ui/site_editor.rs
 msgid "Username"
 msgstr "用户名"
@@ -1019,6 +1067,10 @@ msgstr "版本 {}"
 #: linuxscp/src/ui/queue.rs
 msgid "Waiting for answer…"
 msgstr "等待应答…"
+
+#: linuxscp/src/app.rs
+msgid "Where local panes open in new tabs and after a disconnect"
+msgstr ""
 
 #: linuxscp/src/ui/prompts.rs
 msgid "Yes"
@@ -1315,6 +1367,10 @@ msgstr "{} 个项目"
 #: linuxscp/src/ui/properties.rs
 msgid "{} bytes"
 msgstr "{} 字节"
+
+#: linuxscp/src/ui/pane.rs
+msgid "{} could not be opened; showing {} instead"
+msgstr ""
 
 #: linuxscp/src/ui/properties.rs
 msgid "{} files"

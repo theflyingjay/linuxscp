@@ -93,6 +93,10 @@ On other distributions, install the [Flatpak](#flatpak) or
   and drag and drop works between panes.
 - **Transfer notifications** — when a transfer finishes, LinuxSCP plays a success chime and
   posts a GNOME desktop notification. Both are independently toggleable in Preferences.
+- **Local folders where you want them** — choose in Preferences which folder local panes
+  start in instead of your home folder, and bookmark the local folders you keep coming
+  back to: the bookmark button in a local pane's toolbar, or `Ctrl+D`, lists them, and a
+  click jumps there.
 - **Quality of life** — splash screen, "open terminal here" (local shell or `ssh` into the
   host), reconnect on drop, and remembered preferences. Typing a path in either pane
   (local or remote) drops down the matching folders as you go: `/mnt/` lists what is in
@@ -141,6 +145,7 @@ whether a secret exists, never its value.
 | `Ctrl+R` | Refresh | `Ctrl+L` | Edit path |
 | `Tab` (in path) | Complete the folder name | `↑` / `↓` (in path) | Pick a suggested folder |
 | `Ctrl+T` | Open terminal here | Right click | Context menu |
+| `Ctrl+D` | Bookmarks for local folders | | |
 
 ## How it works
 
