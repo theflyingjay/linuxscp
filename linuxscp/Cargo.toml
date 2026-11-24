@@ -41,7 +41,7 @@ gtk = { version = "0.10.3", package = "gtk4", features = ["v4_12"] }
 # libsecret-1-dev to build; the runtime library ships with every GNOME
 # desktop and the Flatpak runtime.
 libsecret = "0.8"
-russh-sftp = "2.3.0"
+russh-sftp = "4.0.0"
 serde = "1.0.228"
 serde_json = "1.0.150"
 shell-words = "1.1.1"
@@ -51,3 +51,8 @@ tokio-util = "0.7.18"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 uuid = { version = "1.23.4", features = ["v4"] }
+
+[dev-dependencies]
+# The paused clock, for unit tests of timeouts that run to minutes. A feature
+# of the tokio already in use: it adds no crate and leaves Cargo.lock alone.
+tokio = { version = "1.54.1", features = ["test-util"] }

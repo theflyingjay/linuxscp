@@ -1,7 +1,9 @@
 //! End-to-end test against a local sshd (see scripts/test-server.sh).
 //! Run with: cargo test -p linuxscp --test sftp_roundtrip -- --ignored
 
-use linuxscp::types::{Backend, ConnectSpec, Event, TransferRequest, TransferState};
+use linuxscp::types::{
+    Backend, ConnectSpec, Event, TransferAction, TransferRequest, TransferState,
+};
 use linuxscp::{fsops, sessions, ssh, transfers};
 
 const TEST_DIR: &str = "/tmp/linuxscp-test";
@@ -479,5 +481,160 @@ fn su_elevation_wrong_password() {
         .await
         .expect("connect hung on wrong password");
         assert!(result.is_err(), "connect should fail with wrong password");
+    });
+}
+
+/// Start `request` and cancel it as soon as it has added to `part`, its
+/// `.filepart`. Both ends of these tests are this machine, so the partial
+/// file can be watched directly; waiting for a progress event instead would
+/// give a fast transfer time to finish. Returns the partial file as the
+/// cancelled transfer left it.
+async fn cancel_midway(
+    request: TransferRequest,
+    part: &str,
+    events_tx: &async_channel::Sender<Event>,
+    events_rx: &async_channel::Receiver<Event>,
+) -> Vec<u8> {
+    let len = || std::fs::metadata(part).map(|meta| meta.len()).unwrap_or(0);
+    let before = len();
+    let id = transfers::start(request, events_tx.clone());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+    while len() <= before {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the transfer never made progress"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
+    transfers::control(id, TransferAction::Cancel);
+    let (state, error) = wait_for_transfer(events_rx).await;
+    assert_eq!(state, TransferState::Cancelled, "{error:?}");
+    std::fs::read(part).expect("a cancelled transfer keeps its .filepart")
+}
+
+/// Cancelling an upload closes a remote file that still has writes in
+/// flight. However often that happens, what reached the server has to be an
+/// exact prefix of the file, the next attempt has to continue from it, and
+/// the session has to stay usable.
+#[test]
+#[ignore = "requires the local test sshd from scripts/test-server.sh"]
+fn cancelled_uploads_resume_on_a_usable_session() {
+    let rt = linuxscp::runtime::runtime();
+    rt.block_on(async {
+        let (events_tx, events_rx) = async_channel::unbounded::<Event>();
+        let answerer = {
+            let events_rx = events_rx.clone();
+            tokio::spawn(async move {
+                while let Ok(event) = events_rx.recv().await {
+                    if let Event::Prompt(prompt) = event {
+                        let _ = prompt.reply.send(Some("yes".into()));
+                    }
+                }
+            })
+        };
+        let conn = ssh::connect::connect(5, test_spec(), events_tx.clone())
+            .await
+            .expect("connect failed");
+        answerer.abort();
+        sessions::register(
+            5,
+            sessions::SessionHandle::new(conn.sftp.clone(), conn.cancel.clone(), "testbox".into()),
+        );
+        let remote = Backend::Remote(5);
+
+        let src_dir = format!("{TEST_DIR}/cancel-src");
+        let dst_dir = format!("{TEST_DIR}/cancel-dst");
+        let down_dir = format!("{TEST_DIR}/cancel-down");
+        for dir in [&src_dir, &dst_dir, &down_dir] {
+            std::fs::remove_dir_all(dir).ok();
+            std::fs::create_dir_all(dir).unwrap();
+        }
+
+        // 64 MiB whose content depends on its position, so data written at
+        // the wrong offset cannot go unnoticed; and large enough that a
+        // cancel sent within milliseconds of the first write lands mid-file.
+        let payload: Vec<u8> = (0..8 * 1024 * 1024u64)
+            .flat_map(|word| word.wrapping_mul(0x9E37_79B9_7F4A_7C15).to_le_bytes())
+            .collect();
+        std::fs::write(format!("{src_dir}/big.bin"), &payload).unwrap();
+        let src_entry = fsops::stat(Backend::Local, &format!("{src_dir}/big.bin"))
+            .await
+            .unwrap();
+        let upload = TransferRequest {
+            src_backend: Backend::Local,
+            dst_backend: remote,
+            items: vec![src_entry],
+            dst_dir: dst_dir.clone(),
+            move_src: false,
+            overwrite: false,
+            overwrite_in_place: false,
+        };
+        let part = format!("{dst_dir}/big.bin{}", transfers::PART_SUFFIX);
+
+        let mut uploaded = 0;
+        for round in 1..=3 {
+            let partial = cancel_midway(upload.clone(), &part, &events_tx, &events_rx).await;
+            assert!(
+                partial.len() > uploaded && partial.len() < payload.len(),
+                "round {round}: cancelled at {} of {} bytes, having started from {uploaded}",
+                partial.len(),
+                payload.len()
+            );
+            assert!(
+                partial == payload[..partial.len()],
+                "round {round}: the partial upload is not a prefix of the source"
+            );
+            uploaded = partial.len();
+        }
+
+        // The next attempt picks the partial file up and finishes it.
+        transfers::start(upload, events_tx.clone());
+        let (state, error) = wait_for_transfer(&events_rx).await;
+        assert_eq!(
+            state,
+            TransferState::Done,
+            "resumed upload failed: {error:?}"
+        );
+        assert!(
+            std::fs::read(format!("{dst_dir}/big.bin")).unwrap() == payload,
+            "the resumed upload differs from the source"
+        );
+        assert!(
+            !std::path::Path::new(&part).exists(),
+            ".filepart should be renamed away"
+        );
+
+        // The session that went through the cancels still lists and reads.
+        let listed = fsops::list_dir(remote, &dst_dir)
+            .await
+            .expect("listing after cancelled uploads");
+        let uploaded_entry = listed
+            .into_iter()
+            .find(|entry| entry.name == "big.bin")
+            .expect("the uploaded file is not listed");
+        assert_eq!(uploaded_entry.size, payload.len() as u64);
+        transfers::start(
+            TransferRequest {
+                src_backend: remote,
+                dst_backend: Backend::Local,
+                items: vec![uploaded_entry],
+                dst_dir: down_dir.clone(),
+                move_src: false,
+                overwrite: false,
+                overwrite_in_place: false,
+            },
+            events_tx.clone(),
+        );
+        let (state, error) = wait_for_transfer(&events_rx).await;
+        assert_eq!(state, TransferState::Done, "download failed: {error:?}");
+        assert!(
+            std::fs::read(format!("{down_dir}/big.bin")).unwrap() == payload,
+            "the downloaded file differs from the source"
+        );
+
+        for dir in [&src_dir, &dst_dir, &down_dir] {
+            std::fs::remove_dir_all(dir).ok();
+        }
+        sessions::close(5);
     });
 }
